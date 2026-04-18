@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import { useMatches } from "@/hooks/useMatches";
 import { useMatchRegistrationsRealtime } from "@/hooks/useMatchRegistrationsRealtime";
-import { useAuth } from "@/hooks/useAuth";
-import { X, Trash2 } from "lucide-react";
+import { formatCurrency } from "@/lib/currency";
+import { Trash2 } from "lucide-react";
 
 interface MatchData {
   id: string;
@@ -24,6 +24,13 @@ interface PlayerRegistration {
   registered_at: string;
 }
 
+interface StoredMatchPricing {
+  id: string;
+  fieldCost: number;
+  costPerPlayer: number;
+  playersPerTeam: number;
+}
+
 export default function MatchDetails({ matchId }: { matchId: string }) {
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -38,10 +45,10 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const [showUnregisterModal, setShowUnregisterModal] = useState(false);
   const [unregisterTarget, setUnregisterTarget] = useState<PlayerRegistration | null>(null);
   const [unregisterLoading, setUnregisterLoading] = useState(false);
+  const [storedMatchPricing, setStoredMatchPricing] = useState<StoredMatchPricing | null>(null);
   
   const { getMatchById, registerForMatch, unregisterFromMatch } = useMatches();
   const { registrations = [] } = useMatchRegistrationsRealtime(matchId);
-  const { user } = useAuth();
 
   useEffect(() => {
     const fetchMatchData = async () => {
@@ -74,6 +81,40 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     };
 
     fetchMatchData();
+  }, [getMatchById, matchId]);
+
+  useEffect(() => {
+    try {
+      const storedMatches = localStorage.getItem("matches");
+
+      if (!storedMatches) {
+        setStoredMatchPricing(null);
+        return;
+      }
+
+      const parsedMatches = JSON.parse(storedMatches) as Array<Partial<StoredMatchPricing>>;
+      const storedMatch = parsedMatches.find((match) => match.id === matchId);
+
+      if (
+        storedMatch &&
+        typeof storedMatch.fieldCost === "number" &&
+        typeof storedMatch.costPerPlayer === "number" &&
+        typeof storedMatch.playersPerTeam === "number"
+      ) {
+        setStoredMatchPricing({
+          id: matchId,
+          fieldCost: storedMatch.fieldCost,
+          costPerPlayer: storedMatch.costPerPlayer,
+          playersPerTeam: storedMatch.playersPerTeam,
+        });
+        return;
+      }
+
+      setStoredMatchPricing(null);
+    } catch (err) {
+      console.error("Error loading match pricing from localStorage", err);
+      setStoredMatchPricing(null);
+    }
   }, [matchId]);
 
   const handleRegistrationSubmit = async (e: React.FormEvent) => {
@@ -193,7 +234,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const fieldPlayersRemaining = Math.max(0, maxFieldPlayers - fieldPlayersCount);
 
   return (
-    <div className="min-h-screen bg-black py-10 px-4 text-white">
+    <div className="min-h-screen py-10 px-4 text-white">
       <div className="max-w-5xl mx-auto space-y-8">
         {/* Header */}
         <div className="bg-[hsl(220,18%,10%)] rounded-lg p-6 shadow border border-slate-800">
@@ -201,6 +242,22 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
           <p className="mt-2 text-slate-300">Fecha: {formattedDate} - Hora: {formattedTime}</p>
           <p className="mt-2 text-slate-300">Ubicación: {matchData.location}</p>
           <p className="mt-2 text-slate-300">Jugadores: {registrations.length}/{matchData.max_players} ({registeredPercent}% completo)</p>
+          {storedMatchPricing && (
+            <div className="mt-4 grid gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4 text-sm text-slate-200 sm:grid-cols-3">
+              <div>
+                <p className="text-slate-400">Valor de la cancha</p>
+                <p className="mt-1 font-semibold text-white">{formatCurrency(storedMatchPricing.fieldCost)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400">Aporte por jugador</p>
+                <p className="mt-1 font-semibold text-white">{formatCurrency(storedMatchPricing.costPerPlayer)}</p>
+              </div>
+              <div>
+                <p className="text-slate-400">Formato</p>
+                <p className="mt-1 font-semibold text-white">{storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
+              </div>
+            </div>
+          )}
           {playersRemaining > 0 ? (
             <p className="mt-2 text-green-400">{playersRemaining} cupos libres</p>
           ) : (

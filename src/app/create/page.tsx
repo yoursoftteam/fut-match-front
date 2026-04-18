@@ -2,20 +2,32 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import MatchForm from "@/components/MatchForm";
+import MatchForm, { type MatchFormSubmitData } from "@/components/MatchForm";
 import ShareLink from "@/components/ShareLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
+import { formatCurrency } from "@/lib/currency";
+
+interface CreatedMatch extends MatchFormSubmitData {
+  id: string;
+  created_at: string;
+}
 
 export default function CreateMatch() {
-  const [createdMatch, setCreatedMatch] = useState<any>(null);
+  const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   const { createMatch } = useMatches();
   const router = useRouter();
+  const requiresLogin = !user;
+  const submitLabel = loading
+    ? "Creando Partido..."
+    : user
+      ? "Crear Partido"
+      : "Inicia sesión para crear el partido";
 
-  const handleMatchCreate = async (data: any) => {
+  const handleMatchCreate = async (data: MatchFormSubmitData) => {
     if (!user) {
       setError("Debes iniciar sesión para crear un partido");
       return;
@@ -64,9 +76,9 @@ export default function CreateMatch() {
         console.error("Error saving match to localStorage", err);
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating match:", err);
-      setError(err.message || "Error al crear el partido");
+      setError(err instanceof Error ? err.message : "Error al crear el partido");
     } finally {
       setLoading(false);
     }
@@ -91,16 +103,15 @@ export default function CreateMatch() {
                 <p className="text-destructive text-sm">{error}</p>
               </div>
             )}
+          
             
-            {!user && (
-              <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <p className="text-yellow-600 text-sm">
-                  Debes <a href="/auth?mode=signin" className="underline hover:text-yellow-700">iniciar sesión</a> para crear un partido.
-                </p>
-              </div>
-            )}
-            
-            <MatchForm onMatchCreate={handleMatchCreate} disabled={!user || loading} />
+            <MatchForm
+              onMatchCreate={handleMatchCreate}
+              disabled={loading}
+              submitLabel={submitLabel}
+              submitButtonType={requiresLogin ? "button" : "submit"}
+              onSubmitButtonClick={requiresLogin ? () => router.push("/auth?mode=signin") : undefined}
+            />
           </div>
 
           <div className="slide-in-left">
@@ -124,10 +135,14 @@ export default function CreateMatch() {
                     <span className="font-medium text-muted-foreground">Formato:</span>
                     <span className="text-card-foreground font-medium">{createdMatch.playersPerTeam} vs {createdMatch.playersPerTeam}</span>
                   </div>
+                  <div className="flex justify-between items-center border-b border-border pb-3">
+                    <span className="font-medium text-muted-foreground">Valor de la cancha:</span>
+                    <span className="text-card-foreground font-medium">{formatCurrency(createdMatch.fieldCost)}</span>
+                  </div>
                   <div className="flex justify-between items-center pt-3">
                     <span className="font-medium text-muted-foreground">Aporte por jugador:</span>
                     <span className="font-bold text-primary text-xl">
-                      ${createdMatch.costPerPlayer.toLocaleString()}
+                      {formatCurrency(createdMatch.costPerPlayer)}
                     </span>
                   </div>
                 </div>
