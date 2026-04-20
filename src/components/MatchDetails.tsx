@@ -317,6 +317,12 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       const nextLocation = editForm.location.trim();
       const nextDate = `${editForm.date}T${editForm.time}:00`;
 
+      console.log('[EditMatch] Intentando guardar cambios:', {
+        location: nextLocation,
+        date: nextDate,
+        max_players: nextMaxPlayers,
+      });
+
       const { data, error } = await updateMatch(matchId, {
         title: `Partido en ${nextLocation}`,
         location: nextLocation,
@@ -325,13 +331,16 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       });
 
       if (error || !data) {
+        console.error('[EditMatch] Error en respuesta:', error);
         throw error || new Error("No se pudieron guardar los cambios");
       }
 
+      console.log('[EditMatch] ✅ Cambios guardados exitosamente:', data);
+      
       setMatchData(data as MatchData);
-      setShowEditForm(false);
-      setEditMessage("Partido actualizado correctamente.");
+      setEditMessage("✓ ¡Partido actualizado correctamente!");
 
+      // Update localStorage with new pricing info
       setStoredMatchPricing((currentPricing) => {
         if (!currentPricing) {
           return currentPricing;
@@ -374,9 +383,17 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
         return updatedPricing;
       });
+
+      // Close form after a short delay to show success message
+      setTimeout(() => {
+        setShowEditForm(false);
+        setEditMessage(null);
+      }, 1500);
+
     } catch (err) {
-      console.error("Error updating match:", err);
-      setEditMessage("No se pudo actualizar el partido. Intenta nuevamente.");
+      console.error("[EditMatch] Exception:", err);
+      const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar el partido. Intenta nuevamente.";
+      setEditMessage(`❌ ${errorMessage}`);
     } finally {
       setEditLoading(false);
     }
@@ -739,6 +756,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   onClick={() => {
                     setShowEditForm(true);
                     setEditMessage(null);
+                    setEditLoading(false);
                   }}
                   className="rounded border border-green-500/40 bg-green-500/20 px-4 py-2 text-sm font-semibold text-green-300 transition hover:bg-green-500/30"
                 >
@@ -842,17 +860,25 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   />
                 </div>
                 {editMessage && (
-                  <p className={`text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
+                  <div className={`rounded px-4 py-3 text-sm font-medium ${
+                    editMessage.includes("✓")
+                      ? "border border-green-500 bg-green-500/20 text-green-300"
+                      : "border border-red-500 bg-red-500/20 text-red-300"
+                  }`}>
                     {editMessage}
-                  </p>
+                  </div>
                 )}
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 rounded bg-green-500 px-4 py-2 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                    disabled={editLoading}
+                    className={`flex-1 rounded px-4 py-2 font-semibold text-white transition ${
+                      editLoading || editMessage?.includes("✓")
+                        ? "cursor-not-allowed bg-slate-600 opacity-60"
+                        : "bg-green-500 hover:bg-green-600"
+                    }`}
+                    disabled={editLoading || editMessage?.includes("✓")}
                   >
-                    {editLoading ? "Guardando..." : "Guardar cambios"}
+                    {editLoading ? "Guardando..." : editMessage?.includes("✓") ? "✓ Guardado" : "Guardar cambios"}
                   </button>
                   <button
                     type="button"
@@ -860,7 +886,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                       setShowEditForm(false);
                       setEditMessage(null);
                     }}
-                    className="flex-1 rounded bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-800"
+                    className="flex-1 rounded bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={editLoading}
                   >
                     Cancelar
