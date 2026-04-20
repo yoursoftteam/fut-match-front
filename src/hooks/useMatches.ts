@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
+const MAX_SUBSTITUTE_SLOTS = 5
+
 interface Match {
   id: string
   title: string
@@ -150,19 +152,22 @@ export function useMatches() {
       const registrations = currentRegistrations || []
       const currentGoalkeepers = registrations.filter((registration) => registration.is_goalkeeper).length
       const currentFieldPlayers = registrations.length - currentGoalkeepers
+      const isSubstituteSlot = registrations.length >= maxPlayers
 
-      if (isGoalkeeper) {
-        if (currentGoalkeepers >= reservedGoalkeeperSlots) {
-          throw new Error('Ya se completaron los cupos de arqueros (máximo 2).')
-        }
-      } else {
-        if (currentFieldPlayers >= maxFieldPlayers) {
-          throw new Error('Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.')
-        }
+      if (registrations.length >= maxPlayers + MAX_SUBSTITUTE_SLOTS) {
+        throw new Error('No hay cupos disponibles, ni siquiera como suplente.')
       }
 
-      if (registrations.length >= maxPlayers) {
-        throw new Error('El partido ya está completo.')
+      if (!isSubstituteSlot) {
+        if (isGoalkeeper) {
+          if (currentGoalkeepers >= reservedGoalkeeperSlots) {
+            throw new Error('Ya se completaron los cupos de arqueros (máximo 2).')
+          }
+        } else {
+          if (currentFieldPlayers >= maxFieldPlayers) {
+            throw new Error('Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.')
+          }
+        }
       }
 
       const { data, error } = await supabase

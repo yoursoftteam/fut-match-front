@@ -41,6 +41,7 @@ interface MatchEditFormData {
 }
 
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
+const MAX_SUBSTITUTE_SLOTS = 5;
 
 function clampPlayersPerTeam(value: number): number {
   if (value < PLAYER_OPTIONS[0]) {
@@ -412,14 +413,20 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     minute: "2-digit",
   });
 
-  const playersRemaining = Math.max(0, matchData.max_players - registrations.length);
-  const registeredPercent = matchData.max_players > 0 ? Math.round((registrations.length / matchData.max_players) * 100) : 0;
+  const titulares = registrations.slice(0, matchData.max_players);
+  const suplentes = registrations.slice(matchData.max_players);
+
+  const playersRemaining = Math.max(0, matchData.max_players - titulares.length);
+  const substituteSlotsFree = Math.max(0, MAX_SUBSTITUTE_SLOTS - suplentes.length);
+  const registeredPercent = matchData.max_players > 0 ? Math.round((titulares.length / matchData.max_players) * 100) : 0;
   const maxGoalkeepers = Math.min(2, matchData.max_players);
   const maxFieldPlayers = Math.max(0, matchData.max_players - maxGoalkeepers);
-  const goalkeepersCount = registrations.filter((registration) => registration.is_goalkeeper).length;
-  const fieldPlayersCount = registrations.length - goalkeepersCount;
+  const goalkeepersCount = titulares.filter((registration) => registration.is_goalkeeper).length;
+  const fieldPlayersCount = titulares.length - goalkeepersCount;
   const goalkeepersRemaining = Math.max(0, maxGoalkeepers - goalkeepersCount);
   const fieldPlayersRemaining = Math.max(0, maxFieldPlayers - fieldPlayersCount);
+  const isTitularFull = titulares.length >= matchData.max_players;
+  const isSubstituteFull = suplentes.length >= MAX_SUBSTITUTE_SLOTS;
   const isCreator = Boolean(user && user.id === matchData.created_by);
 
   return (
@@ -430,7 +437,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
           <h1 className="text-3xl font-bold text-white">{matchData.title}</h1>
           <p className="mt-2 text-slate-300">Fecha: {formattedDate} - Hora: {formattedTime}</p>
           <p className="mt-2 text-slate-300">Ubicación: {matchData.location}</p>
-          <p className="mt-2 text-slate-300">Jugadores: {registrations.length}/{matchData.max_players} ({registeredPercent}% completo)</p>
+          <p className="mt-2 text-slate-300">Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo){suplentes.length > 0 ? ` · Suplentes: ${suplentes.length}/${MAX_SUBSTITUTE_SLOTS}` : ""}</p>
           {storedMatchPricing && (
             <div className="mt-4 grid gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4 text-sm text-slate-200 sm:grid-cols-3">
               <div>
@@ -449,8 +456,10 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
           )}
           {playersRemaining > 0 ? (
             <p className="mt-2 text-green-400">{playersRemaining} cupos libres</p>
+          ) : substituteSlotsFree > 0 ? (
+            <p className="mt-2 text-amber-400">Titulares completos · {substituteSlotsFree} cupo{substituteSlotsFree !== 1 ? "s" : ""} de suplente disponible{substituteSlotsFree !== 1 ? "s" : ""}</p>
           ) : (
-            <p className="mt-2 text-red-400">Partido completo</p>
+            <p className="mt-2 text-red-400">Partido y lista de suplentes completos</p>
           )}
           {isCreator && !showEditForm && (
             <button
@@ -604,6 +613,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
               <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
               <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
+              {isTitularFull && (
+                <p className="mt-2 border-t border-slate-700 pt-2 text-amber-300">
+                  {isSubstituteFull
+                    ? "Lista de suplentes también completa."
+                    : `Suplentes: ${suplentes.length}/${MAX_SUBSTITUTE_SLOTS} · al inscribirte entras como suplente`}
+                </p>
+              )}
             </div>
 
             {registrationMessage && (
@@ -619,10 +635,20 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             {!showRegistrationForm ? (
               <button
                 onClick={() => setShowRegistrationForm(true)}
-                className="w-full bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition"
-                disabled={registrations.length >= matchData.max_players}
+                className={`w-full py-2 px-4 rounded transition font-semibold ${
+                  isTitularFull && !isSubstituteFull
+                    ? "bg-amber-500 text-white hover:bg-amber-600"
+                    : isTitularFull && isSubstituteFull
+                    ? "bg-slate-700 text-slate-400 cursor-not-allowed"
+                    : "bg-green-500 text-white hover:bg-green-600"
+                }`}
+                disabled={isTitularFull && isSubstituteFull}
               >
-                {registrations.length >= matchData.max_players ? "Partido completo" : "Inscribirme"}
+                {isTitularFull && isSubstituteFull
+                  ? "Sin cupos disponibles"
+                  : isTitularFull
+                  ? "Inscribirme como suplente"
+                  : "Inscribirme"}
               </button>
             ) : (
               <form onSubmit={handleRegistrationSubmit} className="space-y-4">
@@ -665,9 +691,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     className="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition font-semibold"
                     disabled={
                       registrationLoading ||
-                      registrations.length >= matchData.max_players ||
-                      (registrationForm.isGoalkeeper && goalkeepersRemaining <= 0) ||
-                      (!registrationForm.isGoalkeeper && fieldPlayersRemaining <= 0)
+                      (isTitularFull && isSubstituteFull) ||
+                      (!isTitularFull && registrationForm.isGoalkeeper && goalkeepersRemaining <= 0) ||
+                      (!isTitularFull && !registrationForm.isGoalkeeper && fieldPlayersRemaining <= 0)
                     }
                   >
                     {registrationLoading ? "Registrando..." : "Confirmar inscripción"}
@@ -691,11 +717,15 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
           <div className="bg-[hsl(220,18%,10%)] rounded-lg p-6 shadow border border-slate-800">
             <h2 className="text-2xl font-bold text-white mb-4">Jugadores inscritos ({registrations.length})</h2>
             <div className="space-y-2">
-              {registrations.map((registration) => (
+              {titulares.length > 0 && (
+                <p className="text-xs font-semibold uppercase tracking-wide text-green-400 mb-1">Titulares ({titulares.length}/{matchData.max_players})</p>
+              )}
+              {titulares.map((registration, index) => (
                 <div key={registration.id} className="flex justify-between items-center p-3 bg-[hsl(220,16%,14%)] rounded hover:bg-[hsl(220,16%,18%)] transition border border-slate-700">
                   <div className="flex-1">
-                    <span className="font-medium text-white block">{registration.name}</span>
-                    <span className="text-sm text-slate-400">
+                    <span className="text-xs text-slate-500 mr-2">#{index + 1}</span>
+                    <span className="font-medium text-white">{registration.name}</span>
+                    <span className="text-sm text-slate-400 block mt-0.5">
                       {registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}
                     </span>
                   </div>
@@ -708,6 +738,32 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   </button>
                 </div>
               ))}
+
+              {suplentes.length > 0 && (
+                <>
+                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-400 mt-4 mb-1">Suplentes ({suplentes.length}/{MAX_SUBSTITUTE_SLOTS})</p>
+                  <p className="text-xs text-slate-500 mb-2">El primero en la lista entra automáticamente si un titular se baja.</p>
+                  {suplentes.map((registration, index) => (
+                    <div key={registration.id} className="flex justify-between items-center p-3 bg-[hsl(220,16%,14%)] rounded hover:bg-[hsl(220,16%,18%)] transition border border-amber-800/40">
+                      <div className="flex-1">
+                        <span className="inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300 mr-2">S{index + 1}</span>
+                        <span className="font-medium text-white">{registration.name}</span>
+                        <span className="text-sm text-slate-400 block mt-0.5">
+                          {registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}
+                        </span>
+                      </div>
+                      <button
+                        onClick={() => handleUnregisterClick(registration)}
+                        className="ml-4 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition"
+                        title="Darse de baja"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  ))}
+                </>
+              )}
+
               {registrations.length === 0 && (
                 <p className="text-slate-400 text-center py-4">Aún no hay jugadores inscritos</p>
               )}
