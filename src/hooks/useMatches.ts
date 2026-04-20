@@ -12,14 +12,6 @@ interface Match {
   created_by: string
 }
 
-interface MatchRegistration {
-  id: string
-  match_id: string
-  name: string
-  is_goalkeeper: boolean
-  registered_at: string
-}
-
 export function useMatches() {
   const [matches, setMatches] = useState<Match[]>([])
   const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({})
@@ -73,6 +65,29 @@ export function useMatches() {
       return { data, error: null }
     } catch (error) {
       console.error('Error creating match:', error)
+      return { data: null, error }
+    }
+  }
+
+  const updateMatch = async (
+    matchId: string,
+    updates: Pick<Match, 'title' | 'location' | 'date' | 'max_players'>,
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .update(updates)
+        .eq('id', matchId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setMatches(prev => prev.map((match) => (match.id === matchId ? data : match)))
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error updating match:', error)
       return { data: null, error }
     }
   }
@@ -187,6 +202,7 @@ export function useMatches() {
     loading,
     registrationCounts,
     createMatch,
+    updateMatch,
     getMatchById,
     getMatchRegistrations,
     registerForMatch,

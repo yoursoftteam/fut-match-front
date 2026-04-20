@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMatches } from "@/hooks/useMatches";
 import { useMatchRegistrationsRealtime } from "@/hooks/useMatchRegistrationsRealtime";
+import { useAuth } from "@/hooks/useAuth";
 import { formatCurrency } from "@/lib/currency";
 import { Trash2 } from "lucide-react";
 
@@ -31,6 +32,28 @@ interface StoredMatchPricing {
   playersPerTeam: number;
 }
 
+interface MatchEditFormData {
+  location: string;
+  date: string;
+  time: string;
+  playersPerTeam: number;
+  fieldCost: number;
+}
+
+const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
+
+function clampPlayersPerTeam(value: number): number {
+  if (value < PLAYER_OPTIONS[0]) {
+    return PLAYER_OPTIONS[0];
+  }
+
+  if (value > PLAYER_OPTIONS[PLAYER_OPTIONS.length - 1]) {
+    return PLAYER_OPTIONS[PLAYER_OPTIONS.length - 1];
+  }
+
+  return value;
+}
+
 export default function MatchDetails({ matchId }: { matchId: string }) {
   const [matchData, setMatchData] = useState<MatchData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -46,9 +69,22 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const [unregisterTarget, setUnregisterTarget] = useState<PlayerRegistration | null>(null);
   const [unregisterLoading, setUnregisterLoading] = useState(false);
   const [storedMatchPricing, setStoredMatchPricing] = useState<StoredMatchPricing | null>(null);
-  
-  const { getMatchById, registerForMatch, unregisterFromMatch } = useMatches();
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
+  const [editMessage, setEditMessage] = useState<string | null>(null);
+  const [editForm, setEditForm] = useState<MatchEditFormData>({
+    location: "",
+    date: "",
+    time: "",
+    playersPerTeam: PLAYER_OPTIONS[0],
+    fieldCost: 0,
+  });
+  const [editFieldCostInput, setEditFieldCostInput] = useState("");
+  const editFieldCostRef = useRef<HTMLInputElement>(null);
+
+  const { getMatchById, updateMatch, registerForMatch, unregisterFromMatch } = useMatches();
   const { registrations = [] } = useMatchRegistrationsRealtime(matchId);
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchMatchData = async () => {
@@ -117,6 +153,28 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     }
   }, [matchId]);
 
+  useEffect(() => {
+    if (!matchData) {
+      return;
+    }
+
+    const [datePart = "", timePartRaw = ""] = matchData.date.split("T");
+
+    const initialFieldCost = storedMatchPricing?.fieldCost ?? 0;
+
+    setEditForm({
+      location: matchData.location,
+      date: datePart,
+      time: timePartRaw.slice(0, 5),
+      playersPerTeam: clampPlayersPerTeam(Math.round(matchData.max_players / 2)),
+      fieldCost: initialFieldCost,
+    });
+
+    setEditFieldCostInput(
+      initialFieldCost > 0 ? formatCurrency(initialFieldCost) : "",
+    );
+  }, [matchData, storedMatchPricing]);
+
   const handleRegistrationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!registrationForm.name.trim()) return;
@@ -178,6 +236,136 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     }));
   };
 
+  const handleEditInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+
+    if (name === "fieldCost") {
+      const selectionStart =
+        e.target instanceof HTMLInputElement ? (e.target.selectionStart ?? value.length) : value.length;
+      const digitsBeforeCursor = value.slice(0, selectionStart).replace(/\D/g, "").length;
+      const numericValue = value.replace(/\D/g, "");
+      const formattedValue = numericValue === "" ? "" : formatCurrency(Number(numericValue));
+
+      setEditFieldCostInput(formattedValue);
+      setEditForm(prev => ({ ...prev, fieldCost: numericValue === "" ? 0 : Number(numericValue) }));
+
+      requestAnimationFrame(() => {
+        const input = editFieldCostRef.current;
+        if (!input) return;
+
+        let digitsSeen = 0;
+        let nextPos = formattedValue.length;
+        for (let i = 0; i < formattedValue.length; i += 1) {
+          if (/\d/.test(formattedValue[i])) digitsSeen += 1;
+          if (digitsSeen >= Math.min(digitsBeforeCursor, numericValue.length)) {
+            nextPos = i + 1;
+            break;
+          }
+        }
+        input.setSelectionRange(nextPos, nextPos);
+      });
+      return;
+    }
+
+    setEditForm(prev => ({
+      ...prev,
+      [name]: name === "playersPerTeam" ? Number(value) : value,
+    }));
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (!matchData || !user || user.id !== matchData.created_by) {
+      setEditMessage("Solo el creador del partido puede editar esta información.");
+      return;
+    }
+
+    if (!editForm.location.trim() || !editForm.date || !editForm.time) {
+      setEditMessage("Completa todos los campos para guardar los cambios.");
+      return;
+    }
+
+    const selectedPlayersPerTeam = clampPlayersPerTeam(editForm.playersPerTeam);
+    const nextMaxPlayers = selectedPlayersPerTeam * 2;
+
+    if (nextMaxPlayers < registrations.length) {
+      setEditMessage(`No puedes reducir los cupos por debajo de los ${registrations.length} jugadores ya inscritos.`);
+      return;
+    }
+
+    setEditLoading(true);
+    setEditMessage(null);
+
+    try {
+      const nextLocation = editForm.location.trim();
+      const nextDate = `${editForm.date}T${editForm.time}:00`;
+
+      const { data, error } = await updateMatch(matchId, {
+        title: `Partido en ${nextLocation}`,
+        location: nextLocation,
+        date: nextDate,
+        max_players: nextMaxPlayers,
+      });
+
+      if (error || !data) {
+        throw error || new Error("No se pudieron guardar los cambios");
+      }
+
+      setMatchData(data as MatchData);
+      setShowEditForm(false);
+      setEditMessage("Partido actualizado correctamente.");
+
+      setStoredMatchPricing((currentPricing) => {
+        if (!currentPricing) {
+          return currentPricing;
+        }
+
+        const nextFieldCost = editForm.fieldCost > 0 ? editForm.fieldCost : currentPricing.fieldCost;
+
+        const updatedPricing: StoredMatchPricing = {
+          ...currentPricing,
+          fieldCost: nextFieldCost,
+          playersPerTeam: selectedPlayersPerTeam,
+          costPerPlayer: Math.round(nextFieldCost / nextMaxPlayers),
+        };
+
+        try {
+          const storedMatches = localStorage.getItem("matches");
+          if (storedMatches) {
+            const parsedMatches = JSON.parse(storedMatches) as Array<Record<string, unknown>>;
+            const nextMatches = parsedMatches.map((storedMatch) => {
+              if (storedMatch.id !== matchId) {
+                return storedMatch;
+              }
+
+              return {
+                ...storedMatch,
+                location: nextLocation,
+                date: editForm.date,
+                time: editForm.time,
+                fieldCost: updatedPricing.fieldCost,
+                playersPerTeam: selectedPlayersPerTeam,
+                totalPlayers: nextMaxPlayers,
+                costPerPlayer: updatedPricing.costPerPlayer,
+              };
+            });
+            localStorage.setItem("matches", JSON.stringify(nextMatches));
+          }
+        } catch (err) {
+          console.error("Error updating match pricing in localStorage", err);
+        }
+
+        return updatedPricing;
+      });
+    } catch (err) {
+      console.error("Error updating match:", err);
+      setEditMessage("No se pudo actualizar el partido. Intenta nuevamente.");
+    } finally {
+      setEditLoading(false);
+    }
+  };
+
   const handleUnregisterClick = (registration: PlayerRegistration) => {
     setUnregisterTarget(registration);
     setShowUnregisterModal(true);
@@ -232,6 +420,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const fieldPlayersCount = registrations.length - goalkeepersCount;
   const goalkeepersRemaining = Math.max(0, maxGoalkeepers - goalkeepersCount);
   const fieldPlayersRemaining = Math.max(0, maxFieldPlayers - fieldPlayersCount);
+  const isCreator = Boolean(user && user.id === matchData.created_by);
 
   return (
     <div className="min-h-screen py-10 px-4 text-white">
@@ -263,7 +452,148 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
           ) : (
             <p className="mt-2 text-red-400">Partido completo</p>
           )}
+          {isCreator && !showEditForm && (
+            <button
+              type="button"
+              onClick={() => {
+                setShowEditForm(true);
+                setEditMessage(null);
+              }}
+              className="mt-4 rounded border border-green-500/40 bg-green-500/20 px-4 py-2 font-semibold text-green-300 transition hover:bg-green-500/30"
+            >
+              Editar información del partido
+            </button>
+          )}
+          {isCreator && !showEditForm && editMessage && (
+            <p className={`mt-3 text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
+              {editMessage}
+            </p>
+          )}
         </div>
+
+        {isCreator && showEditForm && (
+          <div className="rounded-lg border border-green-700/50 bg-[hsl(220,18%,10%)] p-6 shadow">
+            <h2 className="mb-4 text-2xl font-bold text-white">Editar partido</h2>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div>
+                <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-slate-200">
+                  Ubicación
+                </label>
+                <input
+                  id="edit-location"
+                  name="location"
+                  value={editForm.location}
+                  onChange={handleEditInputChange}
+                  className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                  placeholder="Ej: Cancha Central"
+                  required
+                />
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <label htmlFor="edit-date" className="mb-2 block text-sm font-medium text-slate-200">
+                    Fecha
+                  </label>
+                  <input
+                    type="date"
+                    id="edit-date"
+                    name="date"
+                    value={editForm.date}
+                    onChange={handleEditInputChange}
+                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="edit-time" className="mb-2 block text-sm font-medium text-slate-200">
+                    Hora
+                  </label>
+                  <input
+                    type="time"
+                    id="edit-time"
+                    name="time"
+                    value={editForm.time}
+                    onChange={handleEditInputChange}
+                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                    required
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label htmlFor="edit-playersPerTeam" className="mb-2 block text-sm font-medium text-slate-200">
+                  Jugadores por equipo
+                </label>
+                <select
+                  id="edit-playersPerTeam"
+                  name="playersPerTeam"
+                  value={editForm.playersPerTeam}
+                  onChange={handleEditInputChange}
+                  className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                >
+                  {PLAYER_OPTIONS.map((num) => (
+                    <option key={num} value={num}>
+                      {num} vs {num}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label htmlFor="edit-fieldCost" className="mb-2 block text-sm font-medium text-slate-200">
+                  Valor de la Cancha ($)
+                </label>
+                <input
+                  id="edit-fieldCost"
+                  name="fieldCost"
+                  ref={editFieldCostRef}
+                  value={editFieldCostInput}
+                  onChange={handleEditInputChange}
+                  inputMode="numeric"
+                  autoComplete="off"
+                  className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                  placeholder="Ej: $ 200.000"
+                />
+                {editForm.fieldCost > 0 && (
+                  <p className="mt-1 text-xs text-slate-400">
+                    Aporte por jugador:{" "}
+                    <span className="font-semibold text-white">
+                      {formatCurrency(Math.round(editForm.fieldCost / (editForm.playersPerTeam * 2)))}
+                    </span>
+                  </p>
+                )}
+              </div>
+
+              {editMessage && (
+                <p className={`text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
+                  {editMessage}
+                </p>
+              )}
+
+              <div className="flex gap-3">
+                <button
+                  type="submit"
+                  className="flex-1 rounded bg-green-500 px-4 py-2 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                  disabled={editLoading}
+                >
+                  {editLoading ? "Guardando..." : "Guardar cambios"}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditForm(false);
+                    setEditMessage(null);
+                  }}
+                  className="flex-1 rounded bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-800"
+                  disabled={editLoading}
+                >
+                  Cancelar
+                </button>
+              </div>
+            </form>
+          </div>
+        )}
 
         {/* Registration Section */}
         <div className="grid gap-6 md:grid-cols-2">
