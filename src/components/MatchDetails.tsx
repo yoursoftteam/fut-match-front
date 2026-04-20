@@ -43,6 +43,8 @@ interface MatchEditFormData {
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
 const MAX_SUBSTITUTE_SLOTS = 5;
 
+type TeamZone = "A" | "B" | "pool";
+
 function clampPlayersPerTeam(value: number): number {
   if (value < PLAYER_OPTIONS[0]) {
     return PLAYER_OPTIONS[0];
@@ -83,8 +85,19 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const [editFieldCostInput, setEditFieldCostInput] = useState("");
   const editFieldCostRef = useRef<HTMLInputElement>(null);
 
+  const [showTeamBuilder, setShowTeamBuilder] = useState(false);
+  const [teamA, setTeamA] = useState<PlayerRegistration[]>([]);
+  const [teamB, setTeamB] = useState<PlayerRegistration[]>([]);
+  const [unassigned, setUnassigned] = useState<PlayerRegistration[]>([]);
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  const draggingIdRef = useRef<string | null>(null);
+  const [dragOverZone, setDragOverZone] = useState<TeamZone | null>(null);
+  const [teamSaved, setTeamSaved] = useState(false);
+  const [teamBuilderMessage, setTeamBuilderMessage] = useState<string | null>(null);
+  const [hasAutoLoadedTeams, setHasAutoLoadedTeams] = useState(false);
+
   const { getMatchById, updateMatch, registerForMatch, unregisterFromMatch } = useMatches();
-  const { registrations = [] } = useMatchRegistrationsRealtime(matchId);
+  const { registrations = [], loading: registrationsLoading } = useMatchRegistrationsRealtime(matchId);
   const { user } = useAuth();
 
   useEffect(() => {
@@ -372,6 +385,234 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     setShowUnregisterModal(true);
   };
 
+  const loadSavedTeamBuilder = (players: PlayerRegistration[]) => {
+    try {
+      const saved = localStorage.getItem(`teams-${matchId}`);
+      if (!saved) {
+        return false;
+      }
+
+      const { teamA: savedTeamA, teamB: savedTeamB, unassigned: savedUnassigned } = JSON.parse(saved) as {
+        teamA: PlayerRegistration[];
+        teamB: PlayerRegistration[];
+        unassigned: PlayerRegistration[];
+      };
+
+      const savedIds = new Set([...savedTeamA, ...savedTeamB, ...savedUnassigned].map((player) => player.id));
+      const currentIds = new Set(players.map((player) => player.id));
+      const isSameRoster = savedIds.size === currentIds.size && [...currentIds].every((id) => savedIds.has(id));
+
+      if (!isSameRoster) {
+        return false;
+      }
+
+      const playersPerTeamLimit = Math.ceil((matchData?.max_players ?? 0) / 2);
+      if (playersPerTeamLimit > 0 && (savedTeamA.length > playersPerTeamLimit || savedTeamB.length > playersPerTeamLimit)) {
+        return false;
+      }
+
+      setTeamA(savedTeamA);
+      setTeamB(savedTeamB);
+      setUnassigned(savedUnassigned);
+      setDraggingId(null);
+      setDragOverZone(null);
+      setTeamBuilderMessage(null);
+
+      return true;
+    } catch {
+      return false;
+    }
+  };
+
+  const initTeamBuilder = (players: PlayerRegistration[]) => {
+    if (loadSavedTeamBuilder(players)) {
+      return;
+    }
+
+    // Default: goalkeepers auto-assigned, field players in pool
+    const goalkeepers = players.filter((p) => p.is_goalkeeper);
+    const fieldPlayers = players.filter((p) => !p.is_goalkeeper);
+    setTeamA(goalkeepers[0] ? [goalkeepers[0]] : []);
+    setTeamB(goalkeepers[1] ? [goalkeepers[1]] : []);
+    setUnassigned(fieldPlayers);
+    setDraggingId(null);
+    setDragOverZone(null);
+    setTeamBuilderMessage(null);
+  };
+
+  const resetTeamBuilder = () => {
+    try { localStorage.removeItem(`teams-${matchId}`); } catch { /* ignore */ }
+    setTeamSaved(false);
+    setTeamBuilderMessage(null);
+    const goalkeepers = titulares.filter((p) => p.is_goalkeeper);
+    const fieldPlayers = titulares.filter((p) => !p.is_goalkeeper);
+    setTeamA(goalkeepers[0] ? [goalkeepers[0]] : []);
+    setTeamB(goalkeepers[1] ? [goalkeepers[1]] : []);
+    setUnassigned(fieldPlayers);
+    setDraggingId(null);
+    setDragOverZone(null);
+  };
+
+  const saveTeams = () => {
+    try {
+      localStorage.setItem(`teams-${matchId}`, JSON.stringify({ teamA, teamB, unassigned }));
+      setTeamSaved(true);
+      setTeamBuilderMessage("Equipos guardados correctamente.");
+      setTimeout(() => setTeamSaved(false), 2500);
+      setTimeout(() => setTeamBuilderMessage(null), 2500);
+    } catch {
+      setTeamBuilderMessage("No se pudieron guardar los equipos.");
+    }
+  };
+
+  const getActiveDraggingId = () => draggingIdRef.current ?? draggingId;
+
+  const handlePlayerDragStart = (event: React.DragEvent<HTMLDivElement>, playerId: string) => {
+    draggingIdRef.current = playerId;
+    setDraggingId(playerId);
+    event.dataTransfer.setData("text/plain", playerId);
+    event.dataTransfer.effectAllowed = "move";
+  };
+
+  const handlePlayerDragEnd = () => {
+    draggingIdRef.current = null;
+    setDraggingId(null);
+    setDragOverZone(null);
+  };
+
+  const handleDropOnZone = (targetZone: TeamZone) => {
+    const activeDraggingId = getActiveDraggingId();
+    if (!activeDraggingId) return;
+    setDragOverZone(null);
+
+    const allZones: [TeamZone, PlayerRegistration[]][] = [
+      ["A", teamA],
+      ["B", teamB],
+      ["pool", unassigned],
+    ];
+    let player: PlayerRegistration | undefined;
+    let sourceZone: TeamZone | undefined;
+    for (const [zone, list] of allZones) {
+      const found = list.find((p) => p.id === activeDraggingId);
+      if (found) { player = found; sourceZone = zone; break; }
+    }
+
+    draggingIdRef.current = null;
+    setDraggingId(null);
+    if (!player || !sourceZone || sourceZone === targetZone) return;
+
+    const playersPerTeamLimit = Math.ceil((matchData?.max_players ?? 0) / 2);
+    if (targetZone === "A" && teamA.length >= playersPerTeamLimit) {
+      setTeamBuilderMessage(`El equipo A ya está completo (${playersPerTeamLimit}).`);
+      return;
+    }
+
+    if (targetZone === "B" && teamB.length >= playersPerTeamLimit) {
+      setTeamBuilderMessage(`El equipo B ya está completo (${playersPerTeamLimit}).`);
+      return;
+    }
+
+    setTeamBuilderMessage(null);
+
+    const withoutPlayer = (list: PlayerRegistration[]) => list.filter((p) => p.id !== player!.id);
+    if (sourceZone === "A") setTeamA(withoutPlayer(teamA));
+    else if (sourceZone === "B") setTeamB(withoutPlayer(teamB));
+    else setUnassigned(withoutPlayer(unassigned));
+
+    if (targetZone === "A") setTeamA((prev) => [...prev, player!]);
+    else if (targetZone === "B") setTeamB((prev) => [...prev, player!]);
+    else setUnassigned((prev) => [...prev, player!]);
+  };
+
+  const getSourceZoneByPlayerId = (playerId: string): TeamZone | null => {
+    if (teamA.some((player) => player.id === playerId)) return "A";
+    if (teamB.some((player) => player.id === playerId)) return "B";
+    if (unassigned.some((player) => player.id === playerId)) return "pool";
+    return null;
+  };
+
+  const canDropInZone = (targetZone: TeamZone): boolean => {
+    const activeDraggingId = getActiveDraggingId();
+    if (!activeDraggingId) return false;
+
+    const sourceZone = getSourceZoneByPlayerId(activeDraggingId);
+    if (!sourceZone || sourceZone === targetZone) {
+      return false;
+    }
+
+    if (targetZone === "A") {
+      return teamA.length < playersPerTeamLimit;
+    }
+
+    if (targetZone === "B") {
+      return teamB.length < playersPerTeamLimit;
+    }
+
+    return true;
+  };
+
+  const canSwapWithPlayer = (targetZone: TeamZone, targetPlayerId: string): boolean => {
+    const activeDraggingId = getActiveDraggingId();
+    if (!activeDraggingId || (targetZone !== "A" && targetZone !== "B")) {
+      return false;
+    }
+
+    const sourceZone = getSourceZoneByPlayerId(activeDraggingId);
+    if (!sourceZone || sourceZone === "pool" || sourceZone === targetZone) {
+      return false;
+    }
+
+    const targetList = targetZone === "A" ? teamA : teamB;
+    const sourceList = sourceZone === "A" ? teamA : teamB;
+
+    if (targetList.length < playersPerTeamLimit || sourceList.length < playersPerTeamLimit) {
+      return false;
+    }
+
+    return targetList.some((player) => player.id === targetPlayerId);
+  };
+
+  const handleDropOnPlayer = (targetZone: TeamZone, targetPlayerId: string) => {
+    const activeDraggingId = getActiveDraggingId();
+    if (!activeDraggingId || !canSwapWithPlayer(targetZone, targetPlayerId)) {
+      return;
+    }
+
+    const sourceZone = getSourceZoneByPlayerId(activeDraggingId);
+    if (!sourceZone || sourceZone === "pool" || sourceZone === targetZone) {
+      return;
+    }
+
+    const sourceList = sourceZone === "A" ? [...teamA] : [...teamB];
+    const targetList = targetZone === "A" ? [...teamA] : [...teamB];
+
+    const sourceIndex = sourceList.findIndex((player) => player.id === activeDraggingId);
+    const targetIndex = targetList.findIndex((player) => player.id === targetPlayerId);
+
+    if (sourceIndex < 0 || targetIndex < 0) {
+      return;
+    }
+
+    const sourcePlayer = sourceList[sourceIndex];
+    const targetPlayer = targetList[targetIndex];
+
+    sourceList[sourceIndex] = targetPlayer;
+    targetList[targetIndex] = sourcePlayer;
+
+    if (sourceZone === "A") {
+      setTeamA(sourceList);
+      setTeamB(targetList);
+    } else {
+      setTeamB(sourceList);
+      setTeamA(targetList);
+    }
+
+    draggingIdRef.current = null;
+    setDraggingId(null);
+    setDragOverZone(null);
+    setTeamBuilderMessage(`Intercambio realizado entre Equipo ${sourceZone} y Equipo ${targetZone}.`);
+  };
+
   const handleUnregister = async () => {
     if (!unregisterTarget) return;
 
@@ -388,6 +629,28 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       setUnregisterLoading(false);
     }
   };
+
+  const isCreator = Boolean(user && matchData && user.id === matchData.created_by);
+
+  useEffect(() => {
+    if (hasAutoLoadedTeams || registrationsLoading || !isCreator || !matchData) {
+      return;
+    }
+
+    const currentTitulares = registrations.slice(0, matchData.max_players);
+    if (loadSavedTeamBuilder(currentTitulares)) {
+      setShowTeamBuilder(true);
+    }
+
+    setHasAutoLoadedTeams(true);
+  }, [
+    hasAutoLoadedTeams,
+    isCreator,
+    loadSavedTeamBuilder,
+    matchData,
+    registrations,
+    registrationsLoading,
+  ]);
 
   if (loading) {
     return <div className="text-center py-8">Cargando detalles del partido...</div>;
@@ -415,6 +678,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
   const titulares = registrations.slice(0, matchData.max_players);
   const suplentes = registrations.slice(matchData.max_players);
+  const playersPerTeamLimit = Math.ceil(matchData.max_players / 2);
 
   const playersRemaining = Math.max(0, matchData.max_players - titulares.length);
   const substituteSlotsFree = Math.max(0, MAX_SUBSTITUTE_SLOTS - suplentes.length);
@@ -427,7 +691,6 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const fieldPlayersRemaining = Math.max(0, maxFieldPlayers - fieldPlayersCount);
   const isTitularFull = titulares.length >= matchData.max_players;
   const isSubstituteFull = suplentes.length >= MAX_SUBSTITUTE_SLOTS;
-  const isCreator = Boolean(user && user.id === matchData.created_by);
 
   return (
     <div className="min-h-screen py-10 px-4 text-white">
@@ -462,16 +725,33 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             <p className="mt-2 text-red-400">Partido y lista de suplentes completos</p>
           )}
           {isCreator && !showEditForm && (
-            <button
-              type="button"
-              onClick={() => {
-                setShowEditForm(true);
-                setEditMessage(null);
-              }}
-              className="mt-4 rounded border border-green-500/40 bg-green-500/20 px-4 py-2 font-semibold text-green-300 transition hover:bg-green-500/30"
-            >
-              Editar información del partido
-            </button>
+            <div className="mt-4 flex flex-wrap gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setShowEditForm(true);
+                  setEditMessage(null);
+                }}
+                className="rounded border border-green-500/40 bg-green-500/20 px-4 py-2 font-semibold text-green-300 transition hover:bg-green-500/30"
+              >
+                Editar información del partido
+              </button>
+              {titulares.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    initTeamBuilder(titulares);
+                    setShowTeamBuilder(true);
+                    setTimeout(() => {
+                      document.getElementById("team-builder")?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }, 50);
+                  }}
+                  className="rounded border border-blue-500/40 bg-blue-500/20 px-4 py-2 font-semibold text-blue-300 transition hover:bg-blue-500/30"
+                >
+                  Armar equipos
+                </button>
+              )}
+            </div>
           )}
           {isCreator && !showEditForm && editMessage && (
             <p className={`mt-3 text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
@@ -770,6 +1050,161 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             </div>
           </div>
         </div>
+
+        {/* Team Builder */}
+        {isCreator && showTeamBuilder && (
+          <div id="team-builder" className="rounded-lg border border-blue-700/50 bg-[hsl(220,18%,10%)] p-6 shadow">
+            <div className="mb-5 flex items-center justify-between">
+              <h2 className="text-2xl font-bold text-white">Armar equipos</h2>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={saveTeams}
+                  className={`rounded border px-3 py-1.5 text-sm font-semibold transition ${
+                    teamSaved
+                      ? "border-green-600 bg-green-700 text-green-100"
+                      : "border-blue-600 bg-blue-600 text-white hover:bg-blue-500"
+                  }`}
+                >
+                  {teamSaved ? "✓ Guardado" : "Guardar equipos"}
+                </button>
+                <button
+                  type="button"
+                  onClick={resetTeamBuilder}
+                  className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-600"
+                >
+                  Reiniciar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowTeamBuilder(false)}
+                  className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-600"
+                >
+                  Cerrar
+                </button>
+              </div>
+            </div>
+
+            {teamBuilderMessage && (
+              <p className={`mb-4 text-sm ${teamBuilderMessage.includes("correctamente") ? "text-green-400" : "text-amber-400"}`}>
+                {teamBuilderMessage}
+              </p>
+            )}
+
+            {unassigned.length > 0 && (
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragOverZone("pool"); }}
+                onDrop={() => handleDropOnZone("pool")}
+                className={`mb-5 min-h-[60px] rounded-lg border-2 border-dashed p-3 transition-colors ${
+                  dragOverZone === "pool" ? "border-slate-400 bg-slate-700/40" : "border-slate-700 bg-[hsl(220,16%,14%)]"
+                }`}
+              >
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
+                  Sin equipo ({unassigned.length})
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {unassigned.map((player) => (
+                    <div
+                      key={player.id}
+                      draggable
+                      onDragStart={(event) => handlePlayerDragStart(event, player.id)}
+                      onDragEnd={handlePlayerDragEnd}
+                      className={`flex cursor-grab select-none items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-white transition active:cursor-grabbing ${
+                        draggingId === player.id ? "opacity-40" : "hover:border-slate-400"
+                      }`}
+                    >
+                      <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
+                      <span>{player.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="grid gap-4 sm:grid-cols-2">
+              {(["A", "B"] as const).map((team) => {
+                const list = team === "A" ? teamA : teamB;
+                const isOver = dragOverZone === team;
+                const accentColor = team === "A" ? "text-blue-400" : "text-red-400";
+                const isTeamFull = list.length >= playersPerTeamLimit;
+                const canDropHere = canDropInZone(team);
+                return (
+                  <div
+                    key={team}
+                    onDragOver={(e) => {
+                      const activeDraggingId = getActiveDraggingId();
+                      if (!activeDraggingId) {
+                        return;
+                      }
+
+                      if (canDropHere) {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = "move";
+                        setDragOverZone(team);
+                        return;
+                      }
+
+                      e.dataTransfer.dropEffect = "none";
+                      setDragOverZone(null);
+                    }}
+                    onDrop={() => handleDropOnZone(team)}
+                    className={`min-h-[140px] rounded-lg border-2 border-dashed p-4 transition-colors ${
+                      isOver && !isTeamFull
+                        ? "border-green-400 bg-green-900/20"
+                        : isTeamFull
+                          ? "border-red-700/60 bg-red-900/15"
+                          : "border-slate-700 bg-[hsl(220,16%,14%)]"
+                    } ${draggingId && !canDropHere ? "cursor-not-allowed" : ""}`}
+                  >
+                    <p className={`mb-3 text-sm font-bold uppercase tracking-wide ${accentColor}`}>
+                      Equipo {team} ({list.length}/{playersPerTeamLimit})
+                    </p>
+                    {isTeamFull && (
+                      <p className="mb-2 text-xs text-red-400">Equipo completo</p>
+                    )}
+                    <div className="space-y-2">
+                      {list.map((player) => (
+                        <div
+                          key={player.id}
+                          draggable
+                          onDragStart={(event) => handlePlayerDragStart(event, player.id)}
+                          onDragEnd={handlePlayerDragEnd}
+                          onDragOver={(e) => {
+                            if (canSwapWithPlayer(team, player.id)) {
+                              e.preventDefault();
+                              e.dataTransfer.dropEffect = "move";
+                            }
+                          }}
+                          onDrop={(e) => {
+                            if (canSwapWithPlayer(team, player.id)) {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleDropOnPlayer(team, player.id);
+                            }
+                          }}
+                          className={`flex cursor-grab select-none items-center gap-2 rounded border px-3 py-2 text-sm text-white transition active:cursor-grabbing ${
+                            player.is_goalkeeper
+                              ? "border-yellow-700/60 bg-yellow-900/20 hover:border-yellow-600/60"
+                              : "border-slate-700 bg-slate-800 hover:border-slate-500"
+                          } ${draggingId === player.id ? "opacity-40" : ""}`}
+                        >
+                          <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
+                          <span className="font-medium">{player.name}</span>
+                          {player.is_goalkeeper && (
+                            <span className="ml-auto text-xs text-yellow-500">Portero</span>
+                          )}
+                        </div>
+                      ))}
+                      {list.length === 0 && (
+                        <p className="py-6 text-center text-xs text-slate-500">Arrastra jugadores aquí</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* Unregister Modal */}
         {showUnregisterModal && unregisterTarget && (
