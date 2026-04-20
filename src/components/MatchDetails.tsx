@@ -44,6 +44,7 @@ const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
 const MAX_SUBSTITUTE_SLOTS = 5;
 
 type TeamZone = "A" | "B" | "pool";
+type PanelTab = "register" | "players" | "teams";
 
 function clampPlayersPerTeam(value: number): number {
   if (value < PLAYER_OPTIONS[0]) {
@@ -95,6 +96,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const [teamSaved, setTeamSaved] = useState(false);
   const [teamBuilderMessage, setTeamBuilderMessage] = useState<string | null>(null);
   const [hasAutoLoadedTeams, setHasAutoLoadedTeams] = useState(false);
+  const [activeTab, setActiveTab] = useState<PanelTab>("register");
 
   const { getMatchById, updateMatch, registerForMatch, unregisterFromMatch } = useMatches();
   const { registrations = [], loading: registrationsLoading } = useMatchRegistrationsRealtime(matchId);
@@ -652,6 +654,12 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     registrationsLoading,
   ]);
 
+  useEffect(() => {
+    if (showTeamBuilder) {
+      setActiveTab("teams");
+    }
+  }, [showTeamBuilder]);
+
   if (loading) {
     return <div className="text-center py-8">Cargando detalles del partido...</div>;
   }
@@ -694,517 +702,493 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
   return (
     <div className="min-h-screen py-10 px-4 text-white">
-      <div className="max-w-5xl mx-auto space-y-8">
-        {/* Header */}
-        <div className="bg-[hsl(220,18%,10%)] rounded-lg p-6 shadow border border-slate-800">
-          <h1 className="text-3xl font-bold text-white">{matchData.title}</h1>
-          <p className="mt-2 text-slate-300">Fecha: {formattedDate} - Hora: {formattedTime}</p>
-          <p className="mt-2 text-slate-300">Ubicación: {matchData.location}</p>
-          <p className="mt-2 text-slate-300">Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo){suplentes.length > 0 ? ` · Suplentes: ${suplentes.length}/${MAX_SUBSTITUTE_SLOTS}` : ""}</p>
-          {storedMatchPricing && (
-            <div className="mt-4 grid gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4 text-sm text-slate-200 sm:grid-cols-3">
-              <div>
-                <p className="text-slate-400">Valor de la cancha</p>
-                <p className="mt-1 font-semibold text-white">{formatCurrency(storedMatchPricing.fieldCost)}</p>
-              </div>
-              <div>
-                <p className="text-slate-400">Aporte por jugador</p>
-                <p className="mt-1 font-semibold text-white">{formatCurrency(storedMatchPricing.costPerPlayer)}</p>
-              </div>
-              <div>
-                <p className="text-slate-400">Formato</p>
-                <p className="mt-1 font-semibold text-white">{storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
-              </div>
-            </div>
-          )}
-          {playersRemaining > 0 ? (
-            <p className="mt-2 text-green-400">{playersRemaining} cupos libres</p>
-          ) : substituteSlotsFree > 0 ? (
-            <p className="mt-2 text-amber-400">Titulares completos · {substituteSlotsFree} cupo{substituteSlotsFree !== 1 ? "s" : ""} de suplente disponible{substituteSlotsFree !== 1 ? "s" : ""}</p>
-          ) : (
-            <p className="mt-2 text-red-400">Partido y lista de suplentes completos</p>
-          )}
-          {isCreator && !showEditForm && (
-            <div className="mt-4 flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => {
-                  setShowEditForm(true);
-                  setEditMessage(null);
-                }}
-                className="rounded border border-green-500/40 bg-green-500/20 px-4 py-2 font-semibold text-green-300 transition hover:bg-green-500/30"
-              >
-                Editar información del partido
-              </button>
-              {titulares.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    initTeamBuilder(titulares);
-                    setShowTeamBuilder(true);
-                    setTimeout(() => {
-                      document.getElementById("team-builder")?.scrollIntoView({ behavior: "smooth", block: "start" });
-                    }, 50);
-                  }}
-                  className="rounded border border-blue-500/40 bg-blue-500/20 px-4 py-2 font-semibold text-blue-300 transition hover:bg-blue-500/30"
-                >
-                  Armar equipos
-                </button>
-              )}
-            </div>
-          )}
-          {isCreator && !showEditForm && editMessage && (
-            <p className={`mt-3 text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
-              {editMessage}
+      <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_1fr]">
+        <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
+          <div className="rounded-lg border border-slate-800 bg-[hsl(220,18%,10%)] p-5 shadow">
+            <h1 className="text-2xl font-bold text-white">{matchData.title}</h1>
+            <p className="mt-2 text-sm text-slate-300">Fecha: {formattedDate}</p>
+            <p className="mt-1 text-sm text-slate-300">Hora: {formattedTime}</p>
+            <p className="mt-1 text-sm text-slate-300">Ubicación: {matchData.location}</p>
+            <p className="mt-3 text-sm text-slate-300">
+              Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo)
             </p>
-          )}
-        </div>
+            {suplentes.length > 0 && (
+              <p className="mt-1 text-sm text-slate-300">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>
+            )}
 
-        {isCreator && showEditForm && (
-          <div className="rounded-lg border border-green-700/50 bg-[hsl(220,18%,10%)] p-6 shadow">
-            <h2 className="mb-4 text-2xl font-bold text-white">Editar partido</h2>
-            <form onSubmit={handleEditSubmit} className="space-y-4">
-              <div>
-                <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-slate-200">
-                  Ubicación
-                </label>
-                <input
-                  id="edit-location"
-                  name="location"
-                  value={editForm.location}
-                  onChange={handleEditInputChange}
-                  className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                  placeholder="Ej: Cancha Central"
-                  required
-                />
-              </div>
-
-              <div className="grid gap-4 sm:grid-cols-2">
-                <div>
-                  <label htmlFor="edit-date" className="mb-2 block text-sm font-medium text-slate-200">
-                    Fecha
-                  </label>
-                  <input
-                    type="date"
-                    id="edit-date"
-                    name="date"
-                    value={editForm.date}
-                    onChange={handleEditInputChange}
-                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                    required
-                  />
-                </div>
-                <div>
-                  <label htmlFor="edit-time" className="mb-2 block text-sm font-medium text-slate-200">
-                    Hora
-                  </label>
-                  <input
-                    type="time"
-                    id="edit-time"
-                    name="time"
-                    value={editForm.time}
-                    onChange={handleEditInputChange}
-                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                    required
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label htmlFor="edit-playersPerTeam" className="mb-2 block text-sm font-medium text-slate-200">
-                  Jugadores por equipo
-                </label>
-                <select
-                  id="edit-playersPerTeam"
-                  name="playersPerTeam"
-                  value={editForm.playersPerTeam}
-                  onChange={handleEditInputChange}
-                  className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                >
-                  {PLAYER_OPTIONS.map((num) => (
-                    <option key={num} value={num}>
-                      {num} vs {num}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label htmlFor="edit-fieldCost" className="mb-2 block text-sm font-medium text-slate-200">
-                  Valor de la Cancha ($)
-                </label>
-                <input
-                  id="edit-fieldCost"
-                  name="fieldCost"
-                  ref={editFieldCostRef}
-                  value={editFieldCostInput}
-                  onChange={handleEditInputChange}
-                  inputMode="numeric"
-                  autoComplete="off"
-                  className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                  placeholder="Ej: $ 200.000"
-                />
-                {editForm.fieldCost > 0 && (
-                  <p className="mt-1 text-xs text-slate-400">
-                    Aporte por jugador:{" "}
-                    <span className="font-semibold text-white">
-                      {formatCurrency(Math.round(editForm.fieldCost / (editForm.playersPerTeam * 2)))}
-                    </span>
-                  </p>
-                )}
-              </div>
-
-              {editMessage && (
-                <p className={`text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
-                  {editMessage}
-                </p>
-              )}
-
-              <div className="flex gap-3">
-                <button
-                  type="submit"
-                  className="flex-1 rounded bg-green-500 px-4 py-2 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
-                  disabled={editLoading}
-                >
-                  {editLoading ? "Guardando..." : "Guardar cambios"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setShowEditForm(false);
-                    setEditMessage(null);
-                  }}
-                  className="flex-1 rounded bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-800"
-                  disabled={editLoading}
-                >
-                  Cancelar
-                </button>
-              </div>
-            </form>
-          </div>
-        )}
-
-        {/* Registration Section */}
-        <div className="grid gap-6 md:grid-cols-2">
-          <div className="bg-[hsl(220,18%,10%)] rounded-lg p-6 shadow border border-slate-800">
-            <h2 className="text-2xl font-bold text-white mb-4">Inscribirme al partido</h2>
-            <p className="text-slate-300 mb-4">Deja tu nombre y elige si vienes como portero.</p>
-            <div className="mb-4 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-300">
-              <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
-              <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
-              <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
-              {isTitularFull && (
-                <p className="mt-2 border-t border-slate-700 pt-2 text-amber-300">
-                  {isSubstituteFull
-                    ? "Lista de suplentes también completa."
-                    : `Suplentes: ${suplentes.length}/${MAX_SUBSTITUTE_SLOTS} · al inscribirte entras como suplente`}
-                </p>
-              )}
-            </div>
-
-            {registrationMessage && (
-              <div className={`mb-4 p-3 rounded text-sm ${
-                registrationMessage.includes("exitosamente")
-                  ? "bg-green-900 text-green-200"
-                  : "bg-red-900 text-red-200"
-              }`}>
-                {registrationMessage}
+            {storedMatchPricing && (
+              <div className="mt-4 space-y-2 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-200">
+                <p><span className="text-slate-400">Cancha:</span> {formatCurrency(storedMatchPricing.fieldCost)}</p>
+                <p><span className="text-slate-400">Por jugador:</span> {formatCurrency(storedMatchPricing.costPerPlayer)}</p>
+                <p><span className="text-slate-400">Formato:</span> {storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
               </div>
             )}
 
-            {!showRegistrationForm ? (
-              <button
-                onClick={() => setShowRegistrationForm(true)}
-                className={`w-full py-2 px-4 rounded transition font-semibold ${
-                  isTitularFull && !isSubstituteFull
-                    ? "bg-amber-500 text-white hover:bg-amber-600"
-                    : isTitularFull && isSubstituteFull
-                    ? "bg-slate-700 text-slate-400 cursor-not-allowed"
-                    : "bg-green-500 text-white hover:bg-green-600"
-                }`}
-                disabled={isTitularFull && isSubstituteFull}
-              >
-                {isTitularFull && isSubstituteFull
-                  ? "Sin cupos disponibles"
-                  : isTitularFull
-                  ? "Inscribirme como suplente"
-                  : "Inscribirme"}
-              </button>
+            {playersRemaining > 0 ? (
+              <p className="mt-3 text-sm text-green-400">{playersRemaining} cupos titulares libres</p>
+            ) : substituteSlotsFree > 0 ? (
+              <p className="mt-3 text-sm text-amber-400">Titulares completos · {substituteSlotsFree} cupo{substituteSlotsFree !== 1 ? "s" : ""} de suplente</p>
             ) : (
-              <form onSubmit={handleRegistrationSubmit} className="space-y-4">
+              <p className="mt-3 text-sm text-red-400">Partido y lista de suplentes completos</p>
+            )}
+
+            {isCreator && !showEditForm && (
+              <div className="mt-4 flex flex-col gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowEditForm(true);
+                    setEditMessage(null);
+                  }}
+                  className="rounded border border-green-500/40 bg-green-500/20 px-4 py-2 text-sm font-semibold text-green-300 transition hover:bg-green-500/30"
+                >
+                  Editar partido
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!showTeamBuilder) {
+                      initTeamBuilder(titulares);
+                    }
+                    setShowTeamBuilder(true);
+                    setActiveTab("teams");
+                  }}
+                  className="rounded border border-blue-500/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/30"
+                >
+                  Armar equipos
+                </button>
+              </div>
+            )}
+
+            {isCreator && !showEditForm && editMessage && (
+              <p className={`mt-3 text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
+                {editMessage}
+              </p>
+            )}
+          </div>
+        </aside>
+
+        <section className="space-y-6">
+          {isCreator && showEditForm && (
+            <div className="rounded-lg border border-green-700/50 bg-[hsl(220,18%,10%)] p-6 shadow">
+              <h2 className="mb-4 text-2xl font-bold text-white">Editar partido</h2>
+              <form onSubmit={handleEditSubmit} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-slate-200 mb-2">Nombre completo</label>
+                  <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-slate-200">
+                    Ubicación
+                  </label>
                   <input
-                    type="text"
-                    name="name"
-                    value={registrationForm.name}
-                    onChange={handleInputChange}
+                    id="edit-location"
+                    name="location"
+                    value={editForm.location}
+                    onChange={handleEditInputChange}
                     className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                    placeholder="Ingresa tu nombre"
+                    placeholder="Ej: Cancha Central"
                     required
                   />
                 </div>
-
-                <div className="flex items-center gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4">
-                  <input
-                    type="checkbox"
-                    name="isGoalkeeper"
-                    checked={registrationForm.isGoalkeeper}
-                    onChange={handleCheckboxChange}
-                    className="h-5 w-5"
-                    disabled={goalkeepersRemaining <= 0}
-                  />
-                  <label className="text-sm text-slate-200">Me registro como portero</label>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label htmlFor="edit-date" className="mb-2 block text-sm font-medium text-slate-200">Fecha</label>
+                    <input
+                      type="date"
+                      id="edit-date"
+                      name="date"
+                      value={editForm.date}
+                      onChange={handleEditInputChange}
+                      className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="edit-time" className="mb-2 block text-sm font-medium text-slate-200">Hora</label>
+                    <input
+                      type="time"
+                      id="edit-time"
+                      name="time"
+                      value={editForm.time}
+                      onChange={handleEditInputChange}
+                      className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                      required
+                    />
+                  </div>
                 </div>
-                {goalkeepersRemaining <= 0 && (
-                  <p className="text-xs text-amber-400">Ya se completaron los 2 cupos de arqueros.</p>
-                )}
-                {!registrationForm.isGoalkeeper && fieldPlayersRemaining <= 0 && goalkeepersRemaining > 0 && (
-                  <p className="text-xs text-amber-400">
-                    Los cupos de jugadores de campo están completos. Solo quedan cupos para arqueros.
+                <div>
+                  <label htmlFor="edit-playersPerTeam" className="mb-2 block text-sm font-medium text-slate-200">Jugadores por equipo</label>
+                  <select
+                    id="edit-playersPerTeam"
+                    name="playersPerTeam"
+                    value={editForm.playersPerTeam}
+                    onChange={handleEditInputChange}
+                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                  >
+                    {PLAYER_OPTIONS.map((num) => (
+                      <option key={num} value={num}>{num} vs {num}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="edit-fieldCost" className="mb-2 block text-sm font-medium text-slate-200">Valor de la Cancha ($)</label>
+                  <input
+                    id="edit-fieldCost"
+                    name="fieldCost"
+                    ref={editFieldCostRef}
+                    value={editFieldCostInput}
+                    onChange={handleEditInputChange}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                    placeholder="Ej: $ 200.000"
+                  />
+                </div>
+                {editMessage && (
+                  <p className={`text-sm ${editMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
+                    {editMessage}
                   </p>
                 )}
-
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className="flex-1 bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 transition font-semibold"
-                    disabled={
-                      registrationLoading ||
-                      (isTitularFull && isSubstituteFull) ||
-                      (!isTitularFull && registrationForm.isGoalkeeper && goalkeepersRemaining <= 0) ||
-                      (!isTitularFull && !registrationForm.isGoalkeeper && fieldPlayersRemaining <= 0)
-                    }
+                    className="flex-1 rounded bg-green-500 px-4 py-2 font-semibold text-white transition hover:bg-green-600 disabled:cursor-not-allowed disabled:opacity-60"
+                    disabled={editLoading}
                   >
-                    {registrationLoading ? "Registrando..." : "Confirmar inscripción"}
+                    {editLoading ? "Guardando..." : "Guardar cambios"}
                   </button>
                   <button
                     type="button"
                     onClick={() => {
-                      setShowRegistrationForm(false);
-                      setRegistrationForm({ name: "", isGoalkeeper: false });
-                      setRegistrationMessage(null);
+                      setShowEditForm(false);
+                      setEditMessage(null);
                     }}
-                    className="flex-1 bg-slate-700 text-white py-2 px-4 rounded hover:bg-slate-800 transition"
+                    className="flex-1 rounded bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-800"
+                    disabled={editLoading}
                   >
                     Cancelar
                   </button>
                 </div>
               </form>
-            )}
-          </div>
+            </div>
+          )}
 
-          <div className="bg-[hsl(220,18%,10%)] rounded-lg p-6 shadow border border-slate-800">
-            <h2 className="text-2xl font-bold text-white mb-4">Jugadores inscritos ({registrations.length})</h2>
-            <div className="space-y-2">
-              {titulares.length > 0 && (
-                <p className="text-xs font-semibold uppercase tracking-wide text-green-400 mb-1">Titulares ({titulares.length}/{matchData.max_players})</p>
+          <div className="rounded-lg border border-slate-800 bg-[hsl(220,18%,10%)] p-4 shadow sm:p-6">
+            <div className="mb-4 flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => setActiveTab("register")}
+                className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
+                  activeTab === "register" ? "bg-green-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                }`}
+              >
+                Inscripción
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveTab("players")}
+                className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
+                  activeTab === "players" ? "bg-green-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                }`}
+              >
+                Jugadores
+              </button>
+              {isCreator && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!showTeamBuilder) {
+                      initTeamBuilder(titulares);
+                    }
+                    setShowTeamBuilder(true);
+                    setActiveTab("teams");
+                  }}
+                  className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
+                    activeTab === "teams" ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                  }`}
+                >
+                  Equipos
+                </button>
               )}
-              {titulares.map((registration, index) => (
-                <div key={registration.id} className="flex justify-between items-center p-3 bg-[hsl(220,16%,14%)] rounded hover:bg-[hsl(220,16%,18%)] transition border border-slate-700">
-                  <div className="flex-1">
-                    <span className="text-xs text-slate-500 mr-2">#{index + 1}</span>
-                    <span className="font-medium text-white">{registration.name}</span>
-                    <span className="text-sm text-slate-400 block mt-0.5">
-                      {registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}
-                    </span>
-                  </div>
-                  <button
-                    onClick={() => handleUnregisterClick(registration)}
-                    className="ml-4 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition"
-                    title="Darse de baja"
-                  >
-                    <Trash2 size={18} />
-                  </button>
-                </div>
-              ))}
+            </div>
 
-              {suplentes.length > 0 && (
-                <>
-                  <p className="text-xs font-semibold uppercase tracking-wide text-amber-400 mt-4 mb-1">Suplentes ({suplentes.length}/{MAX_SUBSTITUTE_SLOTS})</p>
-                  <p className="text-xs text-slate-500 mb-2">El primero en la lista entra automáticamente si un titular se baja.</p>
-                  {suplentes.map((registration, index) => (
-                    <div key={registration.id} className="flex justify-between items-center p-3 bg-[hsl(220,16%,14%)] rounded hover:bg-[hsl(220,16%,18%)] transition border border-amber-800/40">
+            {activeTab === "register" && (
+              <div>
+                <h2 className="mb-2 text-xl font-bold text-white">Inscribirme al partido</h2>
+                <p className="mb-4 text-sm text-slate-300">Deja tu nombre y elige si vienes como portero.</p>
+                <div className="mb-4 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-300">
+                  <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
+                  <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
+                  <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
+                </div>
+
+                {registrationMessage && (
+                  <div className={`mb-4 rounded p-3 text-sm ${registrationMessage.includes("exitosamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}>
+                    {registrationMessage}
+                  </div>
+                )}
+
+                {!showRegistrationForm ? (
+                  <button
+                    onClick={() => setShowRegistrationForm(true)}
+                    className={`w-full rounded py-2 px-4 font-semibold transition ${
+                      isTitularFull && !isSubstituteFull
+                        ? "bg-amber-500 text-white hover:bg-amber-600"
+                        : isTitularFull && isSubstituteFull
+                          ? "cursor-not-allowed bg-slate-700 text-slate-400"
+                          : "bg-green-500 text-white hover:bg-green-600"
+                    }`}
+                    disabled={isTitularFull && isSubstituteFull}
+                  >
+                    {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : isTitularFull ? "Inscribirme como suplente" : "Inscribirme"}
+                  </button>
+                ) : (
+                  <form onSubmit={handleRegistrationSubmit} className="space-y-4">
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-slate-200">Nombre completo</label>
+                      <input
+                        type="text"
+                        name="name"
+                        value={registrationForm.name}
+                        onChange={handleInputChange}
+                        className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                        placeholder="Ingresa tu nombre"
+                        required
+                      />
+                    </div>
+                    <div className="flex items-center gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3">
+                      <input
+                        type="checkbox"
+                        name="isGoalkeeper"
+                        checked={registrationForm.isGoalkeeper}
+                        onChange={handleCheckboxChange}
+                        className="h-5 w-5"
+                        disabled={goalkeepersRemaining <= 0}
+                      />
+                      <label className="text-sm text-slate-200">Me registro como portero</label>
+                    </div>
+                    <div className="flex gap-3">
+                      <button
+                        type="submit"
+                        className="flex-1 rounded bg-green-500 py-2 px-4 font-semibold text-white transition hover:bg-green-600"
+                        disabled={
+                          registrationLoading ||
+                          (isTitularFull && isSubstituteFull) ||
+                          (!isTitularFull && registrationForm.isGoalkeeper && goalkeepersRemaining <= 0) ||
+                          (!isTitularFull && !registrationForm.isGoalkeeper && fieldPlayersRemaining <= 0)
+                        }
+                      >
+                        {registrationLoading ? "Registrando..." : "Confirmar inscripción"}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowRegistrationForm(false);
+                          setRegistrationForm({ name: "", isGoalkeeper: false });
+                          setRegistrationMessage(null);
+                        }}
+                        className="flex-1 rounded bg-slate-700 py-2 px-4 text-white transition hover:bg-slate-800"
+                      >
+                        Cancelar
+                      </button>
+                    </div>
+                  </form>
+                )}
+              </div>
+            )}
+
+            {activeTab === "players" && (
+              <div>
+                <h2 className="mb-3 text-xl font-bold text-white">Jugadores inscritos ({registrations.length})</h2>
+                <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
+                  {titulares.length > 0 && (
+                    <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-400">Titulares ({titulares.length}/{matchData.max_players})</p>
+                  )}
+                  {titulares.map((registration, index) => (
+                    <div key={registration.id} className="flex items-center justify-between rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-2.5 transition hover:bg-[hsl(220,16%,18%)]">
                       <div className="flex-1">
-                        <span className="inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300 mr-2">S{index + 1}</span>
+                        <span className="mr-2 text-xs text-slate-500">#{index + 1}</span>
                         <span className="font-medium text-white">{registration.name}</span>
-                        <span className="text-sm text-slate-400 block mt-0.5">
-                          {registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}
-                        </span>
+                        <span className="mt-0.5 block text-xs text-slate-400">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                       </div>
                       <button
                         onClick={() => handleUnregisterClick(registration)}
-                        className="ml-4 p-2 text-red-400 hover:text-red-300 hover:bg-red-900/30 rounded transition"
+                        className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
                         title="Darse de baja"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={16} />
                       </button>
                     </div>
                   ))}
-                </>
-              )}
 
-              {registrations.length === 0 && (
-                <p className="text-slate-400 text-center py-4">Aún no hay jugadores inscritos</p>
-              )}
-            </div>
-          </div>
-        </div>
+                  {suplentes.length > 0 && (
+                    <>
+                      <p className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400">Suplentes ({suplentes.length}/{MAX_SUBSTITUTE_SLOTS})</p>
+                      {suplentes.map((registration, index) => (
+                        <div key={registration.id} className="flex items-center justify-between rounded border border-amber-800/40 bg-[hsl(220,16%,14%)] p-2.5 transition hover:bg-[hsl(220,16%,18%)]">
+                          <div className="flex-1">
+                            <span className="mr-2 inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300">S{index + 1}</span>
+                            <span className="font-medium text-white">{registration.name}</span>
+                            <span className="mt-0.5 block text-xs text-slate-400">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+                          </div>
+                          <button
+                            onClick={() => handleUnregisterClick(registration)}
+                            className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                            title="Darse de baja"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))}
+                    </>
+                  )}
 
-        {/* Team Builder */}
-        {isCreator && showTeamBuilder && (
-          <div id="team-builder" className="rounded-lg border border-blue-700/50 bg-[hsl(220,18%,10%)] p-6 shadow">
-            <div className="mb-5 flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-white">Armar equipos</h2>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={saveTeams}
-                  className={`rounded border px-3 py-1.5 text-sm font-semibold transition ${
-                    teamSaved
-                      ? "border-green-600 bg-green-700 text-green-100"
-                      : "border-blue-600 bg-blue-600 text-white hover:bg-blue-500"
-                  }`}
-                >
-                  {teamSaved ? "✓ Guardado" : "Guardar equipos"}
-                </button>
-                <button
-                  type="button"
-                  onClick={resetTeamBuilder}
-                  className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-600"
-                >
-                  Reiniciar
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setShowTeamBuilder(false)}
-                  className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-600"
-                >
-                  Cerrar
-                </button>
-              </div>
-            </div>
-
-            {teamBuilderMessage && (
-              <p className={`mb-4 text-sm ${teamBuilderMessage.includes("correctamente") ? "text-green-400" : "text-amber-400"}`}>
-                {teamBuilderMessage}
-              </p>
-            )}
-
-            {unassigned.length > 0 && (
-              <div
-                onDragOver={(e) => { e.preventDefault(); setDragOverZone("pool"); }}
-                onDrop={() => handleDropOnZone("pool")}
-                className={`mb-5 min-h-[60px] rounded-lg border-2 border-dashed p-3 transition-colors ${
-                  dragOverZone === "pool" ? "border-slate-400 bg-slate-700/40" : "border-slate-700 bg-[hsl(220,16%,14%)]"
-                }`}
-              >
-                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">
-                  Sin equipo ({unassigned.length})
-                </p>
-                <div className="flex flex-wrap gap-2">
-                  {unassigned.map((player) => (
-                    <div
-                      key={player.id}
-                      draggable
-                      onDragStart={(event) => handlePlayerDragStart(event, player.id)}
-                      onDragEnd={handlePlayerDragEnd}
-                      className={`flex cursor-grab select-none items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-3 py-1.5 text-sm text-white transition active:cursor-grabbing ${
-                        draggingId === player.id ? "opacity-40" : "hover:border-slate-400"
-                      }`}
-                    >
-                      <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
-                      <span>{player.name}</span>
-                    </div>
-                  ))}
+                  {registrations.length === 0 && (
+                    <p className="py-4 text-center text-slate-400">Aún no hay jugadores inscritos</p>
+                  )}
                 </div>
               </div>
             )}
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              {(["A", "B"] as const).map((team) => {
-                const list = team === "A" ? teamA : teamB;
-                const isOver = dragOverZone === team;
-                const accentColor = team === "A" ? "text-blue-400" : "text-red-400";
-                const isTeamFull = list.length >= playersPerTeamLimit;
-                const canDropHere = canDropInZone(team);
-                return (
-                  <div
-                    key={team}
-                    onDragOver={(e) => {
-                      const activeDraggingId = getActiveDraggingId();
-                      if (!activeDraggingId) {
-                        return;
-                      }
-
-                      if (canDropHere) {
-                        e.preventDefault();
-                        e.dataTransfer.dropEffect = "move";
-                        setDragOverZone(team);
-                        return;
-                      }
-
-                      e.dataTransfer.dropEffect = "none";
-                      setDragOverZone(null);
-                    }}
-                    onDrop={() => handleDropOnZone(team)}
-                    className={`min-h-[140px] rounded-lg border-2 border-dashed p-4 transition-colors ${
-                      isOver && !isTeamFull
-                        ? "border-green-400 bg-green-900/20"
-                        : isTeamFull
-                          ? "border-red-700/60 bg-red-900/15"
-                          : "border-slate-700 bg-[hsl(220,16%,14%)]"
-                    } ${draggingId && !canDropHere ? "cursor-not-allowed" : ""}`}
-                  >
-                    <p className={`mb-3 text-sm font-bold uppercase tracking-wide ${accentColor}`}>
-                      Equipo {team} ({list.length}/{playersPerTeamLimit})
-                    </p>
-                    {isTeamFull && (
-                      <p className="mb-2 text-xs text-red-400">Equipo completo</p>
-                    )}
-                    <div className="space-y-2">
-                      {list.map((player) => (
-                        <div
-                          key={player.id}
-                          draggable
-                          onDragStart={(event) => handlePlayerDragStart(event, player.id)}
-                          onDragEnd={handlePlayerDragEnd}
-                          onDragOver={(e) => {
-                            if (canSwapWithPlayer(team, player.id)) {
-                              e.preventDefault();
-                              e.dataTransfer.dropEffect = "move";
-                            }
-                          }}
-                          onDrop={(e) => {
-                            if (canSwapWithPlayer(team, player.id)) {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleDropOnPlayer(team, player.id);
-                            }
-                          }}
-                          className={`flex cursor-grab select-none items-center gap-2 rounded border px-3 py-2 text-sm text-white transition active:cursor-grabbing ${
-                            player.is_goalkeeper
-                              ? "border-yellow-700/60 bg-yellow-900/20 hover:border-yellow-600/60"
-                              : "border-slate-700 bg-slate-800 hover:border-slate-500"
-                          } ${draggingId === player.id ? "opacity-40" : ""}`}
-                        >
-                          <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
-                          <span className="font-medium">{player.name}</span>
-                          {player.is_goalkeeper && (
-                            <span className="ml-auto text-xs text-yellow-500">Portero</span>
-                          )}
-                        </div>
-                      ))}
-                      {list.length === 0 && (
-                        <p className="py-6 text-center text-xs text-slate-500">Arrastra jugadores aquí</p>
-                      )}
-                    </div>
+            {activeTab === "teams" && isCreator && (
+              <div id="team-builder">
+                {!showTeamBuilder ? (
+                  <div className="rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4">
+                    <p className="text-sm text-slate-300">Inicializa el armado para distribuir titulares con drag and drop.</p>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        initTeamBuilder(titulares);
+                        setShowTeamBuilder(true);
+                      }}
+                      className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+                    >
+                      Iniciar equipos
+                    </button>
                   </div>
-                );
-              })}
-            </div>
+                ) : (
+                  <>
+                    <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+                      <h2 className="text-xl font-bold text-white">Armar equipos</h2>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={saveTeams}
+                          className={`rounded border px-3 py-1.5 text-sm font-semibold transition ${teamSaved ? "border-green-600 bg-green-700 text-green-100" : "border-blue-600 bg-blue-600 text-white hover:bg-blue-500"}`}
+                        >
+                          {teamSaved ? "✓ Guardado" : "Guardar equipos"}
+                        </button>
+                        <button
+                          type="button"
+                          onClick={resetTeamBuilder}
+                          className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-600"
+                        >
+                          Reiniciar
+                        </button>
+                      </div>
+                    </div>
+
+                    {teamBuilderMessage && (
+                      <p className={`mb-3 text-sm ${teamBuilderMessage.includes("correctamente") ? "text-green-400" : "text-amber-400"}`}>
+                        {teamBuilderMessage}
+                      </p>
+                    )}
+
+                    <div className="grid gap-3 lg:grid-cols-3">
+                      <div
+                        onDragOver={(e) => { e.preventDefault(); setDragOverZone("pool"); }}
+                        onDrop={() => handleDropOnZone("pool")}
+                        className={`rounded-lg border-2 border-dashed p-3 ${dragOverZone === "pool" ? "border-slate-400 bg-slate-700/40" : "border-slate-700 bg-[hsl(220,16%,14%)]"}`}
+                      >
+                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Sin equipo ({unassigned.length})</p>
+                        <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
+                          {unassigned.map((player) => (
+                            <div
+                              key={player.id}
+                              draggable
+                              onDragStart={(event) => handlePlayerDragStart(event, player.id)}
+                              onDragEnd={handlePlayerDragEnd}
+                              className={`flex cursor-grab select-none items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white transition active:cursor-grabbing ${draggingId === player.id ? "opacity-40" : "hover:border-slate-400"}`}
+                            >
+                              <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
+                              <span>{player.name}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {(["A", "B"] as const).map((team) => {
+                        const list = team === "A" ? teamA : teamB;
+                        const isOver = dragOverZone === team;
+                        const accentColor = team === "A" ? "text-blue-400" : "text-red-400";
+                        const isTeamFull = list.length >= playersPerTeamLimit;
+                        const canDropHere = canDropInZone(team);
+                        return (
+                          <div
+                            key={team}
+                            onDragOver={(e) => {
+                              const activeDraggingId = getActiveDraggingId();
+                              if (!activeDraggingId) return;
+                              if (canDropHere) {
+                                e.preventDefault();
+                                e.dataTransfer.dropEffect = "move";
+                                setDragOverZone(team);
+                                return;
+                              }
+                              e.dataTransfer.dropEffect = "none";
+                              setDragOverZone(null);
+                            }}
+                            onDrop={() => handleDropOnZone(team)}
+                            className={`rounded-lg border-2 border-dashed p-3 ${
+                              isOver && !isTeamFull
+                                ? "border-green-400 bg-green-900/20"
+                                : isTeamFull
+                                  ? "border-red-700/60 bg-red-900/15"
+                                  : "border-slate-700 bg-[hsl(220,16%,14%)]"
+                            } ${draggingId && !canDropHere ? "cursor-not-allowed" : ""}`}
+                          >
+                            <p className={`mb-2 text-sm font-bold uppercase tracking-wide ${accentColor}`}>Equipo {team} ({list.length}/{playersPerTeamLimit})</p>
+                            <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
+                              {list.map((player) => (
+                                <div
+                                  key={player.id}
+                                  draggable
+                                  onDragStart={(event) => handlePlayerDragStart(event, player.id)}
+                                  onDragEnd={handlePlayerDragEnd}
+                                  onDragOver={(e) => {
+                                    if (canSwapWithPlayer(team, player.id)) {
+                                      e.preventDefault();
+                                      e.dataTransfer.dropEffect = "move";
+                                    }
+                                  }}
+                                  onDrop={(e) => {
+                                    if (canSwapWithPlayer(team, player.id)) {
+                                      e.preventDefault();
+                                      e.stopPropagation();
+                                      handleDropOnPlayer(team, player.id);
+                                    }
+                                  }}
+                                  className={`flex cursor-grab select-none items-center gap-2 rounded border px-3 py-2 text-sm text-white transition active:cursor-grabbing ${
+                                    player.is_goalkeeper
+                                      ? "border-yellow-700/60 bg-yellow-900/20 hover:border-yellow-600/60"
+                                      : "border-slate-700 bg-slate-800 hover:border-slate-500"
+                                  } ${draggingId === player.id ? "opacity-40" : ""}`}
+                                >
+                                  <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
+                                  <span className="font-medium">{player.name}</span>
+                                </div>
+                              ))}
+                              {list.length === 0 && (
+                                <p className="py-6 text-center text-xs text-slate-500">Arrastra jugadores aquí</p>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
           </div>
-        )}
+        </section>
 
         {/* Unregister Modal */}
         {showUnregisterModal && unregisterTarget && (
