@@ -305,8 +305,11 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     const selectedPlayersPerTeam = clampPlayersPerTeam(editForm.playersPerTeam);
     const nextMaxPlayers = selectedPlayersPerTeam * 2;
 
-    if (nextMaxPlayers < registrations.length) {
-      setEditMessage(`No puedes reducir los cupos por debajo de los ${registrations.length} jugadores ya inscritos.`);
+    const nextTotalCapacity = nextMaxPlayers + MAX_SUBSTITUTE_SLOTS;
+    if (registrations.length > nextTotalCapacity) {
+      setEditMessage(
+        `No puedes reducir el formato a ${selectedPlayersPerTeam} vs ${selectedPlayersPerTeam} porque hay ${registrations.length} inscritos y el nuevo límite total sería ${nextTotalCapacity} (incluyendo suplentes).`,
+      );
       return;
     }
 

@@ -12,7 +12,7 @@ export default function MatchPage() {
 
   return (
     <div className="min-h-screen bg-background py-12 px-4">
-      <div className="max-w-3xl mx-auto">
+      <div className="mx-auto">
         <MatchDetails matchId={id} />
       </div>
     </div>
