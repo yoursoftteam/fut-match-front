@@ -60,7 +60,7 @@ export default function Home() {
           <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-12">
             ¿Qué puedes hacer en FutMatch?
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
             {/* Cotejos Gratis */}
             <div className="card p-6 text-center bg-card">
               <span className="text-4xl mb-4">⚽</span>
@@ -92,7 +92,7 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Geolocalización */}
+            {/* Geolocalización 
             <div className="card p-6 text-center bg-card">
               <span className="text-4xl mb-4">📍</span>
               <h3 className="text-xl font-semibold text-card-foreground mb-3">
@@ -101,11 +101,8 @@ export default function Home() {
               <p className="text-muted-foreground mb-4">
                 Encuentra partidos y torneos cerca de ti. Ubica canchas y comparte ubicación con tus compañeros.
               </p>
-              <span className="inline-block bg-muted text-muted-foreground px-4 py-2 rounded-lg font-medium text-sm">
-                Próximamente
-              </span>
-            </div>
-
+              <span className="inline-block bg-muted>
+*/}
             {/* Estadísticas Completas */}
             <div className="card p-6 text-center bg-card">
               <span className="text-4xl mb-4">📊</span>
@@ -130,7 +127,7 @@ export default function Home() {
             ¿Listo para jugar?
           </h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Crea tu cuenta gratis y empieza a organizar cotejos o competir en torneos hoy mismo.
+            Crea tu cuenta gratis y empieza a organizar cotejos.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link

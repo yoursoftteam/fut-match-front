@@ -202,6 +202,56 @@ export function useMatches() {
     }
   }
 
+  const registerRentedGoalkeepers = async (matchId: string, count: number) => {
+    try {
+      console.log('[DB] Registering rented goalkeepers:', { matchId, count })
+
+      // Get existing rented goalkeeper registrations
+      const { data: existingRegistrations, error: fetchError } = await supabase
+        .from('match_registrations')
+        .select('id')
+        .eq('match_id', matchId)
+        .ilike('name', 'Arquero Alquilado%')
+
+      if (fetchError) throw fetchError
+
+      const existingCount = existingRegistrations?.length || 0
+
+      // If we need fewer, delete the extras
+      if (existingCount > count) {
+        const toDelete = existingRegistrations?.slice(count) || []
+        for (const reg of toDelete) {
+          await supabase
+            .from('match_registrations')
+            .delete()
+            .eq('id', reg.id)
+        }
+      }
+
+      // If we need more, add them
+      if (existingCount < count) {
+        const toAdd = count - existingCount
+        const newRegistrations = Array.from({ length: toAdd }, (_, i) => ({
+          match_id: matchId,
+          name: `Arquero Alquilado ${existingCount + i + 1}`,
+          is_goalkeeper: true,
+        }))
+
+        const { error: insertError } = await supabase
+          .from('match_registrations')
+          .insert(newRegistrations)
+
+        if (insertError) throw insertError
+      }
+
+      console.log('[DB] ✅ Rented goalkeepers registered successfully')
+      return { error: null }
+    } catch (error) {
+      console.error('[DB] ❌ Error registering rented goalkeepers:', error)
+      return { error }
+    }
+  }
+
   return {
     matches,
     loading,
@@ -212,6 +262,7 @@ export function useMatches() {
     getMatchRegistrations,
     registerForMatch,
     unregisterFromMatch,
+    registerRentedGoalkeepers,
     refetch: fetchMatches,
   }
 }

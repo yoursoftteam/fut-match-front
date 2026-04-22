@@ -30,6 +30,9 @@ interface StoredMatchPricing {
   fieldCost: number;
   costPerPlayer: number;
   playersPerTeam: number;
+  hasRentedGoalkeepers?: boolean;
+  rentedGoalkeepersCount?: number;
+  rentalCost?: number;
 }
 
 interface MatchEditFormData {
@@ -38,6 +41,9 @@ interface MatchEditFormData {
   time: string;
   playersPerTeam: number;
   fieldCost: number;
+  hasRentedGoalkeepers: boolean;
+  rentedGoalkeepersCount: number;
+  rentalCost: number;
 }
 
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
@@ -82,9 +88,14 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     time: "",
     playersPerTeam: PLAYER_OPTIONS[0],
     fieldCost: 0,
+    hasRentedGoalkeepers: false,
+    rentedGoalkeepersCount: 1,
+    rentalCost: 0,
   });
   const [editFieldCostInput, setEditFieldCostInput] = useState("");
+  const [editRentalCostInput, setEditRentalCostInput] = useState("");
   const editFieldCostRef = useRef<HTMLInputElement>(null);
+  const editRentalCostRef = useRef<HTMLInputElement>(null);
 
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);
   const [teamA, setTeamA] = useState<PlayerRegistration[]>([]);
@@ -98,7 +109,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const [hasAutoLoadedTeams, setHasAutoLoadedTeams] = useState(false);
   const [activeTab, setActiveTab] = useState<PanelTab>("register");
 
-  const { getMatchById, updateMatch, registerForMatch, unregisterFromMatch } = useMatches();
+  const { getMatchById, updateMatch, registerForMatch, unregisterFromMatch, registerRentedGoalkeepers } = useMatches();
   const { registrations = [], loading: registrationsLoading } = useMatchRegistrationsRealtime(matchId);
   const { user } = useAuth();
 
@@ -177,6 +188,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     const [datePart = "", timePartRaw = ""] = matchData.date.split("T");
 
     const initialFieldCost = storedMatchPricing?.fieldCost ?? 0;
+    const initialHasRentedGoalkeepers = storedMatchPricing?.hasRentedGoalkeepers ?? false;
+    const initialRentedGoalkeepersCount = storedMatchPricing?.rentedGoalkeepersCount ?? 1;
+    const initialRentalCost = storedMatchPricing?.rentalCost ?? 0;
 
     setEditForm({
       location: matchData.location,
@@ -184,10 +198,16 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       time: timePartRaw.slice(0, 5),
       playersPerTeam: clampPlayersPerTeam(Math.round(matchData.max_players / 2)),
       fieldCost: initialFieldCost,
+      hasRentedGoalkeepers: initialHasRentedGoalkeepers,
+      rentedGoalkeepersCount: initialRentedGoalkeepersCount,
+      rentalCost: initialRentalCost,
     });
 
     setEditFieldCostInput(
       initialFieldCost > 0 ? formatCurrency(initialFieldCost) : "",
+    );
+    setEditRentalCostInput(
+      initialRentalCost > 0 ? formatCurrency(initialRentalCost) : "",
     );
   }, [matchData, storedMatchPricing]);
 
@@ -283,9 +303,45 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       return;
     }
 
+    if (name === "rentalCost") {
+      const selectionStart =
+        e.target instanceof HTMLInputElement ? (e.target.selectionStart ?? value.length) : value.length;
+      const digitsBeforeCursor = value.slice(0, selectionStart).replace(/\D/g, "").length;
+      const numericValue = value.replace(/\D/g, "");
+      const formattedValue = numericValue === "" ? "" : formatCurrency(Number(numericValue));
+
+      setEditRentalCostInput(formattedValue);
+      setEditForm(prev => ({ ...prev, rentalCost: numericValue === "" ? 0 : Number(numericValue) }));
+
+      requestAnimationFrame(() => {
+        const input = editRentalCostRef.current;
+        if (!input) return;
+
+        let digitsSeen = 0;
+        let nextPos = formattedValue.length;
+        for (let i = 0; i < formattedValue.length; i += 1) {
+          if (/\d/.test(formattedValue[i])) digitsSeen += 1;
+          if (digitsSeen >= Math.min(digitsBeforeCursor, numericValue.length)) {
+            nextPos = i + 1;
+            break;
+          }
+        }
+        input.setSelectionRange(nextPos, nextPos);
+      });
+      return;
+    }
+
+    if (name === "hasRentedGoalkeepers") {
+      setEditForm(prev => ({
+        ...prev,
+        [name]: e.target instanceof HTMLInputElement && e.target.checked,
+      }));
+      return;
+    }
+
     setEditForm(prev => ({
       ...prev,
-      [name]: name === "playersPerTeam" ? Number(value) : value,
+      [name]: name === "playersPerTeam" || name === "rentedGoalkeepersCount" ? Number(value) : value,
     }));
   };
 
@@ -343,6 +399,20 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       setMatchData(data as MatchData);
       setEditMessage("✓ ¡Partido actualizado correctamente!");
 
+      // Register or update rented goalkeepers if configured
+      if (editForm.hasRentedGoalkeepers && editForm.rentedGoalkeepersCount > 0) {
+        const { error: rentedError } = await registerRentedGoalkeepers(matchId, editForm.rentedGoalkeepersCount);
+        if (rentedError) {
+          console.error("Error registering rented goalkeepers:", rentedError);
+        }
+      } else {
+        // Remove rented goalkeepers if disabled
+        const { error: rentedError } = await registerRentedGoalkeepers(matchId, 0);
+        if (rentedError) {
+          console.error("Error removing rented goalkeepers:", rentedError);
+        }
+      }
+
       // Update localStorage with new pricing info
       setStoredMatchPricing((currentPricing) => {
         if (!currentPricing) {
@@ -350,12 +420,18 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
         }
 
         const nextFieldCost = editForm.fieldCost > 0 ? editForm.fieldCost : currentPricing.fieldCost;
+        const totalCost = editForm.hasRentedGoalkeepers 
+          ? nextFieldCost + editForm.rentalCost 
+          : nextFieldCost;
 
         const updatedPricing: StoredMatchPricing = {
           ...currentPricing,
           fieldCost: nextFieldCost,
           playersPerTeam: selectedPlayersPerTeam,
-          costPerPlayer: Math.round(nextFieldCost / nextMaxPlayers),
+          costPerPlayer: Math.round(totalCost / nextMaxPlayers),
+          hasRentedGoalkeepers: editForm.hasRentedGoalkeepers,
+          rentedGoalkeepersCount: editForm.rentedGoalkeepersCount,
+          rentalCost: editForm.hasRentedGoalkeepers ? editForm.rentalCost : 0,
         };
 
         try {
@@ -376,6 +452,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 playersPerTeam: selectedPlayersPerTeam,
                 totalPlayers: nextMaxPlayers,
                 costPerPlayer: updatedPricing.costPerPlayer,
+                hasRentedGoalkeepers: editForm.hasRentedGoalkeepers,
+                rentedGoalkeepersCount: editForm.rentedGoalkeepersCount,
+                rentalCost: editForm.hasRentedGoalkeepers ? editForm.rentalCost : 0,
               };
             });
             localStorage.setItem("matches", JSON.stringify(nextMatches));
@@ -473,6 +552,77 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     setUnassigned(fieldPlayers);
     setDraggingId(null);
     setDragOverZone(null);
+  };
+
+  const shufflePlayers = (players: PlayerRegistration[]) => {
+    const shuffled = [...players];
+    for (let i = shuffled.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  const randomizeTeams = () => {
+    const playersPerTeam = playersPerTeamLimit;
+    if (playersPerTeam <= 0) {
+      setTeamBuilderMessage("No se pudo calcular el límite de jugadores por equipo.");
+      return;
+    }
+
+    const currentPlayers = [...teamA, ...teamB, ...unassigned];
+    if (currentPlayers.length === 0) {
+      setTeamBuilderMessage("No hay jugadores para distribuir.");
+      return;
+    }
+
+    const shuffled = shufflePlayers(currentPlayers);
+    const goalkeepers = shuffled.filter((player) => player.is_goalkeeper);
+    const fieldPlayers = shuffled.filter((player) => !player.is_goalkeeper);
+
+    const nextTeamA: PlayerRegistration[] = [];
+    const nextTeamB: PlayerRegistration[] = [];
+
+    if (goalkeepers[0]) nextTeamA.push(goalkeepers[0]);
+    if (goalkeepers[1]) nextTeamB.push(goalkeepers[1]);
+
+    const remainingPlayers = shufflePlayers([...goalkeepers.slice(2), ...fieldPlayers]);
+
+    remainingPlayers.forEach((player) => {
+      const canAddToA = nextTeamA.length < playersPerTeam;
+      const canAddToB = nextTeamB.length < playersPerTeam;
+
+      if (canAddToA && canAddToB) {
+        if (nextTeamA.length === nextTeamB.length) {
+          (Math.random() < 0.5 ? nextTeamA : nextTeamB).push(player);
+        } else if (nextTeamA.length < nextTeamB.length) {
+          nextTeamA.push(player);
+        } else {
+          nextTeamB.push(player);
+        }
+        return;
+      }
+
+      if (canAddToA) {
+        nextTeamA.push(player);
+        return;
+      }
+
+      if (canAddToB) {
+        nextTeamB.push(player);
+      }
+    });
+
+    const assignedIds = new Set([...nextTeamA, ...nextTeamB].map((player) => player.id));
+    const nextUnassigned = shuffled.filter((player) => !assignedIds.has(player.id));
+
+    setTeamA(nextTeamA);
+    setTeamB(nextTeamB);
+    setUnassigned(nextUnassigned);
+    setDraggingId(null);
+    draggingIdRef.current = null;
+    setDragOverZone(null);
+    setTeamBuilderMessage("Jugadores distribuidos aleatoriamente.");
   };
 
   const saveTeams = () => {
@@ -739,6 +889,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             {storedMatchPricing && (
               <div className="mt-4 space-y-2 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-200">
                 <p><span className="text-slate-400">Cancha:</span> {formatCurrency(storedMatchPricing.fieldCost)}</p>
+                {storedMatchPricing.hasRentedGoalkeepers && storedMatchPricing.rentalCost ? (
+                  <p><span className="text-slate-400">Alquiler arqueros ({storedMatchPricing.rentedGoalkeepersCount}):</span> {formatCurrency(storedMatchPricing.rentalCost)}</p>
+                ) : null}
                 <p><span className="text-slate-400">Por jugador:</span> {formatCurrency(storedMatchPricing.costPerPlayer)}</p>
                 <p><span className="text-slate-400">Formato:</span> {storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
               </div>
@@ -862,6 +1015,66 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     placeholder="Ej: $ 200.000"
                   />
                 </div>
+
+                <div className="rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4">
+                  <div className="flex items-center gap-3 mb-4">
+                    <input
+                      type="checkbox"
+                      id="edit-hasRentedGoalkeepers"
+                      name="hasRentedGoalkeepers"
+                      checked={editForm.hasRentedGoalkeepers}
+                      onChange={handleEditInputChange}
+                      className="h-5 w-5 cursor-pointer"
+                      disabled={goalkeepersCount >= 2}
+                    />
+                    <label 
+                      htmlFor="edit-hasRentedGoalkeepers" 
+                      className={`text-sm font-medium cursor-pointer ${goalkeepersCount >= 2 ? 'text-slate-500' : 'text-slate-200'}`}
+                    >
+                      ¿Habrá arqueros alquilados?
+                    </label>
+                  </div>
+                  {goalkeepersCount >= 2 && (
+                    <p className="text-xs text-amber-400 mb-3">Ya hay 2 arqueros inscritos. No se puede configurar alquiler.</p>
+                  )}
+
+                  {editForm.hasRentedGoalkeepers && (
+                    <div className="space-y-4">
+                      <div>
+                        <label htmlFor="edit-rentedGoalkeepersCount" className="mb-2 block text-sm font-medium text-slate-200">
+                          Cantidad de arqueros alquilados
+                        </label>
+                        <select
+                          id="edit-rentedGoalkeepersCount"
+                          name="rentedGoalkeepersCount"
+                          value={editForm.rentedGoalkeepersCount}
+                          onChange={handleEditInputChange}
+                          className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                        >
+                          <option value={1}>1 arquero</option>
+                          <option value={2}>2 arqueros</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="edit-rentalCost" className="mb-2 block text-sm font-medium text-slate-200">
+                          Valor del alquiler ({editForm.rentedGoalkeepersCount} arquero{editForm.rentedGoalkeepersCount > 1 ? "s" : ""}) ($)
+                        </label>
+                        <input
+                          id="edit-rentalCost"
+                          name="rentalCost"
+                          ref={editRentalCostRef}
+                          value={editRentalCostInput}
+                          onChange={handleEditInputChange}
+                          inputMode="numeric"
+                          autoComplete="off"
+                          className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                          placeholder="Ej: $ 50.000"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+
                 {editMessage && (
                   <div className={`rounded px-4 py-3 text-sm font-medium ${
                     editMessage.includes("✓")
@@ -1097,6 +1310,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
                       <h2 className="text-xl font-bold text-white">Armar equipos</h2>
                       <div className="flex gap-2">
+                        <button
+                          type="button"
+                          onClick={randomizeTeams}
+                          className="rounded border border-indigo-500/70 bg-indigo-600/80 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                        >
+                          Distribuir aleatoriamente
+                        </button>
                         <button
                           type="button"
                           onClick={saveTeams}

@@ -9,6 +9,9 @@ interface MatchFormData {
   time: string;
   fieldCost: number;
   playersPerTeam: number;
+  hasRentedGoalkeepers: boolean;
+  rentedGoalkeepersCount: number;
+  rentalCost: number;
 }
 
 export interface MatchFormSubmitData extends MatchFormData {
@@ -67,15 +70,23 @@ export default function MatchForm({
     time: "",
     fieldCost: 0,
     playersPerTeam: 6,
+    hasRentedGoalkeepers: false,
+    rentedGoalkeepersCount: 1,
+    rentalCost: 0,
   });
   const [fieldCostInput, setFieldCostInput] = useState("");
+  const [rentalCostInput, setRentalCostInput] = useState("");
   const fieldCostInputRef = useRef<HTMLInputElement>(null);
+  const rentalCostInputRef = useRef<HTMLInputElement>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     // Calculate cost per player (total players = playersPerTeam * 2)
     const totalPlayers = formData.playersPerTeam * 2;
-    const costPerPlayer = Math.round(formData.fieldCost / totalPlayers);
+    const totalCost = formData.hasRentedGoalkeepers 
+      ? formData.fieldCost + formData.rentalCost 
+      : formData.fieldCost;
+    const costPerPlayer = Math.round(totalCost / totalPlayers);
     
     onMatchCreate({
       ...formData,
@@ -85,7 +96,10 @@ export default function MatchForm({
   };
 
   const totalPlayers = formData.playersPerTeam * 2;
-  const costPerPlayer = formData.fieldCost > 0 ? Math.round(formData.fieldCost / totalPlayers) : 0;
+  const totalCost = formData.hasRentedGoalkeepers 
+    ? formData.fieldCost + formData.rentalCost 
+    : formData.fieldCost;
+  const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -122,9 +136,49 @@ export default function MatchForm({
       return;
     }
 
+    if (name === "rentalCost") {
+      const selectionStart = e.target instanceof HTMLInputElement
+        ? e.target.selectionStart ?? value.length
+        : value.length;
+      const digitsBeforeCursor = getDigitCount(value.slice(0, selectionStart));
+      const numericValue = value.replace(/\D/g, "");
+      const formattedValue = numericValue === "" ? "" : formatCurrency(Number(numericValue));
+
+      setRentalCostInput(formattedValue);
+      setFormData(prev => ({
+        ...prev,
+        rentalCost: numericValue === "" ? 0 : Number(numericValue),
+      }));
+
+      requestAnimationFrame(() => {
+        const input = rentalCostInputRef.current;
+
+        if (!input) {
+          return;
+        }
+
+        const nextCursorPosition = getCursorPositionFromDigitCount(
+          formattedValue,
+          Math.min(digitsBeforeCursor, numericValue.length),
+        );
+
+        input.setSelectionRange(nextCursorPosition, nextCursorPosition);
+      });
+
+      return;
+    }
+
+    if (name === "hasRentedGoalkeepers") {
+      setFormData(prev => ({
+        ...prev,
+        [name]: e.target instanceof HTMLInputElement && e.target.checked,
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
-      [name]: name === "playersPerTeam" ? Number(value) : value,
+      [name]: name === "playersPerTeam" || name === "rentedGoalkeepersCount" ? Number(value) : value,
     }));
   };
 
@@ -201,6 +255,60 @@ export default function MatchForm({
         <p className="form-help-text">Ingrese el costo total de alquiler de la cancha</p>
       </div>
 
+      <div className="border border-border rounded-lg p-4 bg-muted/30">
+        <div className="flex items-center gap-3 mb-4">
+          <input
+            type="checkbox"
+            id="hasRentedGoalkeepers"
+            name="hasRentedGoalkeepers"
+            checked={formData.hasRentedGoalkeepers}
+            onChange={handleChange}
+            className="h-4 w-4"
+          />
+          <label htmlFor="hasRentedGoalkeepers" className="form-label mb-0 cursor-pointer">
+            ¿Habrá arqueros alquilados?
+          </label>
+        </div>
+
+        {formData.hasRentedGoalkeepers && (
+          <div className="space-y-4">
+            <div className="form-group">
+              <label htmlFor="rentedGoalkeepersCount" className="form-label">
+                Cantidad de arqueros alquilados
+              </label>
+              <select
+                id="rentedGoalkeepersCount"
+                name="rentedGoalkeepersCount"
+                value={formData.rentedGoalkeepersCount}
+                onChange={handleChange}
+                className="form-input"
+              >
+                <option value={1}>1 arquero</option>
+                <option value={2}>2 arqueros</option>
+              </select>
+            </div>
+            <div className="form-group">
+              <label htmlFor="rentalCost" className="form-label">
+                Valor del alquiler ({formData.rentedGoalkeepersCount} arquero{formData.rentedGoalkeepersCount > 1 ? "s" : ""}) ($)
+              </label>
+              <input
+                type="text"
+                id="rentalCost"
+                name="rentalCost"
+                ref={rentalCostInputRef}
+                value={rentalCostInput}
+                onChange={handleChange}
+                inputMode="numeric"
+                autoComplete="off"
+                className="form-input"
+                placeholder="Ej: $ 50.000"
+              />
+              <p className="form-help-text">Ingrese el costo total del alquiler de arqueros</p>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="form-group">
         <label htmlFor="playersPerTeam" className="form-label">
           Jugadores por Equipo
@@ -229,6 +337,12 @@ export default function MatchForm({
               <span className="text-muted-foreground">Valor de la cancha:</span>
               <span className="font-medium">{formatCurrency(formData.fieldCost)}</span>
             </div>
+            {formData.hasRentedGoalkeepers && formData.rentalCost > 0 && (
+              <div className="flex justify-between">
+                <span className="text-muted-foreground">Alquiler arqueros ({formData.rentedGoalkeepersCount}):</span>
+                <span className="font-medium">{formatCurrency(formData.rentalCost)}</span>
+              </div>
+            )}
             <div className="flex justify-between">
               <span className="text-muted-foreground">Formato:</span>
               <span className="font-medium">{formData.playersPerTeam} vs {formData.playersPerTeam}</span>

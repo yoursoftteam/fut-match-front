@@ -18,7 +18,7 @@ export default function CreateMatch() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const { createMatch } = useMatches();
+  const { createMatch, registerRentedGoalkeepers } = useMatches();
   const router = useRouter();
   const requiresLogin = !user;
   const submitLabel = loading
@@ -50,6 +50,14 @@ export default function CreateMatch() {
 
       if (createError) {
         throw createError;
+      }
+
+      // Register rented goalkeepers if configured
+      if (data.hasRentedGoalkeepers && data.rentedGoalkeepersCount > 0) {
+        const { error: rentedError } = await registerRentedGoalkeepers(newMatch.id, data.rentedGoalkeepersCount);
+        if (rentedError) {
+          console.error("Error registering rented goalkeepers:", rentedError);
+        }
       }
 
       // Set the created match with the database response
@@ -103,7 +111,14 @@ export default function CreateMatch() {
                 <p className="text-destructive text-sm">{error}</p>
               </div>
             )}
-          
+            
+            {!user && (
+              <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+                <p className="text-yellow-600 text-sm">
+                  Debes <a href="/auth?mode=signin" className="underline hover:text-yellow-700">iniciar sesión</a> para crear un partido.
+                </p>
+              </div>
+            )}
             
             <MatchForm
               onMatchCreate={handleMatchCreate}
@@ -174,7 +189,7 @@ export default function CreateMatch() {
                   </li>
                   <li className="flex items-start">
                     <span className="text-primary mr-3 mt-1">✓</span>
-                    <span>Tus amigos pueden registrarse con sus cuentas</span>
+                    <span>Tus amigos pueden registrarse facilmente</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-primary mr-3 mt-1">✓</span>
