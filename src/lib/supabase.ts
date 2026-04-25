@@ -1,16 +1,17 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const hasSupabaseEnv = Boolean(supabaseUrl && supabaseAnonKey)
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
+if (!hasSupabaseEnv) {
+  console.warn('Supabase env vars are missing. Configure NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your deployment environment.')
 }
 
-// Check if we're in development
-const isDevelopment = process.env.NODE_ENV === 'development'
-
-export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+export const supabase = createClient(
+  hasSupabaseEnv ? supabaseUrl! : 'https://placeholder.supabase.co',
+  hasSupabaseEnv ? supabaseAnonKey! : 'placeholder-anon-key',
+  {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
