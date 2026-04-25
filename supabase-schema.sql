@@ -49,18 +49,21 @@ CREATE POLICY "Anyone can unregister from matches" ON match_registrations
   FOR DELETE USING (true);
 
 -- Enforce registration rules at DB level:
--- 1) max 2 goalkeepers
--- 2) always reserve 2 slots for goalkeepers
+-- 1) max 2 goalkeepers (for titular slots only)
+-- 2) always reserve 2 slots for goalkeepers (for titular slots only)
+-- 3) allow up to max_players + 5 substitute slots (no position restrictions for substitutes)
 CREATE OR REPLACE FUNCTION validate_match_registration()
 RETURNS TRIGGER
 LANGUAGE plpgsql
 AS $$
 DECLARE
   v_max_players INTEGER;
+  v_total INTEGER;
   v_goalkeepers INTEGER;
   v_field_players INTEGER;
   v_reserved_goalkeeper_slots INTEGER;
   v_max_field_players INTEGER;
+  v_max_substitute_slots CONSTANT INTEGER := 5;
 BEGIN
   SELECT max_players INTO v_max_players
   FROM matches
@@ -70,27 +73,32 @@ BEGIN
     RAISE EXCEPTION 'Partido no encontrado.';
   END IF;
 
-  v_reserved_goalkeeper_slots := LEAST(2, v_max_players);
-  v_max_field_players := GREATEST(0, v_max_players - v_reserved_goalkeeper_slots);
-
   SELECT
+    COUNT(*),
     COUNT(*) FILTER (WHERE is_goalkeeper),
     COUNT(*) FILTER (WHERE NOT is_goalkeeper)
-  INTO v_goalkeepers, v_field_players
+  INTO v_total, v_goalkeepers, v_field_players
   FROM match_registrations
   WHERE match_id = NEW.match_id;
 
-  IF (v_goalkeepers + v_field_players) >= v_max_players THEN
-    RAISE EXCEPTION 'El partido ya está completo.';
+  -- Hard cap: titular slots + substitute slots
+  IF v_total >= v_max_players + v_max_substitute_slots THEN
+    RAISE EXCEPTION 'No hay cupos disponibles, ni siquiera como suplente.';
   END IF;
 
-  IF NEW.is_goalkeeper THEN
-    IF v_goalkeepers >= v_reserved_goalkeeper_slots THEN
-      RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
-    END IF;
-  ELSE
-    IF v_field_players >= v_max_field_players THEN
-      RAISE EXCEPTION 'Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.';
+  -- Position restrictions only apply while filling titular slots
+  IF v_total < v_max_players THEN
+    v_reserved_goalkeeper_slots := LEAST(2, v_max_players);
+    v_max_field_players := GREATEST(0, v_max_players - v_reserved_goalkeeper_slots);
+
+    IF NEW.is_goalkeeper THEN
+      IF v_goalkeepers >= v_reserved_goalkeeper_slots THEN
+        RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
+      END IF;
+    ELSE
+      IF v_field_players >= v_max_field_players THEN
+        RAISE EXCEPTION 'Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.';
+      END IF;
     END IF;
   END IF;
 

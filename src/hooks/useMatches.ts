@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
+const MAX_SUBSTITUTE_SLOTS = 5
+
 interface Match {
   id: string
   title: string
@@ -10,14 +12,6 @@ interface Match {
   date: string
   max_players: number
   created_by: string
-}
-
-interface MatchRegistration {
-  id: string
-  match_id: string
-  name: string
-  is_goalkeeper: boolean
-  registered_at: string
 }
 
 export function useMatches() {
@@ -73,6 +67,29 @@ export function useMatches() {
       return { data, error: null }
     } catch (error) {
       console.error('Error creating match:', error)
+      return { data: null, error }
+    }
+  }
+
+  const updateMatch = async (
+    matchId: string,
+    updates: Pick<Match, 'title' | 'location' | 'date' | 'max_players'>,
+  ) => {
+    try {
+      const { data, error } = await supabase
+        .from('matches')
+        .update(updates)
+        .eq('id', matchId)
+        .select()
+        .single()
+
+      if (error) throw error
+
+      setMatches(prev => prev.map((match) => (match.id === matchId ? data : match)))
+
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error updating match:', error)
       return { data: null, error }
     }
   }
@@ -135,19 +152,22 @@ export function useMatches() {
       const registrations = currentRegistrations || []
       const currentGoalkeepers = registrations.filter((registration) => registration.is_goalkeeper).length
       const currentFieldPlayers = registrations.length - currentGoalkeepers
+      const isSubstituteSlot = registrations.length >= maxPlayers
 
-      if (isGoalkeeper) {
-        if (currentGoalkeepers >= reservedGoalkeeperSlots) {
-          throw new Error('Ya se completaron los cupos de arqueros (máximo 2).')
-        }
-      } else {
-        if (currentFieldPlayers >= maxFieldPlayers) {
-          throw new Error('Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.')
-        }
+      if (registrations.length >= maxPlayers + MAX_SUBSTITUTE_SLOTS) {
+        throw new Error('No hay cupos disponibles, ni siquiera como suplente.')
       }
 
-      if (registrations.length >= maxPlayers) {
-        throw new Error('El partido ya está completo.')
+      if (!isSubstituteSlot) {
+        if (isGoalkeeper) {
+          if (currentGoalkeepers >= reservedGoalkeeperSlots) {
+            throw new Error('Ya se completaron los cupos de arqueros (máximo 2).')
+          }
+        } else {
+          if (currentFieldPlayers >= maxFieldPlayers) {
+            throw new Error('Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.')
+          }
+        }
       }
 
       const { data, error } = await supabase
@@ -182,15 +202,67 @@ export function useMatches() {
     }
   }
 
+  const registerRentedGoalkeepers = async (matchId: string, count: number) => {
+    try {
+      console.log('[DB] Registering rented goalkeepers:', { matchId, count })
+
+      // Get existing rented goalkeeper registrations
+      const { data: existingRegistrations, error: fetchError } = await supabase
+        .from('match_registrations')
+        .select('id')
+        .eq('match_id', matchId)
+        .ilike('name', 'Arquero Alquilado%')
+
+      if (fetchError) throw fetchError
+
+      const existingCount = existingRegistrations?.length || 0
+
+      // If we need fewer, delete the extras
+      if (existingCount > count) {
+        const toDelete = existingRegistrations?.slice(count) || []
+        for (const reg of toDelete) {
+          await supabase
+            .from('match_registrations')
+            .delete()
+            .eq('id', reg.id)
+        }
+      }
+
+      // If we need more, add them
+      if (existingCount < count) {
+        const toAdd = count - existingCount
+        const newRegistrations = Array.from({ length: toAdd }, (_, i) => ({
+          match_id: matchId,
+          name: `Arquero Alquilado ${existingCount + i + 1}`,
+          is_goalkeeper: true,
+        }))
+
+        const { error: insertError } = await supabase
+          .from('match_registrations')
+          .insert(newRegistrations)
+
+        if (insertError) throw insertError
+      }
+
+      console.log('[DB] ✅ Rented goalkeepers registered successfully')
+      return { error: null }
+    } catch (error) {
+      console.error('[DB] ❌ Error registering rented goalkeepers:', error)
+      return { error }
+    }
+  }
+
   return {
     matches,
     loading,
     registrationCounts,
     createMatch,
+    updateMatch,
     getMatchById,
     getMatchRegistrations,
     registerForMatch,
     unregisterFromMatch,
+    registerRentedGoalkeepers,
     refetch: fetchMatches,
   }
 }

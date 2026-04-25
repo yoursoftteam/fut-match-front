@@ -2,20 +2,32 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import MatchForm from "@/components/MatchForm";
+import MatchForm, { type MatchFormSubmitData } from "@/components/MatchForm";
 import ShareLink from "@/components/ShareLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
+import { formatCurrency } from "@/lib/currency";
+
+interface CreatedMatch extends MatchFormSubmitData {
+  id: string;
+  created_at: string;
+}
 
 export default function CreateMatch() {
-  const [createdMatch, setCreatedMatch] = useState<any>(null);
+  const [createdMatch, setCreatedMatch] = useState<CreatedMatch | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
-  const { createMatch } = useMatches();
+  const { createMatch, registerRentedGoalkeepers } = useMatches();
   const router = useRouter();
+  const requiresLogin = !user;
+  const submitLabel = loading
+    ? "Creando Partido..."
+    : user
+      ? "Crear Partido"
+      : "Inicia sesión para crear el partido";
 
-  const handleMatchCreate = async (data: any) => {
+  const handleMatchCreate = async (data: MatchFormSubmitData) => {
     if (!user) {
       setError("Debes iniciar sesión para crear un partido");
       return;
@@ -38,6 +50,14 @@ export default function CreateMatch() {
 
       if (createError) {
         throw createError;
+      }
+
+      // Register rented goalkeepers if configured
+      if (data.hasRentedGoalkeepers && data.rentedGoalkeepersCount > 0) {
+        const { error: rentedError } = await registerRentedGoalkeepers(newMatch.id, data.rentedGoalkeepersCount);
+        if (rentedError) {
+          console.error("Error registering rented goalkeepers:", rentedError);
+        }
       }
 
       // Set the created match with the database response
@@ -64,9 +84,9 @@ export default function CreateMatch() {
         console.error("Error saving match to localStorage", err);
       }
 
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("Error creating match:", err);
-      setError(err.message || "Error al crear el partido");
+      setError(err instanceof Error ? err.message : "Error al crear el partido");
     } finally {
       setLoading(false);
     }
@@ -100,7 +120,13 @@ export default function CreateMatch() {
               </div>
             )}
             
-            <MatchForm onMatchCreate={handleMatchCreate} disabled={!user || loading} />
+            <MatchForm
+              onMatchCreate={handleMatchCreate}
+              disabled={loading}
+              submitLabel={submitLabel}
+              submitButtonType={requiresLogin ? "button" : "submit"}
+              onSubmitButtonClick={requiresLogin ? () => router.push("/auth?mode=signin") : undefined}
+            />
           </div>
 
           <div className="slide-in-left">
@@ -124,10 +150,14 @@ export default function CreateMatch() {
                     <span className="font-medium text-muted-foreground">Formato:</span>
                     <span className="text-card-foreground font-medium">{createdMatch.playersPerTeam} vs {createdMatch.playersPerTeam}</span>
                   </div>
+                  <div className="flex justify-between items-center border-b border-border pb-3">
+                    <span className="font-medium text-muted-foreground">Valor de la cancha:</span>
+                    <span className="text-card-foreground font-medium">{formatCurrency(createdMatch.fieldCost)}</span>
+                  </div>
                   <div className="flex justify-between items-center pt-3">
                     <span className="font-medium text-muted-foreground">Aporte por jugador:</span>
                     <span className="font-bold text-primary text-xl">
-                      ${createdMatch.costPerPlayer.toLocaleString()}
+                      {formatCurrency(createdMatch.costPerPlayer)}
                     </span>
                   </div>
                 </div>
@@ -159,7 +189,7 @@ export default function CreateMatch() {
                   </li>
                   <li className="flex items-start">
                     <span className="text-primary mr-3 mt-1">✓</span>
-                    <span>Tus amigos pueden registrarse con sus cuentas</span>
+                    <span>Tus amigos pueden registrarse facilmente</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-primary mr-3 mt-1">✓</span>
