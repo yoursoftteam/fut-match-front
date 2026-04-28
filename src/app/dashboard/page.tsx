@@ -7,7 +7,7 @@ import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
 
 export default function DashboardPage() {
-  const { user, loading: authLoading, signOut } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const { matches, loading: matchesLoading, registrationCounts } = useMatches()
   const router = useRouter()
 
@@ -17,17 +17,12 @@ export default function DashboardPage() {
     }
   }, [user, authLoading, router])
 
-  const handleSignOut = async () => {
-    await signOut()
-    router.push('/')
-  }
-
   if (authLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-          <p className="text-muted-foreground">Cargando...</p>
+          <p className="text-muted-foreground">Cargando…</p>
         </div>
       </div>
     )
@@ -110,7 +105,7 @@ export default function DashboardPage() {
           {matchesLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Cargando partidos...</p>
+              <p className="text-muted-foreground">Cargando partidos…</p>
             </div>
           ) : matches.length === 0 ? (
             <div className="card p-8 text-center">

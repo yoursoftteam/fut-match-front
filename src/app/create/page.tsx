@@ -22,7 +22,7 @@ export default function CreateMatch() {
   const router = useRouter();
   const requiresLogin = !user;
   const submitLabel = loading
-    ? "Creando Partido..."
+    ? "Creando partido…"
     : user
       ? "Crear Partido"
       : "Inicia sesión para crear el partido";
@@ -96,7 +96,7 @@ export default function CreateMatch() {
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="max-w-5xl mx-auto">
         <header className="text-center mb-16 mt-8 fade-in-up">
-          <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4 neon-text">FutMatch</h1>
+          <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4 neon-text">Vibesports</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Crea partidos de fútbol y comparte con tus amigos
           </p>

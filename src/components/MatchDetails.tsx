@@ -696,6 +696,51 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     else setUnassigned((prev) => [...prev, player!]);
   };
 
+  /** Same move logic as drag-and-drop, for keyboard / button alternative (WCAG). */
+  const assignPlayerToZone = (playerId: string, targetZone: TeamZone) => {
+    if (!matchData) return;
+
+    const allZones: [TeamZone, PlayerRegistration[]][] = [
+      ["A", teamA],
+      ["B", teamB],
+      ["pool", unassigned],
+    ];
+    let player: PlayerRegistration | undefined;
+    let sourceZone: TeamZone | undefined;
+    for (const [zone, list] of allZones) {
+      const found = list.find((p) => p.id === playerId);
+      if (found) {
+        player = found;
+        sourceZone = zone;
+        break;
+      }
+    }
+
+    if (!player || !sourceZone || sourceZone === targetZone) return;
+
+    const limit = Math.ceil(matchData.max_players / 2);
+    if (targetZone === "A" && teamA.length >= limit) {
+      setTeamBuilderMessage(`El equipo A ya está completo (${limit}).`);
+      return;
+    }
+
+    if (targetZone === "B" && teamB.length >= limit) {
+      setTeamBuilderMessage(`El equipo B ya está completo (${limit}).`);
+      return;
+    }
+
+    setTeamBuilderMessage(null);
+
+    const withoutPlayer = (list: PlayerRegistration[]) => list.filter((p) => p.id !== player!.id);
+    if (sourceZone === "A") setTeamA(withoutPlayer(teamA));
+    else if (sourceZone === "B") setTeamB(withoutPlayer(teamB));
+    else setUnassigned(withoutPlayer(unassigned));
+
+    if (targetZone === "A") setTeamA((prev) => [...prev, player!]);
+    else if (targetZone === "B") setTeamB((prev) => [...prev, player!]);
+    else setUnassigned((prev) => [...prev, player!]);
+  };
+
   const getSourceZoneByPlayerId = (playerId: string): TeamZone | null => {
     if (teamA.some((player) => player.id === playerId)) return "A";
     if (teamB.some((player) => player.id === playerId)) return "B";
@@ -829,6 +874,18 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       setActiveTab("teams");
     }
   }, [showTeamBuilder]);
+
+  useEffect(() => {
+    if (!showUnregisterModal) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        setShowUnregisterModal(false);
+        setUnregisterTarget(null);
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [showUnregisterModal]);
 
   if (loading) {
     return <div className="text-center py-8">Cargando detalles del partido...</div>;
@@ -1076,11 +1133,15 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 </div>
 
                 {editMessage && (
-                  <div className={`rounded px-4 py-3 text-sm font-medium ${
-                    editMessage.includes("✓")
-                      ? "border border-green-500 bg-green-500/20 text-green-300"
-                      : "border border-red-500 bg-red-500/20 text-red-300"
-                  }`}>
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className={`rounded px-4 py-3 text-sm font-medium ${
+                      editMessage.includes("✓")
+                        ? "border border-green-500 bg-green-500/20 text-green-300"
+                        : "border border-red-500 bg-red-500/20 text-red-300"
+                    }`}
+                  >
                     {editMessage}
                   </div>
                 )}
@@ -1113,9 +1174,18 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
           )}
 
           <div className="rounded-lg border border-slate-800 bg-[hsl(220,18%,10%)] p-4 shadow sm:p-6">
-            <div className="mb-4 flex flex-wrap gap-2">
+            <div
+              className="mb-4 flex flex-wrap gap-2"
+              role="tablist"
+              aria-label="Secciones del partido"
+            >
               <button
                 type="button"
+                role="tab"
+                id="tab-register"
+                aria-selected={activeTab === "register"}
+                aria-controls="panel-register"
+                tabIndex={activeTab === "register" ? 0 : -1}
                 onClick={() => setActiveTab("register")}
                 className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
                   activeTab === "register" ? "bg-green-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
@@ -1125,6 +1195,11 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               </button>
               <button
                 type="button"
+                role="tab"
+                id="tab-players"
+                aria-selected={activeTab === "players"}
+                aria-controls="panel-players"
+                tabIndex={activeTab === "players" ? 0 : -1}
                 onClick={() => setActiveTab("players")}
                 className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
                   activeTab === "players" ? "bg-green-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
@@ -1135,6 +1210,11 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               {isCreator && (
                 <button
                   type="button"
+                  role="tab"
+                  id="tab-teams"
+                  aria-selected={activeTab === "teams"}
+                  aria-controls="panel-teams"
+                  tabIndex={activeTab === "teams" ? 0 : -1}
                   onClick={() => {
                     if (!showTeamBuilder) {
                       initTeamBuilder(titulares);
@@ -1152,7 +1232,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             </div>
 
             {activeTab === "register" && (
-              <div>
+              <div id="panel-register" role="tabpanel" aria-labelledby="tab-register">
                 <h2 className="mb-2 text-xl font-bold text-white">Inscribirme al partido</h2>
                 <p className="mb-4 text-sm text-slate-300">Deja tu nombre y elige si vienes como portero.</p>
                 <div className="mb-4 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-300">
@@ -1162,13 +1242,18 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 </div>
 
                 {registrationMessage && (
-                  <div className={`mb-4 rounded p-3 text-sm ${registrationMessage.includes("exitosamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}>
+                  <div
+                    role="status"
+                    aria-live="polite"
+                    className={`mb-4 rounded p-3 text-sm ${registrationMessage.includes("exitosamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}
+                  >
                     {registrationMessage}
                   </div>
                 )}
 
                 {!showRegistrationForm ? (
                   <button
+                    type="button"
                     onClick={() => setShowRegistrationForm(true)}
                     className={`w-full rounded py-2 px-4 font-semibold transition ${
                       isTitularFull && !isSubstituteFull
@@ -1184,19 +1269,24 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 ) : (
                   <form onSubmit={handleRegistrationSubmit} className="space-y-4">
                     <div>
-                      <label className="mb-2 block text-sm font-medium text-slate-200">Nombre completo</label>
+                      <label htmlFor="register-fullname" className="mb-2 block text-sm font-medium text-slate-200">
+                        Nombre completo
+                      </label>
                       <input
+                        id="register-fullname"
                         type="text"
                         name="name"
+                        autoComplete="name"
                         value={registrationForm.name}
                         onChange={handleInputChange}
                         className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
-                        placeholder="Ingresa tu nombre"
+                        placeholder="Ingresa tu nombre…"
                         required
                       />
                     </div>
                     <div className="flex items-center gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3">
                       <input
+                        id="register-gk"
                         type="checkbox"
                         name="isGoalkeeper"
                         checked={registrationForm.isGoalkeeper}
@@ -1204,7 +1294,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                         className="h-5 w-5"
                         disabled={goalkeepersRemaining <= 0}
                       />
-                      <label className="text-sm text-slate-200">Me registro como portero</label>
+                      <label htmlFor="register-gk" className="text-sm text-slate-200">
+                        Me registro como portero
+                      </label>
                     </div>
                     <div className="flex gap-3">
                       <button
@@ -1237,7 +1329,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             )}
 
             {activeTab === "players" && (
-              <div>
+              <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
                 <h2 className="mb-3 text-xl font-bold text-white">Jugadores inscritos ({registrations.length})</h2>
                 <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
                   {titulares.length > 0 && (
@@ -1251,11 +1343,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                         <span className="mt-0.5 block text-xs text-slate-400">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                       </div>
                       <button
+                        type="button"
                         onClick={() => handleUnregisterClick(registration)}
                         className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
                         title="Darse de baja"
+                        aria-label={`Dar de baja a ${registration.name}`}
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={16} aria-hidden />
                       </button>
                     </div>
                   ))}
@@ -1271,11 +1365,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                             <span className="mt-0.5 block text-xs text-slate-400">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                           </div>
                           <button
+                            type="button"
                             onClick={() => handleUnregisterClick(registration)}
                             className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
                             title="Darse de baja"
+                            aria-label={`Dar de baja a ${registration.name}`}
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={16} aria-hidden />
                           </button>
                         </div>
                       ))}
@@ -1290,6 +1386,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             )}
 
             {activeTab === "teams" && isCreator && (
+              <div id="panel-teams" role="tabpanel" aria-labelledby="tab-teams">
               <div id="team-builder">
                 {!showTeamBuilder ? (
                   <div className="rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4">
@@ -1335,7 +1432,11 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     </div>
 
                     {teamBuilderMessage && (
-                      <p className={`mb-3 text-sm ${teamBuilderMessage.includes("correctamente") ? "text-green-400" : "text-amber-400"}`}>
+                      <p
+                        role="status"
+                        aria-live="polite"
+                        className={`mb-3 text-sm ${teamBuilderMessage.includes("correctamente") ? "text-green-400" : "text-amber-400"}`}
+                      >
                         {teamBuilderMessage}
                       </p>
                     )}
@@ -1349,15 +1450,34 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                         <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Sin equipo ({unassigned.length})</p>
                         <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
                           {unassigned.map((player) => (
-                            <div
-                              key={player.id}
-                              draggable
-                              onDragStart={(event) => handlePlayerDragStart(event, player.id)}
-                              onDragEnd={handlePlayerDragEnd}
-                              className={`flex cursor-grab select-none items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white transition active:cursor-grabbing ${draggingId === player.id ? "opacity-40" : "hover:border-slate-400"}`}
-                            >
-                              <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
-                              <span>{player.name}</span>
+                            <div key={player.id} className="space-y-1">
+                              <div
+                                draggable
+                                onDragStart={(event) => handlePlayerDragStart(event, player.id)}
+                                onDragEnd={handlePlayerDragEnd}
+                                className={`flex cursor-grab select-none items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white transition active:cursor-grabbing ${draggingId === player.id ? "opacity-40" : "hover:border-slate-400"}`}
+                              >
+                                <span aria-hidden>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
+                                <span>{player.name}</span>
+                              </div>
+                              <div className="flex flex-wrap justify-end gap-1">
+                                <button
+                                  type="button"
+                                  className="rounded border border-blue-600/60 bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-200 hover:bg-blue-800/40"
+                                  onClick={() => assignPlayerToZone(player.id, "A")}
+                                  aria-label={`Asignar ${player.name} al equipo A`}
+                                >
+                                  → A
+                                </button>
+                                <button
+                                  type="button"
+                                  className="rounded border border-red-600/60 bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-200 hover:bg-red-800/40"
+                                  onClick={() => assignPlayerToZone(player.id, "B")}
+                                  aria-label={`Asignar ${player.name} al equipo B`}
+                                >
+                                  → B
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1435,19 +1555,30 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   </>
                 )}
               </div>
+              </div>
             )}
           </div>
         </section>
 
         {/* Unregister Modal */}
         {showUnregisterModal && unregisterTarget && (
-          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-            <div className="bg-[hsl(220,18%,10%)] rounded-lg p-6 max-w-sm w-full border border-slate-700">
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overscroll-contain"
+            role="presentation"
+          >
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="unregister-dialog-title"
+              className="max-h-[90dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-lg border border-slate-700 bg-[hsl(220,18%,10%)] p-6"
+            >
               <div className="flex items-center gap-3 mb-4">
-                <div className="p-2 bg-red-900/30 rounded-full">
-                  <Trash2 className="text-red-400" size={24} />
+                <div className="rounded-full bg-red-900/30 p-2">
+                  <Trash2 className="text-red-400" size={24} aria-hidden />
                 </div>
-                <h3 className="text-xl font-bold text-white">Confirmar baja</h3>
+                <h3 id="unregister-dialog-title" className="text-xl font-bold text-white">
+                  Confirmar baja
+                </h3>
               </div>
               <p className="text-slate-300 mb-6">
                 ¿Estás seguro de que deseas darte de baja de este partido?
@@ -1456,28 +1587,30 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               </p>
               <div className="flex gap-3">
                 <button
+                  type="button"
                   onClick={() => {
                     setShowUnregisterModal(false);
                     setUnregisterTarget(null);
                   }}
-                  className="flex-1 bg-slate-700 text-white py-2 px-4 rounded hover:bg-slate-800 transition"
+                  className="flex-1 rounded bg-slate-700 py-2 px-4 text-white transition hover:bg-slate-800"
                   disabled={unregisterLoading}
                 >
                   Cancelar
                 </button>
                 <button
+                  type="button"
                   onClick={handleUnregister}
-                  className="flex-1 bg-green-500 text-white py-3 px-4 rounded hover:bg-green-600 transition flex items-center justify-center gap-2 whitespace-nowrap text-base font-semibold"
+                  className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded bg-green-500 py-3 px-4 text-base font-semibold text-white transition hover:bg-green-600"
                   disabled={unregisterLoading}
                 >
                   {unregisterLoading ? (
                     <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white flex-shrink-0"></div>
-                      <span>Dando de baja...</span>
+                      <div className="h-4 w-4 shrink-0 animate-spin rounded-full border-b-2 border-white" />
+                      <span>Dando de baja…</span>
                     </>
                   ) : (
                     <>
-                      <Trash2 size={18} className="flex-shrink-0" />
+                      <Trash2 size={18} className="shrink-0" aria-hidden />
                       <span>Confirmar baja</span>
                     </>
                   )}

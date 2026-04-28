@@ -184,7 +184,7 @@ export default function MatchForm({
 
   return (
     <form onSubmit={handleSubmit} className="card p-6 w-full max-w-md slide-in-left">
-      <h2 className="text-2xl font-bold mb-6 text-center text-text-primary">Crear Partido</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-card-foreground">Crear Partido</h2>
       
       <div className="form-group">
         <label htmlFor="location" className="form-label">

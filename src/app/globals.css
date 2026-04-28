@@ -1,7 +1,72 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+html {
+  color-scheme: light;
+}
+html.dark {
+  color-scheme: dark;
+}
+
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-to-main:focus {
+  left: 0.75rem;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+#main-content {
+  scroll-margin-top: 5rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 
 :root {
+  --background: 220 20% 97%;
+  --foreground: 220 25% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 25% 11%;
+  --primary: 142 68% 36%;
+  --primary-hover: 142 68% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 92%;
+  --secondary-foreground: 220 25% 11%;
+  --muted: 220 14% 94%;
+  --muted-foreground: 220 10% 42%;
+  --accent: 200 72% 40%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 220 14% 86%;
+  --input: 220 14% 86%;
+  --ring: 142 68% 36%;
+  --radius: 0.75rem;
+  --shadow: 0 4px 24px hsl(220 25% 11% / 0.08);
+  --shadow-lg: 0 12px 28px -8px hsl(220 25% 11% / 0.12);
+}
+
+html.dark {
   --background: 220 20% 6%;
   --foreground: 0 0% 95%;
   --card: 220 18% 10%;
@@ -24,6 +89,7 @@
   --shadow: 0 8px 32px hsl(0 0% 0% / 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
+
 
 body {
   background: hsl(var(--background));
@@ -96,7 +162,7 @@ p {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   border: 1px solid hsl(var(--border));
-  transition: all 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
   animation: fadeInUp 0.3s ease-out;
 }
@@ -123,13 +189,14 @@ p {
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
-.btn:focus {
+.btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.45);
 }
 
 .btn:disabled {
@@ -165,8 +232,8 @@ p {
 
 .btn-outline {
   background-color: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -182,24 +249,25 @@ p {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
 }
 
 .form-input, .form-select {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
-  background-color: var(--card-bg);
-  color: var(--text-primary);
-  transition: all 0.2s ease-in-out;
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.form-input:focus, .form-select:focus {
+.form-input:focus-visible, .form-select:focus-visible {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
 }
 
 .form-input:disabled, .form-select:disabled {
@@ -241,25 +309,26 @@ p {
 .form-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
-  background-color: var(--card-bg);
-  color: var(--text-primary);
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.form-input:focus {
+.form-input:focus-visible {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
 }
 
 .form-label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
 }
 
 .section-title {
@@ -402,6 +471,21 @@ p {
 
 .slide-in-left {
   animation: slideInLeft 0.3s ease-out;
+}
+
+
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .fade-in,
+  .fade-in-up,
+  .slide-in-left {
+    animation: none !important;
+    transition: none !important;
+  }
+  .card:hover {
+    transform: none;
+  }
 }
 
 /* Responsive improvements */

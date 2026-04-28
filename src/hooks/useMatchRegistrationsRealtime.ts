@@ -17,7 +17,7 @@ export function useMatchRegistrationsRealtime(matchId: string) {
 
   useEffect(() => {
     console.log('[Realtime] Inicializando hook para matchId:', matchId)
-    
+
     // Cargar datos iniciales
     const loadInitialData = async () => {
       try {
@@ -68,8 +68,8 @@ export function useMatchRegistrationsRealtime(matchId: string) {
           filter: `match_id=eq.${matchId}`,
         },
         (payload) => {
-          const newData = payload.new as any
-          const oldData = payload.old as any
+          const newData = payload.new as unknown
+          const oldData = payload.old as unknown
 
           console.log('[Realtime] 🎉 EVENTO RECIBIDO!', payload.eventType)
           console.log('[Realtime] Payload completo:', payload)
@@ -79,8 +79,9 @@ export function useMatchRegistrationsRealtime(matchId: string) {
             console.log('[Realtime] ➕ Agregando nuevo jugador:', newReg.name)
             setRegistrations((prev) => [...prev, newReg])
           } else if (payload.eventType === 'DELETE') {
-            console.log('[Realtime] ➖ Eliminando jugador ID:', oldData.id)
-            setRegistrations((prev) => prev.filter((reg) => reg.id !== oldData.id))
+            const oldReg = oldData as PlayerRegistration
+            console.log('[Realtime] ➖ Eliminando jugador ID:', oldReg.id)
+            setRegistrations((prev) => prev.filter((reg) => reg.id !== oldReg.id))
           } else if (payload.eventType === 'UPDATE') {
             const updatedReg = newData as PlayerRegistration
             console.log('[Realtime] ✏️ Actualizando jugador:', updatedReg.name)
@@ -101,9 +102,9 @@ export function useMatchRegistrationsRealtime(matchId: string) {
     }
   }, [matchId])
 
-  return { 
-    registrations, 
-    loading, 
+  return {
+    registrations,
+    loading,
     error
   }
 }
