@@ -888,7 +888,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   }, [showUnregisterModal]);
 
   if (loading) {
-    return <div className="text-center py-8">Cargando detalles del partido...</div>;
+    return <div className="text-center py-8">Cargando detalles del partido…</div>;
   }
 
   if (error) {
@@ -1155,7 +1155,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     }`}
                     disabled={editLoading || editMessage?.includes("✓")}
                   >
-                    {editLoading ? "Guardando..." : editMessage?.includes("✓") ? "✓ Guardado" : "Guardar cambios"}
+                    {editLoading ? "Guardando…" : editMessage?.includes("✓") ? "✓ Guardado" : "Guardar cambios"}
                   </button>
                   <button
                     type="button"
@@ -1309,7 +1309,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                           (!isTitularFull && !registrationForm.isGoalkeeper && fieldPlayersRemaining <= 0)
                         }
                       >
-                        {registrationLoading ? "Registrando..." : "Confirmar inscripción"}
+                        {registrationLoading ? "Registrando…" : "Confirmar inscripción"}
                       </button>
                       <button
                         type="button"
