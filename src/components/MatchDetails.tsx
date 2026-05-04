@@ -928,29 +928,29 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   const isSubstituteFull = suplentes.length >= MAX_SUBSTITUTE_SLOTS;
 
   return (
-    <div className="min-h-screen py-10 px-4 text-white">
+    <div className="min-h-screen py-10 px-4 text-foreground">
       <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_1fr]">
         <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
-          <div className="rounded-lg border border-slate-800 bg-[hsl(220,18%,10%)] p-5 shadow">
-            <h1 className="text-2xl font-bold text-white">{matchData.title}</h1>
-            <p className="mt-2 text-sm text-slate-300">Fecha: {formattedDate}</p>
-            <p className="mt-1 text-sm text-slate-300">Hora: {formattedTime}</p>
-            <p className="mt-1 text-sm text-slate-300">Ubicación: {matchData.location}</p>
-            <p className="mt-3 text-sm text-slate-300">
+          <div className="card match-card rounded-2xl border border-border/80 bg-card p-6 shadow-lg">
+            <h1 className="text-2xl font-bold text-foreground">{matchData.title}</h1>
+            <p className="mt-2 text-sm text-muted-foreground">Fecha: {formattedDate}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Hora: {formattedTime}</p>
+            <p className="mt-1 text-sm text-muted-foreground">Ubicación: {matchData.location}</p>
+            <p className="mt-3 text-sm text-muted-foreground">
               Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo)
             </p>
             {suplentes.length > 0 && (
-              <p className="mt-1 text-sm text-slate-300">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>
+              <p className="mt-1 text-sm text-muted-foreground">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>
             )}
 
             {storedMatchPricing && (
-              <div className="mt-4 space-y-2 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-200">
-                <p><span className="text-slate-400">Cancha:</span> {formatCurrency(storedMatchPricing.fieldCost)}</p>
+              <div className="mt-4 space-y-2 rounded border border-border bg-muted p-3 text-sm text-foreground">
+                <p><span className="text-muted-foreground">Cancha:</span> {formatCurrency(storedMatchPricing.fieldCost)}</p>
                 {storedMatchPricing.hasRentedGoalkeepers && storedMatchPricing.rentalCost ? (
-                  <p><span className="text-slate-400">Alquiler arqueros ({storedMatchPricing.rentedGoalkeepersCount}):</span> {formatCurrency(storedMatchPricing.rentalCost)}</p>
+                  <p><span className="text-muted-foreground">Alquiler arqueros ({storedMatchPricing.rentedGoalkeepersCount}):</span> {formatCurrency(storedMatchPricing.rentalCost)}</p>
                 ) : null}
-                <p><span className="text-slate-400">Por jugador:</span> {formatCurrency(storedMatchPricing.costPerPlayer)}</p>
-                <p><span className="text-slate-400">Formato:</span> {storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
+                <p><span className="text-muted-foreground">Por jugador:</span> {formatCurrency(storedMatchPricing.costPerPlayer)}</p>
+                <p><span className="text-muted-foreground">Formato:</span> {storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
               </div>
             )}
 
@@ -971,7 +971,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     setEditMessage(null);
                     setEditLoading(false);
                   }}
-                  className="rounded border border-green-500/40 bg-green-500/20 px-4 py-2 text-sm font-semibold text-green-300 transition hover:bg-green-500/30"
+                  className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition"
                 >
                   Editar partido
                 </button>
@@ -984,7 +984,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     setShowTeamBuilder(true);
                     setActiveTab("teams");
                   }}
-                  className="rounded border border-blue-500/40 bg-blue-500/20 px-4 py-2 text-sm font-semibold text-blue-300 transition hover:bg-blue-500/30"
+                  className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700"
                 >
                   Armar equipos
                 </button>
@@ -1001,11 +1001,11 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
         <section className="space-y-6">
           {isCreator && showEditForm && (
-            <div className="rounded-lg border border-green-700/50 bg-[hsl(220,18%,10%)] p-6 shadow">
-              <h2 className="mb-4 text-2xl font-bold text-white">Editar partido</h2>
+            <div className="rounded-lg border border-green-700/50 bg-card p-6 shadow">
+              <h2 className="mb-4 text-2xl font-bold text-foreground">Editar partido</h2>
               <form onSubmit={handleEditSubmit} className="space-y-4">
                 <div>
-                  <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-slate-200">
+                  <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-foreground">
                     Ubicación
                   </label>
                   <input
@@ -1013,45 +1013,45 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     name="location"
                     value={editForm.location}
                     onChange={handleEditInputChange}
-                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                    className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                     placeholder="Ej: Cancha Central"
                     required
                   />
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div>
-                    <label htmlFor="edit-date" className="mb-2 block text-sm font-medium text-slate-200">Fecha</label>
+                    <label htmlFor="edit-date" className="mb-2 block text-sm font-medium text-foreground">Fecha</label>
                     <input
                       type="date"
                       id="edit-date"
                       name="date"
                       value={editForm.date}
                       onChange={handleEditInputChange}
-                      className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                      className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                       required
                     />
                   </div>
                   <div>
-                    <label htmlFor="edit-time" className="mb-2 block text-sm font-medium text-slate-200">Hora</label>
+                    <label htmlFor="edit-time" className="mb-2 block text-sm font-medium text-foreground">Hora</label>
                     <input
                       type="time"
                       id="edit-time"
                       name="time"
                       value={editForm.time}
                       onChange={handleEditInputChange}
-                      className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                      className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                       required
                     />
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="edit-playersPerTeam" className="mb-2 block text-sm font-medium text-slate-200">Jugadores por equipo</label>
+                  <label htmlFor="edit-playersPerTeam" className="mb-2 block text-sm font-medium text-foreground">Jugadores por equipo</label>
                   <select
                     id="edit-playersPerTeam"
                     name="playersPerTeam"
                     value={editForm.playersPerTeam}
                     onChange={handleEditInputChange}
-                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                    className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                   >
                     {PLAYER_OPTIONS.map((num) => (
                       <option key={num} value={num}>{num} vs {num}</option>
@@ -1059,7 +1059,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   </select>
                 </div>
                 <div>
-                  <label htmlFor="edit-fieldCost" className="mb-2 block text-sm font-medium text-slate-200">Valor de la Cancha ($)</label>
+                  <label htmlFor="edit-fieldCost" className="mb-2 block text-sm font-medium text-foreground">Valor de la Cancha ($)</label>
                   <input
                     id="edit-fieldCost"
                     name="fieldCost"
@@ -1068,12 +1068,12 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     onChange={handleEditInputChange}
                     inputMode="numeric"
                     autoComplete="off"
-                    className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                    className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                     placeholder="Ej: $ 200.000"
                   />
                 </div>
 
-                <div className="rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4">
+                <div className="rounded border border-border bg-muted p-4">
                   <div className="flex items-center gap-3 mb-4">
                     <input
                       type="checkbox"
@@ -1086,7 +1086,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     />
                     <label 
                       htmlFor="edit-hasRentedGoalkeepers" 
-                      className={`text-sm font-medium cursor-pointer ${goalkeepersCount >= 2 ? 'text-slate-500' : 'text-slate-200'}`}
+                      className={`text-sm font-medium cursor-pointer ${goalkeepersCount >= 2 ? 'text-muted-foreground' : 'text-foreground'}`}
                     >
                       ¿Habrá arqueros alquilados?
                     </label>
@@ -1098,7 +1098,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   {editForm.hasRentedGoalkeepers && (
                     <div className="space-y-4">
                       <div>
-                        <label htmlFor="edit-rentedGoalkeepersCount" className="mb-2 block text-sm font-medium text-slate-200">
+                        <label htmlFor="edit-rentedGoalkeepersCount" className="mb-2 block text-sm font-medium text-foreground">
                           Cantidad de arqueros alquilados
                         </label>
                         <select
@@ -1106,14 +1106,14 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                           name="rentedGoalkeepersCount"
                           value={editForm.rentedGoalkeepersCount}
                           onChange={handleEditInputChange}
-                          className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                          className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                         >
                           <option value={1}>1 arquero</option>
                           <option value={2}>2 arqueros</option>
                         </select>
                       </div>
                       <div>
-                        <label htmlFor="edit-rentalCost" className="mb-2 block text-sm font-medium text-slate-200">
+                        <label htmlFor="edit-rentalCost" className="mb-2 block text-sm font-medium text-foreground">
                           Valor del alquiler ({editForm.rentedGoalkeepersCount} arquero{editForm.rentedGoalkeepersCount > 1 ? "s" : ""}) ($)
                         </label>
                         <input
@@ -1124,7 +1124,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                           onChange={handleEditInputChange}
                           inputMode="numeric"
                           autoComplete="off"
-                          className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                          className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                           placeholder="Ej: $ 50.000"
                         />
                       </div>
@@ -1148,9 +1148,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 <div className="flex gap-3">
                   <button
                     type="submit"
-                    className={`flex-1 rounded px-4 py-2 font-semibold text-white transition ${
+                    className={`flex-1 rounded px-4 py-2 font-semibold text-foreground transition ${
                       editLoading || editMessage?.includes("✓")
-                        ? "cursor-not-allowed bg-slate-600 opacity-60"
+                        ? "cursor-not-allowed bg-muted opacity-60"
                         : "bg-green-500 hover:bg-green-600"
                     }`}
                     disabled={editLoading || editMessage?.includes("✓")}
@@ -1163,7 +1163,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                       setShowEditForm(false);
                       setEditMessage(null);
                     }}
-                    className="flex-1 rounded bg-slate-700 px-4 py-2 text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="flex-1 rounded border border-border bg-muted px-4 py-2 font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
                     disabled={editLoading}
                   >
                     Cancelar
@@ -1173,7 +1173,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             </div>
           )}
 
-          <div className="rounded-lg border border-slate-800 bg-[hsl(220,18%,10%)] p-4 shadow sm:p-6">
+          <div className="card match-card rounded-2xl border border-border/80 bg-card p-5 shadow-lg sm:p-6">
             <div
               className="mb-4 flex flex-wrap gap-2"
               role="tablist"
@@ -1188,7 +1188,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 tabIndex={activeTab === "register" ? 0 : -1}
                 onClick={() => setActiveTab("register")}
                 className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
-                  activeTab === "register" ? "bg-green-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                  activeTab === "register" ? "bg-green-600 text-white" : "bg-muted text-foreground border border-border hover:bg-secondary"
                 }`}
               >
                 Inscripción
@@ -1202,7 +1202,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 tabIndex={activeTab === "players" ? 0 : -1}
                 onClick={() => setActiveTab("players")}
                 className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
-                  activeTab === "players" ? "bg-green-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                  activeTab === "players" ? "bg-green-600 text-white" : "bg-muted text-foreground border border-border hover:bg-secondary"
                 }`}
               >
                 Jugadores
@@ -1223,7 +1223,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     setActiveTab("teams");
                   }}
                   className={`rounded px-3 py-1.5 text-sm font-semibold transition ${
-                    activeTab === "teams" ? "bg-blue-600 text-white" : "bg-slate-700 text-slate-200 hover:bg-slate-600"
+                    activeTab === "teams" ? "bg-blue-600 text-white" : "bg-muted text-foreground border border-border hover:bg-secondary"
                   }`}
                 >
                   Equipos
@@ -1233,9 +1233,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
             {activeTab === "register" && (
               <div id="panel-register" role="tabpanel" aria-labelledby="tab-register">
-                <h2 className="mb-2 text-xl font-bold text-white">Inscribirme al partido</h2>
-                <p className="mb-4 text-sm text-slate-300">Deja tu nombre y elige si vienes como portero.</p>
-                <div className="mb-4 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3 text-sm text-slate-300">
+                <h2 className="mb-2 text-xl font-bold text-foreground">Inscribirme al partido</h2>
+                <p className="mb-4 text-sm text-muted-foreground">Deja tu nombre y elige si vienes como portero.</p>
+                <div className="mb-4 rounded border border-border bg-muted p-3 text-sm text-muted-foreground">
                   <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
                   <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
                   <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
@@ -1257,9 +1257,9 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     onClick={() => setShowRegistrationForm(true)}
                     className={`w-full rounded py-2 px-4 font-semibold transition ${
                       isTitularFull && !isSubstituteFull
-                        ? "bg-amber-500 text-white hover:bg-amber-600"
+                        ? "bg-amber-500 text-foreground hover:bg-amber-600"
                         : isTitularFull && isSubstituteFull
-                          ? "cursor-not-allowed bg-slate-700 text-slate-400"
+                          ? "cursor-not-allowed bg-muted text-muted-foreground"
                           : "bg-green-500 text-white hover:bg-green-600"
                     }`}
                     disabled={isTitularFull && isSubstituteFull}
@@ -1269,7 +1269,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 ) : (
                   <form onSubmit={handleRegistrationSubmit} className="space-y-4">
                     <div>
-                      <label htmlFor="register-fullname" className="mb-2 block text-sm font-medium text-slate-200">
+                      <label htmlFor="register-fullname" className="mb-2 block text-sm font-medium text-foreground">
                         Nombre completo
                       </label>
                       <input
@@ -1279,12 +1279,12 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                         autoComplete="name"
                         value={registrationForm.name}
                         onChange={handleInputChange}
-                        className="w-full rounded border border-slate-700 bg-[hsl(220,16%,14%)] px-4 py-3 text-white"
+                        className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
                         placeholder="Ingresa tu nombre…"
                         required
                       />
                     </div>
-                    <div className="flex items-center gap-3 rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-3">
+                    <div className="flex items-center gap-3 rounded border border-border bg-muted p-3">
                       <input
                         id="register-gk"
                         type="checkbox"
@@ -1294,7 +1294,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                         className="h-5 w-5"
                         disabled={goalkeepersRemaining <= 0}
                       />
-                      <label htmlFor="register-gk" className="text-sm text-slate-200">
+                      <label htmlFor="register-gk" className="text-sm text-foreground">
                         Me registro como portero
                       </label>
                     </div>
@@ -1318,7 +1318,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                           setRegistrationForm({ name: "", isGoalkeeper: false });
                           setRegistrationMessage(null);
                         }}
-                        className="flex-1 rounded bg-slate-700 py-2 px-4 text-white transition hover:bg-slate-800"
+                        className="flex-1 rounded border border-border bg-muted py-2 px-4 font-medium text-foreground transition hover:bg-secondary"
                       >
                         Cancelar
                       </button>
@@ -1330,17 +1330,17 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
             {activeTab === "players" && (
               <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
-                <h2 className="mb-3 text-xl font-bold text-white">Jugadores inscritos ({registrations.length})</h2>
+                <h2 className="mb-3 text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
                 <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
                   {titulares.length > 0 && (
                     <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-400">Titulares ({titulares.length}/{matchData.max_players})</p>
                   )}
                   {titulares.map((registration, index) => (
-                    <div key={registration.id} className="flex items-center justify-between rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-2.5 transition hover:bg-[hsl(220,16%,18%)]">
+                    <div key={registration.id} className="flex items-center justify-between rounded border border-border bg-muted p-2.5 transition hover:bg-muted">
                       <div className="flex-1">
-                        <span className="mr-2 text-xs text-slate-500">#{index + 1}</span>
-                        <span className="font-medium text-white">{registration.name}</span>
-                        <span className="mt-0.5 block text-xs text-slate-400">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+                        <span className="mr-2 text-xs text-muted-foreground">#{index + 1}</span>
+                        <span className="font-medium text-foreground">{registration.name}</span>
+                        <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                       </div>
                       <button
                         type="button"
@@ -1358,11 +1358,11 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     <>
                       <p className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400">Suplentes ({suplentes.length}/{MAX_SUBSTITUTE_SLOTS})</p>
                       {suplentes.map((registration, index) => (
-                        <div key={registration.id} className="flex items-center justify-between rounded border border-amber-800/40 bg-[hsl(220,16%,14%)] p-2.5 transition hover:bg-[hsl(220,16%,18%)]">
+                        <div key={registration.id} className="flex items-center justify-between rounded border border-amber-800/40 bg-muted p-2.5 transition hover:bg-muted">
                           <div className="flex-1">
                             <span className="mr-2 inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300">S{index + 1}</span>
-                            <span className="font-medium text-white">{registration.name}</span>
-                            <span className="mt-0.5 block text-xs text-slate-400">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+                            <span className="font-medium text-foreground">{registration.name}</span>
+                            <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                           </div>
                           <button
                             type="button"
@@ -1379,7 +1379,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   )}
 
                   {registrations.length === 0 && (
-                    <p className="py-4 text-center text-slate-400">Aún no hay jugadores inscritos</p>
+                    <p className="py-4 text-center text-muted-foreground">Aún no hay jugadores inscritos</p>
                   )}
                 </div>
               </div>
@@ -1389,15 +1389,15 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               <div id="panel-teams" role="tabpanel" aria-labelledby="tab-teams">
               <div id="team-builder">
                 {!showTeamBuilder ? (
-                  <div className="rounded border border-slate-700 bg-[hsl(220,16%,14%)] p-4">
-                    <p className="text-sm text-slate-300">Inicializa el armado para distribuir titulares con drag and drop.</p>
+                  <div className="rounded border border-border bg-muted p-4">
+                    <p className="text-sm text-muted-foreground">Inicializa el armado para distribuir titulares con drag and drop.</p>
                     <button
                       type="button"
                       onClick={() => {
                         initTeamBuilder(titulares);
                         setShowTeamBuilder(true);
                       }}
-                      className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-500"
+                      className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
                     >
                       Iniciar equipos
                     </button>
@@ -1405,26 +1405,26 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 ) : (
                   <>
                     <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
-                      <h2 className="text-xl font-bold text-white">Armar equipos</h2>
+                      <h2 className="text-xl font-bold text-foreground">Armar equipos</h2>
                       <div className="flex gap-2">
                         <button
                           type="button"
                           onClick={randomizeTeams}
-                          className="rounded border border-indigo-500/70 bg-indigo-600/80 px-3 py-1.5 text-sm font-semibold text-white transition hover:bg-indigo-500"
+                          className="rounded border border-indigo-500/70 bg-indigo-600/80 px-3 py-1.5 text-sm font-semibold text-foreground transition hover:bg-indigo-500"
                         >
                           Distribuir aleatoriamente
                         </button>
                         <button
                           type="button"
                           onClick={saveTeams}
-                          className={`rounded border px-3 py-1.5 text-sm font-semibold transition ${teamSaved ? "border-green-600 bg-green-700 text-green-100" : "border-blue-600 bg-blue-600 text-white hover:bg-blue-500"}`}
+                          className={`rounded border px-3 py-1.5 text-sm font-semibold transition ${teamSaved ? "border-green-600 bg-green-600 text-white" : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"}`}
                         >
                           {teamSaved ? "✓ Guardado" : "Guardar equipos"}
                         </button>
                         <button
                           type="button"
                           onClick={resetTeamBuilder}
-                          className="rounded border border-slate-600 bg-slate-700 px-3 py-1.5 text-sm text-slate-200 transition hover:bg-slate-600"
+                          className="rounded border border-border bg-muted px-3 py-1.5 text-sm font-medium text-foreground transition hover:bg-secondary"
                         >
                           Reiniciar
                         </button>
@@ -1441,13 +1441,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                       </p>
                     )}
 
-                    <div className="grid gap-3 lg:grid-cols-3">
+                    <div className="grid gap-4 lg:grid-cols-3">
                       <div
                         onDragOver={(e) => { e.preventDefault(); setDragOverZone("pool"); }}
                         onDrop={() => handleDropOnZone("pool")}
-                        className={`rounded-lg border-2 border-dashed p-3 ${dragOverZone === "pool" ? "border-slate-400 bg-slate-700/40" : "border-slate-700 bg-[hsl(220,16%,14%)]"}`}
+                        className={`card match-card rounded-xl border-2 border-dashed p-4 ${dragOverZone === "pool" ? "border-primary/70 bg-card shadow-lg" : "border-border/70 bg-card"}`}
                       >
-                        <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-slate-400">Sin equipo ({unassigned.length})</p>
+                        <p className="mb-3 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sin equipo ({unassigned.length})</p>
                         <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
                           {unassigned.map((player) => (
                             <div key={player.id} className="space-y-1">
@@ -1455,7 +1455,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                                 draggable
                                 onDragStart={(event) => handlePlayerDragStart(event, player.id)}
                                 onDragEnd={handlePlayerDragEnd}
-                                className={`flex cursor-grab select-none items-center gap-1.5 rounded border border-slate-600 bg-slate-800 px-3 py-2 text-sm text-white transition active:cursor-grabbing ${draggingId === player.id ? "opacity-40" : "hover:border-slate-400"}`}
+                                className={`flex cursor-grab select-none items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-sm text-foreground transition active:cursor-grabbing ${draggingId === player.id ? "opacity-40" : "hover:border-primary/40"}`}
                               >
                                 <span aria-hidden>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
                                 <span>{player.name}</span>
@@ -1463,7 +1463,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                               <div className="flex flex-wrap justify-end gap-1">
                                 <button
                                   type="button"
-                                  className="rounded border border-blue-600/60 bg-blue-900/30 px-2 py-0.5 text-xs font-medium text-blue-200 hover:bg-blue-800/40"
+                                  className="rounded border border-blue-500/60 bg-blue-600/15 px-2 py-0.5 text-xs font-medium text-blue-300 hover:bg-blue-600/25"
                                   onClick={() => assignPlayerToZone(player.id, "A")}
                                   aria-label={`Asignar ${player.name} al equipo A`}
                                 >
@@ -1471,7 +1471,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                                 </button>
                                 <button
                                   type="button"
-                                  className="rounded border border-red-600/60 bg-red-900/30 px-2 py-0.5 text-xs font-medium text-red-200 hover:bg-red-800/40"
+                                  className="rounded border border-red-500/60 bg-red-600/15 px-2 py-0.5 text-xs font-medium text-red-300 hover:bg-red-600/25"
                                   onClick={() => assignPlayerToZone(player.id, "B")}
                                   aria-label={`Asignar ${player.name} al equipo B`}
                                 >
@@ -1505,15 +1505,24 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                               setDragOverZone(null);
                             }}
                             onDrop={() => handleDropOnZone(team)}
-                            className={`rounded-lg border-2 border-dashed p-3 ${
+                            className={`card match-card rounded-xl border-2 border-dashed p-4 ${
                               isOver && !isTeamFull
-                                ? "border-green-400 bg-green-900/20"
+                                ? "border-primary/70 bg-card shadow-lg"
                                 : isTeamFull
-                                  ? "border-red-700/60 bg-red-900/15"
-                                  : "border-slate-700 bg-[hsl(220,16%,14%)]"
+                                  ? "border-red-500/80 bg-red-500/10 shadow-lg"
+                                  : "border-border/70 bg-card"
                             } ${draggingId && !canDropHere ? "cursor-not-allowed" : ""}`}
                           >
-                            <p className={`mb-2 text-sm font-bold uppercase tracking-wide ${accentColor}`}>Equipo {team} ({list.length}/{playersPerTeamLimit})</p>
+                            <div className="mb-3 flex items-center justify-between gap-2">
+                              <p className={`text-sm font-bold uppercase tracking-wide ${accentColor}`}>
+                                Equipo {team} ({list.length}/{playersPerTeamLimit})
+                              </p>
+                              {isTeamFull && (
+                                <span className="rounded-full border border-red-500/70 bg-red-500/15 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wide text-red-400">
+                                  Completo
+                                </span>
+                              )}
+                            </div>
                             <div className="max-h-[62vh] space-y-2 overflow-y-auto pr-1">
                               {list.map((player) => (
                                 <div
@@ -1534,10 +1543,10 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                                       handleDropOnPlayer(team, player.id);
                                     }
                                   }}
-                                  className={`flex cursor-grab select-none items-center gap-2 rounded border px-3 py-2 text-sm text-white transition active:cursor-grabbing ${
+                                  className={`flex cursor-grab select-none items-center gap-2 rounded-lg border px-3 py-2 text-sm text-foreground transition active:cursor-grabbing ${
                                     player.is_goalkeeper
-                                      ? "border-yellow-700/60 bg-yellow-900/20 hover:border-yellow-600/60"
-                                      : "border-slate-700 bg-slate-800 hover:border-slate-500"
+                                      ? "border-yellow-600/50 bg-yellow-600/10 hover:border-yellow-500/60"
+                                      : "border-border/70 bg-background/70 hover:border-primary/40"
                                   } ${draggingId === player.id ? "opacity-40" : ""}`}
                                 >
                                   <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
@@ -1545,7 +1554,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                                 </div>
                               ))}
                               {list.length === 0 && (
-                                <p className="py-6 text-center text-xs text-slate-500">Arrastra jugadores aquí</p>
+                                <p className="py-6 text-center text-xs text-muted-foreground">Arrastra jugadores aquí</p>
                               )}
                             </div>
                           </div>
@@ -1570,20 +1579,20 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               role="dialog"
               aria-modal="true"
               aria-labelledby="unregister-dialog-title"
-              className="max-h-[90dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-lg border border-slate-700 bg-[hsl(220,18%,10%)] p-6"
+              className="max-h-[90dvh] w-full max-w-sm overflow-y-auto overscroll-contain rounded-lg border border-border bg-card p-6"
             >
               <div className="flex items-center gap-3 mb-4">
                 <div className="rounded-full bg-red-900/30 p-2">
                   <Trash2 className="text-red-400" size={24} aria-hidden />
                 </div>
-                <h3 id="unregister-dialog-title" className="text-xl font-bold text-white">
+                <h3 id="unregister-dialog-title" className="text-xl font-bold text-foreground">
                   Confirmar baja
                 </h3>
               </div>
-              <p className="text-slate-300 mb-6">
+              <p className="text-muted-foreground mb-6">
                 ¿Estás seguro de que deseas darte de baja de este partido?
                 <br />
-                <span className="font-semibold text-white mt-2 block">{unregisterTarget.name}</span>
+                <span className="font-semibold text-foreground mt-2 block">{unregisterTarget.name}</span>
               </p>
               <div className="flex gap-3">
                 <button
@@ -1592,7 +1601,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                     setShowUnregisterModal(false);
                     setUnregisterTarget(null);
                   }}
-                  className="flex-1 rounded bg-slate-700 py-2 px-4 text-white transition hover:bg-slate-800"
+                  className="flex-1 rounded border border-border bg-muted py-2 px-4 font-medium text-foreground transition hover:bg-secondary"
                   disabled={unregisterLoading}
                 >
                   Cancelar
