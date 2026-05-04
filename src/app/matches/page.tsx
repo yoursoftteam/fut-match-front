@@ -37,23 +37,23 @@ export default function MatchesPage() {
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-bold text-foreground">Mis partidos ⚽</h1>
+            <h1 className="font-heading text-3xl font-bold text-foreground">Mis encuentros ⚽</h1>
             <p className="mt-1 text-muted-foreground">
-              Los partidos que armaste o en los que estás anotado.
+              Los encuentros que armaste o en los que estás anotado.
             </p>
           </div>
           <Link
             href="/create"
             className="btn-primary-fm inline-block rounded-lg px-6 py-2 text-center text-sm font-semibold neon-glow"
           >
-            ⚡ Armar cotejo
+            ⚡ Armar encuentro
           </Link>
         </div>
 
         {matchesLoading ? (
           <div className="py-12 text-center">
             <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-b-2 border-primary" />
-            <p className="text-muted-foreground">Cargando partidos…</p>
+            <p className="text-muted-foreground">Cargando encuentros…</p>
           </div>
         ) : matches.length === 0 ? (
           <div className="card p-10 text-center">
@@ -61,7 +61,7 @@ export default function MatchesPage() {
             <p className="text-lg font-semibold text-card-foreground mb-1">La cancha está vacía</p>
             <p className="text-muted-foreground text-sm mb-5">¡Ármate el primero y convoca a tu gente!</p>
             <Link href="/create" className="btn-primary-fm inline-block rounded-lg px-6 py-3 font-semibold">
-              ⚽ Armar primer cotejo
+              ⚽ Armar primer encuentro
             </Link>
           </div>
         ) : (
@@ -96,7 +96,7 @@ export default function MatchesPage() {
                     href={`/match/${match.id}`}
                     className="btn-primary-fm inline-block w-full rounded-lg px-4 py-2 text-center text-sm font-semibold"
                   >
-                    {isFull ? 'Ver detalles' : '¡Ver partido!'}
+                    {isFull ? 'Ver detalles' : '¡Ver encuentro!'}
                   </Link>
                 </div>
               );

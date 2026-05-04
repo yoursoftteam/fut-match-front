@@ -22,14 +22,14 @@ export default function CreateMatch() {
   const router = useRouter();
   const requiresLogin = !user;
   const submitLabel = loading
-    ? "Creando partido…"
+    ? "Creando encuentro…"
     : user
-      ? "Crear Partido"
-      : "Inicia sesión para crear el partido";
+      ? "Crear Encuentro"
+      : "Inicia sesión para crear el encuentro";
 
   const handleMatchCreate = async (data: MatchFormSubmitData) => {
     if (!user) {
-      setError("Debes iniciar sesión para crear un partido");
+      setError("Debes iniciar sesión para crear un encuentro");
       return;
     }
 
@@ -39,7 +39,7 @@ export default function CreateMatch() {
     try {
       // Map the form data to the database schema
       const matchData = {
-        title: `Partido en ${data.location}`,
+        title: `Encuentro en ${data.location}`,
         location: data.location,
         date: `${data.date}T${data.time}:00`,
         max_players: data.totalPlayers,
@@ -86,7 +86,7 @@ export default function CreateMatch() {
 
     } catch (err: unknown) {
       console.error("Error creating match:", err);
-      setError(err instanceof Error ? err.message : "Error al crear el partido");
+      setError(err instanceof Error ? err.message : "Error al crear el encuentro");
     } finally {
       setLoading(false);
     }
@@ -98,13 +98,13 @@ export default function CreateMatch() {
         <header className="text-center mb-16 mt-8 fade-in-up">
           <h1 className="text-4xl md:text-5xl font-heading font-bold text-foreground mb-4 neon-text">Vibesports</h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Crea partidos de fútbol y comparte con tus amigos
+            Crea encuentros de fútbol y comparte con tus amigos
           </p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="slide-in-left">
-            <h2 className="section-title text-foreground">Crear Nuevo Partido</h2>
+            <h2 className="section-title text-foreground">Crear Nuevo Encuentro</h2>
             
             {error && (
               <div className="mb-4 p-4 bg-destructive/10 border border-destructive/20 rounded-lg">
@@ -115,7 +115,7 @@ export default function CreateMatch() {
             {!user && (
               <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
                 <p className="text-yellow-600 text-sm">
-                  Debes <a href="/auth?mode=signin" className="underline hover:text-yellow-700">iniciar sesión</a> para crear un partido.
+                  Debes <a href="/auth?mode=signin" className="underline hover:text-yellow-700">iniciar sesión</a> para crear un encuentro.
                 </p>
               </div>
             )}
@@ -132,7 +132,7 @@ export default function CreateMatch() {
           <div className="slide-in-left">
             {createdMatch ? (
               <div className="card p-6 bg-card">
-                <h2 className="text-2xl font-bold mb-6 text-center text-card-foreground">¡Partido Creado!</h2>
+                <h2 className="text-2xl font-bold mb-6 text-center text-card-foreground">¡Encuentro Creado!</h2>
                 <div className="space-y-4 mb-6">
                   <div className="flex justify-between items-center border-b border-border pb-3">
                     <span className="font-medium text-muted-foreground">Lugar:</span>
@@ -167,7 +167,7 @@ export default function CreateMatch() {
                     onClick={() => router.push(`/match/${createdMatch.id}`)}
                     className="w-full btn btn-primary"
                   >
-                    Ver Detalles del Partido
+                    Ver Detalles del Encuentro
                   </button>
                   
                   <ShareLink matchId={createdMatch.id} />
@@ -181,7 +181,7 @@ export default function CreateMatch() {
                 <ul className="text-left space-y-4 text-muted-foreground">
                   <li className="flex items-start">
                     <span className="text-primary mr-3 mt-1">✓</span>
-                    <span>Completa el formulario con los detalles del partido</span>
+                    <span>Completa el formulario con los detalles del encuentro</span>
                   </li>
                   <li className="flex items-start">
                     <span className="text-primary mr-3 mt-1">✓</span>

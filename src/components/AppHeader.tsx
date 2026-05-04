@@ -36,7 +36,7 @@ export function AppHeader() {
                   href="/create"
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Armar cotejo
+                  Armar encuentro
                 </Link>
               </li>
               {user && (
