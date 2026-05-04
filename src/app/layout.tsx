@@ -1,11 +1,12 @@
 import type { Metadata } from "next";
-import { AuthProvider } from "@/components/AuthProvider";
 import { AppHeader } from "@/components/AppHeader";
+import { Providers } from "@/components/Providers";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "FutMatch - El ecosistema definitivo para futbolistas",
-  description: "Organiza cotejos de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
+  title: "Vibesports - El ecosistema definitivo para deportistas",
+  description:
+    "Organiza encuentros de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
 };
 
 export default function RootLayout({
@@ -14,22 +15,24 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html
-      lang="es"
-      className="h-full antialiased"
-    >
+    <html lang="es" className="h-full antialiased" suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <AuthProvider>
+        <Providers>
+          <a href="#main-content" className="skip-to-main">
+            Saltar al contenido
+          </a>
           <AppHeader />
-          <main className="flex-grow">
+          <main id="main-content" className="flex-grow scroll-mt-24 tabular-nums">
             {children}
           </main>
           <footer className="bg-card py-6 px-4 border-t border-border">
             <div className="max-w-5xl mx-auto text-center text-muted-foreground text-sm">
-              <p>© {new Date().getFullYear()} FutMatch - Todos los derechos reservados</p>
+              <p>
+                © {new Date().getFullYear()} Vibesports — Todos los derechos reservados
+              </p>
             </div>
           </footer>
-        </AuthProvider>
+        </Providers>
       </body>
     </html>
   );

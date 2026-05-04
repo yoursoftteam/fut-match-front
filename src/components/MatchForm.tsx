@@ -60,7 +60,7 @@ function getCursorPositionFromDigitCount(formattedValue: string, digitsBeforeCur
 export default function MatchForm({
   onMatchCreate,
   disabled = false,
-  submitLabel = "Crear Partido",
+  submitLabel = "Crear Encuentro",
   submitButtonType = "submit",
   onSubmitButtonClick,
 }: MatchFormProps) {
@@ -184,11 +184,11 @@ export default function MatchForm({
 
   return (
     <form onSubmit={handleSubmit} className="card p-6 w-full max-w-md slide-in-left">
-      <h2 className="text-2xl font-bold mb-6 text-center text-text-primary">Crear Partido</h2>
+      <h2 className="text-2xl font-bold mb-6 text-center text-card-foreground">Crear Encuentro</h2>
       
       <div className="form-group">
         <label htmlFor="location" className="form-label">
-          Lugar del Partido
+          Lugar del Encuentro
         </label>
         <input
           type="text"
@@ -200,7 +200,7 @@ export default function MatchForm({
           placeholder="Ej: Cancha Central"
           required
         />
-        <p className="form-help-text">Ingrese el nombre o dirección del lugar donde se jugará el partido</p>
+        <p className="form-help-text">Ingrese el nombre o dirección del lugar donde se jugará el encuentro</p>
       </div>
 
       <div className="grid grid-cols-2 gap-4 mb-5">

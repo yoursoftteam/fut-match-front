@@ -1,7 +1,72 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=Space+Grotesk:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+html {
+  color-scheme: dark;
+}
+html.light {
+  color-scheme: light;
+}
+
+.skip-to-main {
+  position: absolute;
+  left: -9999px;
+  top: 0.75rem;
+  z-index: 100;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius);
+  background: hsl(var(--primary));
+  color: hsl(var(--primary-foreground));
+  font-weight: 600;
+  text-decoration: none;
+}
+.skip-to-main:focus {
+  left: 0.75rem;
+  outline: 2px solid hsl(var(--ring));
+  outline-offset: 2px;
+}
+
+#main-content {
+  scroll-margin-top: 5rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
 
 :root {
+  --background: 220 20% 97%;
+  --foreground: 220 25% 11%;
+  --card: 0 0% 100%;
+  --card-foreground: 220 25% 11%;
+  --primary: 142 68% 36%;
+  --primary-hover: 142 68% 30%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 220 14% 92%;
+  --secondary-foreground: 220 25% 11%;
+  --muted: 220 14% 94%;
+  --muted-foreground: 220 10% 42%;
+  --accent: 200 72% 40%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 72% 45%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 220 14% 86%;
+  --input: 220 14% 86%;
+  --ring: 142 68% 36%;
+  --radius: 0.75rem;
+  --shadow: 0 4px 24px hsl(220 25% 11% / 0.08);
+  --shadow-lg: 0 12px 28px -8px hsl(220 25% 11% / 0.12);
+}
+
+html.dark {
   --background: 220 20% 6%;
   --foreground: 0 0% 95%;
   --card: 220 18% 10%;
@@ -24,6 +89,7 @@
   --shadow: 0 8px 32px hsl(0 0% 0% / 0.5);
   --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
 }
+
 
 body {
   background: hsl(var(--background));
@@ -96,7 +162,7 @@ p {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   border: 1px solid hsl(var(--border));
-  transition: all 0.3s ease;
+  transition: box-shadow 0.3s ease, transform 0.3s ease, border-color 0.3s ease;
   overflow: hidden;
   animation: fadeInUp 0.3s ease-out;
 }
@@ -123,13 +189,14 @@ p {
   border-radius: var(--radius);
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  transition: background-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out, transform 0.2s ease-in-out;
   box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
 }
 
-.btn:focus {
+.btn:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.3);
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.45);
 }
 
 .btn:disabled {
@@ -165,8 +232,8 @@ p {
 
 .btn-outline {
   background-color: transparent;
-  border: 1px solid var(--border);
-  color: var(--text-primary);
+  border: 1px solid hsl(var(--border));
+  color: hsl(var(--foreground));
 }
 
 .btn-outline:hover:not(:disabled) {
@@ -182,24 +249,25 @@ p {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
 }
 
 .form-input, .form-select {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
-  background-color: var(--card-bg);
-  color: var(--text-primary);
-  transition: all 0.2s ease-in-out;
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.form-input:focus, .form-select:focus {
+.form-input:focus-visible, .form-select:focus-visible {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
 }
 
 .form-input:disabled, .form-select:disabled {
@@ -241,25 +309,26 @@ p {
 .form-input {
   width: 100%;
   padding: 0.75rem;
-  border: 1px solid var(--border);
+  border: 1px solid hsl(var(--border));
   border-radius: 0.5rem;
-  background-color: var(--card-bg);
-  color: var(--text-primary);
+  background-color: hsl(var(--card));
+  color: hsl(var(--foreground));
   transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
   box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
 }
 
-.form-input:focus {
+.form-input:focus-visible {
   outline: none;
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2);
+  outline: none;
+  box-shadow: 0 0 0 3px hsl(var(--ring) / 0.35);
 }
 
 .form-label {
   display: block;
   margin-bottom: 0.5rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: hsl(var(--foreground));
 }
 
 .section-title {
@@ -404,6 +473,21 @@ p {
   animation: slideInLeft 0.3s ease-out;
 }
 
+
+
+@media (prefers-reduced-motion: reduce) {
+  .card,
+  .fade-in,
+  .fade-in-up,
+  .slide-in-left {
+    animation: none !important;
+    transition: none !important;
+  }
+  .card:hover {
+    transform: none;
+  }
+}
+
 /* Responsive improvements */
 @media (max-width: 768px) {
   .section-title {
@@ -443,6 +527,80 @@ p {
 .bg-secondary{
   background-color: var(--secondary);
   z-index: 1;
+}
+
+/* === Sport-Tech: Micro-interactions & Match Cards === */
+
+/* Neon pulse for primary CTAs */
+@keyframes neonPulse {
+  0%, 100% { box-shadow: 0 0 10px hsl(var(--primary) / 0.4), 0 0 20px hsl(var(--primary) / 0.2); }
+  50%       { box-shadow: 0 0 20px hsl(var(--primary) / 0.7), 0 0 40px hsl(var(--primary) / 0.35); }
+}
+
+/* Bounce scale for join/action buttons */
+@keyframes joinSuccess {
+  0%   { transform: scale(1); }
+  30%  { transform: scale(1.1); }
+  60%  { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+/* Staggered card entrance */
+@keyframes cardEntrance {
+  from { opacity: 0; transform: translateY(16px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0)   scale(1);    }
+}
+
+.btn-neon-pulse {
+  animation: neonPulse 2.4s ease-in-out infinite;
+}
+
+.btn-join-active {
+  animation: joinSuccess 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+/* Match card with sport accent left border */
+.match-card {
+  border-left: 3px solid hsl(var(--primary));
+  transition: border-color 0.2s ease, box-shadow 0.25s ease, transform 0.25s ease;
+}
+
+.match-card:hover {
+  border-left-color: hsl(var(--accent));
+  box-shadow: 0 0 0 1px hsl(var(--primary) / 0.25), var(--shadow-lg);
+}
+
+/* Competitiveness level badge */
+.level-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  text-transform: uppercase;
+}
+.level-casual   { background: hsl(142 72% 50% / 0.15); color: hsl(142 72% 50%); }
+.level-semipro  { background: hsl(200 85% 55% / 0.15); color: hsl(200 85% 55%); }
+.level-pro      { background: hsl(35 95% 55%  / 0.15); color: hsl(35 95% 55%);  }
+
+/* Stagger delays for card grids */
+.card-grid > *:nth-child(1)  { animation: cardEntrance 0.35s ease-out 0.05s both; }
+.card-grid > *:nth-child(2)  { animation: cardEntrance 0.35s ease-out 0.10s both; }
+.card-grid > *:nth-child(3)  { animation: cardEntrance 0.35s ease-out 0.15s both; }
+.card-grid > *:nth-child(4)  { animation: cardEntrance 0.35s ease-out 0.20s both; }
+.card-grid > *:nth-child(5)  { animation: cardEntrance 0.35s ease-out 0.25s both; }
+.card-grid > *:nth-child(6)  { animation: cardEntrance 0.35s ease-out 0.30s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-neon-pulse,
+  .btn-join-active,
+  .match-card,
+  .card-grid > * {
+    animation: none !important;
+  }
 }
 
 @media (max-width: 480px) {

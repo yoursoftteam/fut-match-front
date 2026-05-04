@@ -10,39 +10,42 @@ export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
-    // Si el usuario está logueado, redirigir a dashboard
     if (user && !loading) {
       router.push("/dashboard");
     }
   }, [user, loading, router]);
 
-  // Si está cargando, mostrar estado de carga
   if (loading) {
-    return <div className="min-h-screen bg-background flex items-center justify-center text-foreground">Cargando...</div>;
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center text-foreground">
+        Cargando…
+      </div>
+    );
   }
 
-  // Si el usuario está logueado, no mostrar nada (será redirigido)
   if (user) {
     return null;
   }
 
   return (
     <div className="min-h-screen bg-background">
-      {/* Hero Section */}
       <section className="py-20 px-4 bg-background">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-9xl md:text-9xl font-heading font-bold text-foreground mb-6 neon-text">
-            FutMatch
+          <h1 className="text-7xl sm:text-8xl md:text-9xl font-heading font-bold text-foreground mb-6 neon-text">
+            Vibesports
           </h1>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
-            El ecosistema definitivo para futbolistas. <br></br>Organiza cotejos de manera gratuita!
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
+            ¿Listo para demostrar tu nivel en la cancha?
+          </p>
+          <p className="text-base text-muted-foreground max-w-xl mx-auto mb-10">
+            Encuentra encuentros, arma tu equipo y juega. <span className="text-foreground font-semibold">Sin excusas.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/create"
-              className="inline-block bg-primary text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-colors neon-glow btn-primary-fm"
+              className="inline-block bg-primary text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-colors neon-glow btn-primary-fm btn-neon-pulse"
             >
-              Comenzar Gratis
+              ⚡ Armar mi encuentro
             </Link>
             <Link
               href="/auth"
@@ -54,36 +57,33 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Features Section */}
       <section className="py-16 px-4 bg-muted">
         <div className="max-w-6xl mx-auto">
           <h2 className="text-3xl font-heading font-bold text-center text-foreground mb-12">
-            ¿Qué puedes hacer en FutMatch?
+            Tu próxima cancha, a un clic
           </h2>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {/* Cotejos Gratis */}
             <div className="card p-6 text-center bg-card">
-              <span className="text-4xl mb-4">⚽</span>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">
-                Cotejos Gratis
-              </h3>
+              <span className="text-4xl mb-4 block" aria-hidden>
+                ⚽
+              </span>
+              <h3 className="text-xl font-semibold text-card-foreground mb-3">Encuentro Gratis</h3>
               <p className="text-muted-foreground mb-4">
-                Organiza partidos rápidos con tus amigos. Define lugar, hora, costo y máximo de jugadores. ¡Todo gratis!
+                Arma encuentros rápidos con tu gente. Define lugar, hora, costo y cupos. ¡Sin complicaciones!
               </p>
               <Link
                 href="/create"
                 className="inline-block bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium transition-colors btn-primary-fm"
               >
-                Crear Cotejo
+                ¡Armar ahora!
               </Link>
             </div>
 
-            {/* Torneos Profesionales */}
             <div className="card p-6 text-center bg-card">
-              <span className="text-4xl mb-4">🏆</span>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">
-                Torneos Profesionales
-              </h3>
+              <span className="text-4xl mb-4 block" aria-hidden>
+                🏆
+              </span>
+              <h3 className="text-xl font-semibold text-card-foreground mb-3">Torneos Profesionales</h3>
               <p className="text-muted-foreground mb-4">
                 Crea ligas con tabla de posiciones, fixture automático, fase de grupos y reglas personalizadas.
               </p>
@@ -92,23 +92,11 @@ export default function Home() {
               </span>
             </div>
 
-            {/* Geolocalización 
             <div className="card p-6 text-center bg-card">
-              <span className="text-4xl mb-4">📍</span>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">
-                Geolocalización
-              </h3>
-              <p className="text-muted-foreground mb-4">
-                Encuentra partidos y torneos cerca de ti. Ubica canchas y comparte ubicación con tus compañeros.
-              </p>
-              <span className="inline-block bg-muted>
-*/}
-            {/* Estadísticas Completas */}
-            <div className="card p-6 text-center bg-card">
-              <span className="text-4xl mb-4">📊</span>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">
-                Estadísticas Completas
-              </h3>
+              <span className="text-4xl mb-4 block" aria-hidden>
+                📊
+              </span>
+              <h3 className="text-xl font-semibold text-card-foreground mb-3">Estadísticas Completas</h3>
               <p className="text-muted-foreground mb-4">
                 Goles, tarjetas, diferencia de gol y más. Lleva el control total de cada equipo y jugador.
               </p>
@@ -120,40 +108,28 @@ export default function Home() {
         </div>
       </section>
 
-      {/* CTA Section */}
       <section className="py-20 px-4 bg-background">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-heading font-bold text-foreground mb-6">
-            ¿Listo para jugar?
-          </h2>
+          <h2 className="text-3xl font-heading font-bold text-foreground mb-4">¿A qué esperas?</h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Crea tu cuenta gratis y empieza a organizar cotejos.
+            El encuentro de tu vida te está esperando. <span className="text-foreground font-semibold">Entra al campo.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/auth?mode=signup"
-              className="inline-block bg-primary text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-colors neon-glow btn-primary-fm"
+              className="inline-block bg-primary text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-colors neon-glow btn-primary-fm btn-neon-pulse"
             >
-              Crear Cuenta Gratis
+              ⚡ Crear cuenta gratis
             </Link>
             <Link
               href="/auth?mode=signin"
               className="inline-block border-2 border-primary text-primary px-8 py-4 rounded-lg font-semibold text-lg hover:bg-primary hover:text-primary-foreground transition-colors"
             >
-              Iniciar Sesión
+              Ya tengo cuenta
             </Link>
           </div>
         </div>
       </section>
-
-      {/* Footer */}
-      <footer className="py-8 px-4 bg-background border-t border-border">
-        <div className="max-w-6xl mx-auto text-center">
-          <p className="text-muted-foreground">
-            © 2026 FutMatch. Todos los derechos reservados.
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }
