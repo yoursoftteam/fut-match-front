@@ -36,7 +36,7 @@ export default function Home() {
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-8">
             El ecosistema definitivo para deportistas.
-            <span className="block mt-2">Organiza cotejos de manera gratuita.</span>
+            <span className="block mt-2">Organiza encuentros de manera gratuita.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
@@ -65,7 +65,7 @@ export default function Home() {
               <span className="text-4xl mb-4 block" aria-hidden>
                 ⚽
               </span>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">Cotejos Gratis</h3>
+              <h3 className="text-xl font-semibold text-card-foreground mb-3">encuentros Gratis</h3>
               <p className="text-muted-foreground mb-4">
                 Organiza partidos rápidos con tus amigos. Define lugar, hora, costo y máximo de jugadores. ¡Todo gratis!
               </p>
@@ -110,7 +110,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-heading font-bold text-foreground mb-6">¿Listo para jugar?</h2>
           <p className="text-xl text-muted-foreground mb-8">
-            Crea tu cuenta gratis y empieza a organizar cotejos.
+            Crea tu cuenta gratis y empieza a organizar encuentros.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link

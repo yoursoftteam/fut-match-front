@@ -42,7 +42,7 @@ export default function DashboardPage() {
               ¡Bienvenido a tu Dashboard!
             </h1>
             <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-              Gestiona tus partidos, crea nuevos cotejos y conecta con otros futbolistas.
+              Gestiona tus partidos, crea nuevos encuentros y conecta con otros futbolistas.
             </p>
           </div>
         </section>
