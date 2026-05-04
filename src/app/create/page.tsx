@@ -112,13 +112,6 @@ export default function CreateMatch() {
               </div>
             )}
             
-            {!user && (
-              <div className="mb-4 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                <p className="text-yellow-600 text-sm">
-                  Debes <a href="/auth?mode=signin" className="underline hover:text-yellow-700">iniciar sesión</a> para crear un encuentro.
-                </p>
-              </div>
-            )}
             
             <MatchForm
               onMatchCreate={handleMatchCreate}
