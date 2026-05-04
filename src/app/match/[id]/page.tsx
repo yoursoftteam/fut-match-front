@@ -20,4 +20,3 @@ export default async function MatchPage({ params }: MatchPageProps) {
       </div>
     </div>
   );
-}

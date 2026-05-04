@@ -24,4 +24,3 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
       'X-Client-Info': 'vibesports-app'
     }
   }
-})
