@@ -38,7 +38,7 @@ export default function ShareLink({ matchId }: { matchId: string }) {
         />
         <Button
           type="button"
-          variant="primary"
+          variant="default"
           onClick={copyToClipboard}
           className={`rounded-l-lg rounded-r-lg sm:rounded-l-none sm:rounded-r-lg px-5 py-3 ${
             copied ? "bg-green-600 hover:bg-green-600" : ""
