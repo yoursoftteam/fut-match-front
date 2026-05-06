@@ -20,14 +20,14 @@ export default function ShareLink({ matchId }: { matchId: string }) {
 
   return (
     <div className="mt-6 p-5 card">
-      <h3 className="font-bold text-card-foreground mb-3">Compartir partido</h3>
+      <h3 className="font-bold text-card-foreground mb-3">Compartir encuentro</h3>
       <p className="text-muted-foreground mb-4">
-        Envía este enlace a tus amigos para que se registren en el partido:
+        Envía este enlace a tus amigos para que se registren en el encuentro:
       </p>
 
       <div className="flex flex-col gap-2 sm:flex-row">
         <label htmlFor={fieldId} className="sr-only">
-          Enlace del partido
+          Enlace del encuentro
         </label>
         <input
           id={fieldId}

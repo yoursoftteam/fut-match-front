@@ -1,13 +1,16 @@
-"use client";
-
-import { useParams } from "next/navigation";
 import MatchDetails from "@/components/MatchDetails";
 
-export default function MatchPage() {
-  const { id } = useParams<{ id: string }>();
+export const runtime = "edge";
+
+interface MatchPageProps {
+  params: Promise<{ id: string }>;
+}
+
+export default async function MatchPage({ params }: MatchPageProps) {
+  const { id } = await params;
   
   if (!id) {
-    return <div className="text-center py-8">ID de partido no proporcionado</div>;
+    return <div className="text-center py-8">ID de encuentro no proporcionado</div>;
   }
 
   return (

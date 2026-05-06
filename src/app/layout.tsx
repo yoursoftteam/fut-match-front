@@ -10,7 +10,7 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   title: "Vibesports - El ecosistema definitivo para deportistas",
   description:
-    "Organiza cotejos de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
+    "Organiza encuentros de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
 };
 
 export default function RootLayout({

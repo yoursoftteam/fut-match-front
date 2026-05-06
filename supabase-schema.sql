@@ -70,7 +70,7 @@ BEGIN
   WHERE id = NEW.match_id;
 
   IF v_max_players IS NULL THEN
-    RAISE EXCEPTION 'Partido no encontrado.';
+    RAISE EXCEPTION 'Encuentro no encontrado.';
   END IF;
 
   SELECT
