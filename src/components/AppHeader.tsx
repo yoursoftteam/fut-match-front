@@ -22,7 +22,7 @@ export function AppHeader() {
             href="/"
             className="text-2xl font-heading font-bold text-primary hover:text-primary/80 transition-colors"
           >
-            Vibesports
+            Parti2
           </Link>
           <nav aria-label="Principal">
             <ul className="flex flex-wrap items-center gap-4 text-sm">

@@ -87,7 +87,7 @@ function AuthForm() {
             <p className="text-muted-foreground">
               {isSignUp
                 ? "Únete a la comunidad de deportistas"
-                : "Bienvenido de vuelta a Vibesports"}
+                : "Bienvenido de vuelta a Parti2"}
             </p>
           </div>
 
