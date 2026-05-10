@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Vibesports - El ecosistema definitivo para deportistas",
+  title: "Parti2 - El ecosistema definitivo para deportistas",
   description:
     "Organiza encuentros de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
 };
@@ -32,7 +32,7 @@ export default function RootLayout({
           <footer className="bg-card py-6 px-4 border-t border-border">
             <div className="max-w-5xl mx-auto text-center text-muted-foreground text-sm">
               <p>
-                © {new Date().getFullYear()} Vibesports — Todos los derechos reservados
+                © {new Date().getFullYear()} Parti2 — Todos los derechos reservados
               </p>
             </div>
           </footer>

@@ -21,7 +21,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   },
   global: {
     headers: {
-      'X-Client-Info': 'vibesports-app'
+      'X-Client-Info': 'parti2-app'
     }
   }
 })

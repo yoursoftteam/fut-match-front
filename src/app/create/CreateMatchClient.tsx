@@ -91,7 +91,7 @@ export default function CreateMatchClient() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <header className="text-center mb-8 mt-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2 neon-text">Vibesports</h1>
+          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2 neon-text">Parti2</h1>
           <p className="text-muted-foreground">
             Crea partidos de fútbol y comparte con tus amigos
           </p>

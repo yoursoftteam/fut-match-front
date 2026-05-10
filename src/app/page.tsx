@@ -32,7 +32,7 @@ export default function Home() {
       <section className="py-20 px-4 bg-background">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-7xl sm:text-8xl md:text-9xl font-heading font-bold text-foreground mb-6 neon-text">
-            Vibesports
+            Parti2
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
             ¿Listo para demostrar tu nivel en la cancha?
