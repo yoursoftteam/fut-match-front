@@ -5,14 +5,17 @@ Resumen operativo de la app para evitar re-analizar el repo en cada chat.
 ## 1) Stack y base técnica
 - Next.js 16 (App Router) + React 19 + TypeScript (strict).
 - Tailwind CSS 4 + CSS global en `src/app/globals.css`.
-- Supabase (`@supabase/supabase-js`) para auth y DB.
+- Supabase con `@supabase/ssr` (`createBrowserClient`) para auth y DB — sesión en cookies.
 - Alias: `@/* -> src/*`.
 - Tema: `next-themes` con dark mode por defecto (`src/components/Providers.tsx`).
+- Deploy target: **Cloudflare Workers** via `@opennextjs/cloudflare`.
 
 ## 2) Comandos clave
 - Dev: `npm run dev`
 - Build: `npm run build`
 - Lint: `npm run lint`
+- Preview CF: `npm run preview` (`opennextjs-cloudflare build && opennextjs-cloudflare preview`)
+- Deploy CF: `npm run deploy` (`opennextjs-cloudflare build && opennextjs-cloudflare deploy`)
 
 ## 3) Variables de entorno requeridas
 - `NEXT_PUBLIC_SUPABASE_URL`
@@ -28,10 +31,11 @@ Notas:
 - `/create` Crear partido.
 - `/dashboard` Vista principal para usuario autenticado.
 - `/matches` Lista de partidos del usuario autenticado.
-- `/match/[id]` Detalle del partido (runtime edge).
+- `/match/[id]` Detalle del partido (Dynamic, sin edge runtime).
 
 ## 5) Archivos clave y responsabilidad
-- `src/lib/supabase.ts`: cliente Supabase compartido.
+- `src/lib/supabase.ts`: cliente Supabase con `createBrowserClient` (sesión en cookies).
+- `src/proxy.ts`: middleware Next.js 16 — protege `/dashboard`, `/matches`, `/match/*`, `/create`.
 - `src/hooks/useAuth.ts`: sesión/auth estado.
 - `src/hooks/useMatches.ts`: CRUD de partidos + registros + conteos + utilidades.
 - `src/hooks/useMatchRegistrationsRealtime.ts`: realtime de inscripciones.
@@ -68,12 +72,22 @@ Notas:
 ## 9) Decisiones recientes importantes
 - Se quitó el bloque "Encuentros en curso" de la home pública (`/`) para no mostrar partidos sin login.
 - El feed principal de partidos vive en vistas autenticadas (`/dashboard`, `/matches`).
-- `src/app/match/[id]/page.tsx` está en runtime edge y usa params async.
+- `export const runtime = "edge"` eliminado de todas las páginas y `layout.tsx` (incompatible con `@opennextjs/cloudflare`).
+- `@supabase/ssr` reemplaza uso directo de `@supabase/supabase-js` para sesión en cookies.
+- `sessionStorage` usado en lugar de `localStorage` para datos de pricing en `CreateMatchClient` y `MatchDetails`.
+- Validación de nombre en `MatchDetails`: 2-100 chars.
+- `router.refresh()` antes de push en `auth/page.tsx` para refrescar sesión.
+- Errores de auth genéricos (sin exponer detalle interno).
 
 ## 10) Deploy / infraestructura
-- Destino: Cloudflare Pages.
-- Consideración: rutas dinámicas deben ser compatibles con edge runtime.
-- Warning esperado en build: usar edge runtime deshabilita static generation para esa ruta.
+- Destino: **Cloudflare Workers** (no Pages estático).
+- Adaptador: `@opennextjs/cloudflare` — genera output en `.open-next/` (worker.js + assets/).
+- Config: `wrangler.jsonc` + `open-next.config.ts` con `defineCloudflareConfig()`.
+- `next.config.ts`: headers de seguridad + `initOpenNextCloudflareForDev()` al final.
+- `public/_headers`: cache `immutable` para `/_next/static/*`.
+- **NO usar** `export const runtime = "edge"` — no soportado por `@opennextjs/cloudflare`.
+- `.open-next/` en `.gitignore`.
+- Env vars a configurar en CF dashboard: `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
 
 ## 11) Riesgos/errores frecuentes (para ahorrar tiempo)
 - Error parse `<eof>` suele ser archivo truncado (faltan `}` o `)`), revisar:
@@ -81,6 +95,8 @@ Notas:
 	- `src/app/match/[id]/page.tsx`
 - Si falla detalle de partido por id, revisar tipado params en App Router actual.
 - Si algo se ve mal en light mode, revisar clases hardcodeadas (`slate`, `text-white`) en lugar de tokens (`bg-card`, `text-foreground`, etc.).
+- No agregar `export const runtime = "edge"` — rompe el build de CF con `@opennextjs/cloudflare`.
+- La columna `time` no existe en tabla `matches` — se deriva del campo `date` (ISO 8601).
 
 ## 12) Convenciones prácticas para futuras tareas
 - Preferir tokens de tema sobre colores hardcodeados.

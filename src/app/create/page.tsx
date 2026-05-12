@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import CreateMatchClient from "./CreateMatchClient";
+import CreateMatchWrapper from "./CreateMatchWrapper";
 
 export const metadata: Metadata = {
   title: "Crear Partido | Parti2",
@@ -7,5 +7,5 @@ export const metadata: Metadata = {
 };
 
 export default function CreateMatch() {
-  return <CreateMatchClient />;
+  return <CreateMatchWrapper />;
 }
