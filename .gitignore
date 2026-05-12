@@ -40,5 +40,6 @@ coverage/
 .turbo/
 .cache/
 
-# Vercel (si aplica)
+# Vercel / next-on-pages output
+.vercel/
 .vercel.open-next
