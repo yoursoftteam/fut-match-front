@@ -7,7 +7,7 @@
     "build": "next build",
     "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "build:cf-pages": "opennextjs-cloudflare build && cp -r .open-next/cloudflare .open-next/middleware .open-next/server-functions .open-next/.build .open-next/assets/ && cp .open-next/worker.js .open-next/assets/_worker.js",
+    "build:cf-pages": "opennextjs-cloudflare build && cp .open-next/worker.js .open-next/_worker.js",
     "start": "next start",
     "lint": "eslint"
   },
