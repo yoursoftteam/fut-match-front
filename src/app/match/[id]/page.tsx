@@ -1,7 +1,5 @@
 import MatchDetails from "@/components/MatchDetails";
 
-export const runtime = "edge";
-
 interface MatchPageProps {
   params: Promise<{ id: string }>;
 }
