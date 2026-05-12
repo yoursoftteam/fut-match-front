@@ -4,6 +4,13 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Inter } from "next/font/google";
+
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["700"],
+  style: ["italic"],
+});
 
 export function AppHeader() {
   const router = useRouter();
@@ -20,9 +27,10 @@ export function AppHeader() {
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className="text-2xl font-heading font-bold text-primary hover:text-primary/80 transition-colors"
+            className={`text-2xl sm:text-3xl leading-none transition-opacity hover:opacity-80 ${inter.className} font-bold italic`}
           >
-            Vibesports
+            <span className="text-black dark:text-white">Parti</span>
+            <span className="text-emerald-500">2</span>
           </Link>
           <nav aria-label="Principal">
             <ul className="flex flex-wrap items-center gap-4 text-sm">
@@ -36,7 +44,7 @@ export function AppHeader() {
                   href="/create"
                   className="text-muted-foreground hover:text-primary transition-colors"
                 >
-                  Armar encuentro
+                  Armar partido
                 </Link>
               </li>
               {user && (

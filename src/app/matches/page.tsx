@@ -1,5 +1,6 @@
 "use client";
 
+
 import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
@@ -37,16 +38,16 @@ export default function MatchesPage() {
       <main className="mx-auto max-w-6xl px-4 py-8">
         <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="font-heading text-3xl font-bold text-foreground">Mis encuentros ⚽</h1>
+            <h1 className="font-heading text-3xl font-bold text-foreground">Mis partidos ⚽</h1>
             <p className="mt-1 text-muted-foreground">
-              Los encuentros que armaste o en los que estás anotado.
+              Los partidos que armaste o en los que estás anotado.
             </p>
           </div>
           <Link
             href="/create"
             className="btn-primary-fm inline-block rounded-lg px-6 py-2 text-center text-sm font-semibold neon-glow"
           >
-            ⚡ Armar encuentro
+            ⚡ Armar partido
           </Link>
         </div>
 
@@ -61,7 +62,7 @@ export default function MatchesPage() {
             <p className="text-lg font-semibold text-card-foreground mb-1">La cancha está vacía</p>
             <p className="text-muted-foreground text-sm mb-5">¡Ármate el primero y convoca a tu gente!</p>
             <Link href="/create" className="btn-primary-fm inline-block rounded-lg px-6 py-3 font-semibold">
-              ⚽ Armar primer encuentro
+              ⚽ Armar primer partido
             </Link>
           </div>
         ) : (
@@ -96,7 +97,7 @@ export default function MatchesPage() {
                     href={`/match/${match.id}`}
                     className="btn-primary-fm inline-block w-full rounded-lg px-4 py-2 text-center text-sm font-semibold"
                   >
-                    {isFull ? 'Ver detalles' : '¡Ver encuentro!'}
+                    {isFull ? 'Ver detalles' : '¡Ver partido!'}
                   </Link>
                 </div>
               );

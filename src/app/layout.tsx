@@ -1,12 +1,18 @@
 import type { Metadata } from "next";
+import { MailIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
+import { Geist } from "next/font/google";
+import { cn } from "@/lib/utils";
+
+
+const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Vibesports - El ecosistema definitivo para deportistas",
+  title: "Parti2 - El ecosistema definitivo para deportistas",
   description:
-    "Organiza encuentros de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
+    "Organiza partidos de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
 };
 
 export default function RootLayout({
@@ -15,7 +21,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="h-full antialiased" suppressHydrationWarning>
+    <html lang="es" className={cn("h-full antialiased", "font-sans", geist.variable)} suppressHydrationWarning>
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>
           <a href="#main-content" className="skip-to-main">
@@ -28,8 +34,15 @@ export default function RootLayout({
           <footer className="bg-card py-6 px-4 border-t border-border">
             <div className="max-w-5xl mx-auto text-center text-muted-foreground text-sm">
               <p>
-                © {new Date().getFullYear()} Vibesports — Todos los derechos reservados
+                © {new Date().getFullYear()} Parti2 — Todos los derechos reservados
               </p>
+              <a
+                href="mailto:contacto@parti2.co"
+                className="mt-2 inline-flex items-center gap-2 text-foreground/90 hover:text-primary transition-colors"
+              >
+                <MailIcon className="h-4 w-4" aria-hidden="true" />
+                <span>contacto@parti2.co</span>
+              </a>
             </div>
           </footer>
         </Providers>

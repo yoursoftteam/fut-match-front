@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
-import { supabase } from '@/lib/supabase'
+import { hasSupabaseEnv, supabase } from '@/lib/supabase'
 import { User } from '@supabase/supabase-js'
 
 export function useAuth() {
@@ -9,6 +9,12 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
+    if (!hasSupabaseEnv) {
+      setUser(null)
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
