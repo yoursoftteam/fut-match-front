@@ -6,6 +6,7 @@ jspm_packages/
 .next/
 out/
 build/
+.open-next/
 
 # Entorno y Secretos (Seguridad Crítica)
 .env
