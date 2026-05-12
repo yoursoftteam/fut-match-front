@@ -7,6 +7,7 @@ import ShareLink from "@/components/ShareLink";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
 import { formatCurrency } from "@/lib/currency";
+import { BrandLogo } from "@/components/BrandLogo";
 
 interface CreatedMatch extends MatchFormSubmitData {
   id: string;
@@ -91,7 +92,9 @@ export default function CreateMatchClient() {
     <div className="min-h-screen bg-background py-8 px-4">
       <div className="max-w-3xl mx-auto">
         <header className="text-center mb-8 mt-4">
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-2 neon-text">Parti2</h1>
+          <div className="mb-2 flex justify-center">
+            <BrandLogo width={220} height={96} className="h-auto w-[160px] sm:w-[200px]" />
+          </div>
           <p className="text-muted-foreground">
             Crea partidos de fútbol y comparte con tus amigos
           </p>

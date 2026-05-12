@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useAuth } from "@/hooks/useAuth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import { BrandLogo } from "@/components/BrandLogo";
 
 export default function Home() {
   const { user, loading } = useAuth();
@@ -32,21 +33,21 @@ export default function Home() {
     <div className="min-h-screen bg-background">
       <section className="py-20 px-4 bg-background">
         <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-7xl sm:text-8xl md:text-9xl font-heading font-bold text-foreground mb-6 neon-text">
-            Parti2
-          </h1>
+          <div className="mb-6 flex justify-center">
+            <BrandLogo width={300} height={230} priority className="h-auto w-[220px] sm:w-[260px] md:w-[300px]" />
+          </div>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto mb-4">
             ¿Listo para demostrar tu nivel en la cancha?
           </p>
           <p className="text-base text-muted-foreground max-w-xl mx-auto mb-10">
-            Encuentra encuentros, arma tu equipo y juega. <span className="text-foreground font-semibold">Sin excusas.</span>
+            Encuentra partidos, arma tu equipo y juega. <span className="text-foreground font-semibold">Sin excusas.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link
               href="/create"
               className="inline-block bg-primary text-primary-foreground px-8 py-4 rounded-lg font-semibold text-lg transition-colors neon-glow btn-primary-fm btn-neon-pulse"
             >
-              ⚡ Armar mi encuentro
+              ⚡ Armar mi partido
             </Link>
             <Link
               href="/auth"
@@ -68,9 +69,9 @@ export default function Home() {
               <span className="text-4xl mb-4 block" aria-hidden>
                 ⚽
               </span>
-              <h3 className="text-xl font-semibold text-card-foreground mb-3">Encuentro Gratis</h3>
+              <h3 className="text-xl font-semibold text-card-foreground mb-3">Partido Gratis</h3>
               <p className="text-muted-foreground mb-4">
-                Arma encuentros rápidos con tu gente. Define lugar, hora, costo y cupos. ¡Sin complicaciones!
+                Arma partidos rápidos con tu gente. Define lugar, hora, costo y cupos. ¡Sin complicaciones!
               </p>
               <Link
                 href="/create"
@@ -113,7 +114,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto text-center">
           <h2 className="text-3xl font-heading font-bold text-foreground mb-4">¿A qué esperas?</h2>
           <p className="text-xl text-muted-foreground mb-8">
-            El encuentro de tu vida te está esperando. <span className="text-foreground font-semibold">Entra al campo.</span>
+            El partido de tu vida te está esperando. <span className="text-foreground font-semibold">Entra al campo.</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
             <Link

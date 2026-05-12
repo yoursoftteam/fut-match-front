@@ -58,7 +58,7 @@ export function useMatches() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        return { data: null, error: new Error('Debes iniciar sesión para crear un encuentro.') }
+        return { data: null, error: new Error('Debes iniciar sesión para crear un partido.') }
       }
 
       const { data, error } = await supabase
@@ -83,7 +83,7 @@ export function useMatches() {
     try {
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) {
-        return { data: null, error: new Error('Debes iniciar sesión para editar un encuentro.') }
+        return { data: null, error: new Error('Debes iniciar sesión para editar un partido.') }
       }
 
       // Verify ownership before updating
@@ -96,7 +96,7 @@ export function useMatches() {
       if (fetchError) throw fetchError
 
       if (existing.created_by !== user.id) {
-        return { data: null, error: new Error('No tienes permiso para editar este encuentro.') }
+        return { data: null, error: new Error('No tienes permiso para editar este partido.') }
       }
 
       const { data, error } = await supabase
@@ -247,7 +247,7 @@ export function useMatches() {
       if (fetchError) throw fetchError
 
       if (existing.created_by !== user.id) {
-        return { error: new Error('No tienes permiso para modificar este encuentro.') }
+        return { error: new Error('No tienes permiso para modificar este partido.') }
       }
 
       // Get existing rented goalkeeper registrations

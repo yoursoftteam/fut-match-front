@@ -50,14 +50,14 @@ export default function DashboardPage() {
                 ¿Listo para jugar? ⚡
               </h1>
               <p className="text-muted-foreground">
-                Arma tu encuentro, gestiona tus encuentros y demuestra tu nivel.
+                Arma tu partido, gestiona tus partidos y demuestra tu nivel.
               </p>
             </div>
             <Link
               href="/create"
               className="btn-primary-fm neon-glow px-6 py-3 rounded-lg font-semibold text-sm inline-block text-center shrink-0"
             >
-              ⚽ Armar encuentro
+              ⚽ Armar partido
             </Link>
           </div>
         </section>
@@ -74,10 +74,10 @@ export default function DashboardPage() {
             >
               <span className="text-4xl mb-4 block" aria-hidden>⚽</span>
               <h3 className="text-base font-semibold text-card-foreground mb-1 group-hover:text-primary transition-colors">
-                ¡Armar encuentro!
+                ¡Armar partido!
               </h3>
               <p className="text-sm text-muted-foreground">
-                Nuevo encuentro en 2 minutos
+                Nuevo partido en 2 minutos
               </p>
             </Link>
 
@@ -99,7 +99,7 @@ export default function DashboardPage() {
         <section>
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-heading font-bold text-foreground">
-              Mis Encuentros
+              Mis Partidos
             </h2>
             <Link
               href="/matches"
@@ -112,13 +112,13 @@ export default function DashboardPage() {
           {matchesLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Cargando encuentros…</p>
+              <p className="text-muted-foreground">Cargando partidos…</p>
             </div>
           ) : matches.length === 0 ? (
             <div className="card p-10 text-center">
               <span className="text-4xl mb-4 block" aria-hidden>📅</span>
               <h3 className="text-lg font-semibold text-card-foreground mb-2">
-                Ningún encuentro todavía
+                Ningún partido todavía
               </h3>
               <p className="text-muted-foreground mb-5 text-sm">
                 La cancha no se llena sola. ¡Arma el primero!
@@ -162,7 +162,7 @@ export default function DashboardPage() {
                       href={`/match/${match.id}`}
                       className="btn-primary-fm px-4 py-2 text-sm inline-block text-center w-full rounded-lg font-semibold"
                     >
-                      {isFull ? 'Ver detalles' : '¡Ver encuentro!'}
+                      {isFull ? 'Ver detalles' : '¡Ver partido!'}
                     </Link>
                   </div>
                 )

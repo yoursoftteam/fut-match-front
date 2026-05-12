@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { MailIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Providers } from "@/components/Providers";
 import "./globals.css";
@@ -11,7 +12,7 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   title: "Parti2 - El ecosistema definitivo para deportistas",
   description:
-    "Organiza encuentros de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
+    "Organiza partidos de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
 };
 
 export default function RootLayout({
@@ -35,6 +36,13 @@ export default function RootLayout({
               <p>
                 © {new Date().getFullYear()} Parti2 — Todos los derechos reservados
               </p>
+              <a
+                href="mailto:contacto@parti2.co"
+                className="mt-2 inline-flex items-center gap-2 text-foreground/90 hover:text-primary transition-colors"
+              >
+                <MailIcon className="h-4 w-4" aria-hidden="true" />
+                <span>contacto@parti2.co</span>
+              </a>
             </div>
           </footer>
         </Providers>

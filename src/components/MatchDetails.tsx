@@ -122,13 +122,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
         const matchResult = await getMatchById(matchId);
 
         if (matchResult.error) {
-          setError("Error al cargar el encuentro");
+          setError("Error al cargar el partido");
           setLoading(false);
           return;
         }
 
         if (!matchResult.data) {
-          setError("Encuentro no encontrado");
+          setError("Partido no encontrado");
           setLoading(false);
           return;
         }
@@ -137,7 +137,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
         setLoading(false);
 
       } catch (err) {
-        setError("Error al cargar los datos del encuentro");
+        setError("Error al cargar los datos del partido");
         setLoading(false);
       }
     };
@@ -350,7 +350,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
     e.preventDefault();
 
     if (!matchData || !user || user.id !== matchData.created_by) {
-      setEditMessage("Solo el creador del encuentro puede editar esta información.");
+      setEditMessage("Solo el creador del partido puede editar esta información.");
       return;
     }
 
@@ -378,7 +378,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       const nextDate = `${editForm.date}T${editForm.time}:00`;
 
       const { data, error } = await updateMatch(matchId, {
-        title: `Encuentro en ${nextLocation}`,
+        title: `Partido en ${nextLocation}`,
         location: nextLocation,
         date: nextDate,
         max_players: nextMaxPlayers,
@@ -389,7 +389,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       }
 
       setMatchData(data as MatchData);
-      setEditMessage("✓ ¡Encuentro actualizado correctamente!");
+      setEditMessage("✓ ¡Partido actualizado correctamente!");
 
       // Register or update rented goalkeepers if configured
       if (editForm.hasRentedGoalkeepers && editForm.rentedGoalkeepersCount > 0) {
@@ -459,7 +459,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       }, 1500);
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar el encuentro. Intenta nuevamente.";
+      const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar el partido. Intenta nuevamente.";
       setEditMessage(`❌ ${errorMessage}`);
     } finally {
       setEditLoading(false);
@@ -873,7 +873,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   }, [showUnregisterModal]);
 
   if (loading) {
-    return <div className="text-center py-8">Cargando detalles del encuentro…</div>;
+    return <div className="text-center py-8">Cargando detalles del partido…</div>;
   }
 
   if (error) {
@@ -881,7 +881,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
   }
 
   if (!matchData) {
-    return <div className="text-center py-8">No se encontró información del encuentro</div>;
+    return <div className="text-center py-8">No se encontró información del partido</div>;
   }
 
   const formattedDate = new Date(matchData.date).toLocaleDateString("es-ES", {
@@ -944,7 +944,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             ) : substituteSlotsFree > 0 ? (
               <p className="mt-3 text-sm text-amber-400">Titulares completos · {substituteSlotsFree} cupo{substituteSlotsFree !== 1 ? "s" : ""} de suplente</p>
             ) : (
-              <p className="mt-3 text-sm text-red-400">Encuentro y lista de suplentes completos</p>
+              <p className="mt-3 text-sm text-red-400">Partido y lista de suplentes completos</p>
             )}
 
             {isCreator && !showEditForm && (
@@ -958,7 +958,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                   }}
                   className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition"
                 >
-                  Editar encuentro
+                  Editar partido
                 </button>
                 <button
                   type="button"
@@ -987,7 +987,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
         <section className="space-y-6">
           {isCreator && showEditForm && (
             <div className="rounded-lg border border-green-700/50 bg-card p-6 shadow">
-              <h2 className="mb-4 text-2xl font-bold text-foreground">Editar encuentro</h2>
+              <h2 className="mb-4 text-2xl font-bold text-foreground">Editar partido</h2>
               <form onSubmit={handleEditSubmit} className="space-y-4">
                 <div>
                   <label htmlFor="edit-location" className="mb-2 block text-sm font-medium text-foreground">
@@ -1162,7 +1162,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
             <div
               className="mb-4 flex flex-wrap gap-2"
               role="tablist"
-              aria-label="Secciones del encuentro"
+              aria-label="Secciones del partido"
             >
               <button
                 type="button"
@@ -1218,7 +1218,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
             {activeTab === "register" && (
               <div id="panel-register" role="tabpanel" aria-labelledby="tab-register">
-                <h2 className="mb-2 text-xl font-bold text-foreground">Inscribirme al encuentro</h2>
+                <h2 className="mb-2 text-xl font-bold text-foreground">Inscribirme al partido</h2>
                 <p className="mb-4 text-sm text-muted-foreground">Deja tu nombre y elige si vienes como portero.</p>
                 <div className="mb-4 rounded border border-border bg-muted p-3 text-sm text-muted-foreground">
                   <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
@@ -1575,7 +1575,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 </h3>
               </div>
               <p className="text-muted-foreground mb-6">
-                ¿Estás seguro de que deseas darte de baja de este encuentro?
+                ¿Estás seguro de que deseas darte de baja de este partido?
                 <br />
                 <span className="font-semibold text-foreground mt-2 block">{unregisterTarget.name}</span>
               </p>
