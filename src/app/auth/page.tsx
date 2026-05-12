@@ -1,5 +1,7 @@
 "use client";
 
+export const runtime = "edge";
+
 import { useState, useEffect, Suspense } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -36,6 +38,12 @@ function AuthForm() {
       return;
     }
 
+    if (isSignUp && password.length < 6) {
+      setMessage("La contraseña debe tener al menos 6 caracteres.");
+      setLoading(false);
+      return;
+    }
+
     try {
       if (isSignUp) {
         const redirectTo =
@@ -66,11 +74,29 @@ function AuthForm() {
           throw error;
         }
 
+        router.refresh();
         router.push("/dashboard");
       }
     } catch (error: unknown) {
-      const err = error as { message?: string };
-      setMessage(err?.message ?? "Ocurrió un error. Intenta de nuevo.");
+      const err = error as { message?: string; status?: number };
+      // Map Supabase errors to generic messages to avoid account enumeration
+      const raw = err?.message ?? "";
+      if (
+        raw.toLowerCase().includes("invalid login") ||
+        raw.toLowerCase().includes("invalid credentials") ||
+        raw.toLowerCase().includes("email not confirmed") ||
+        raw.toLowerCase().includes("user not found")
+      ) {
+        setMessage("Email o contraseña incorrectos. Verifica tus datos e intenta de nuevo.");
+      } else if (raw.toLowerCase().includes("already registered") || raw.toLowerCase().includes("user already exists")) {
+        setMessage("Ya existe una cuenta con este email. Intenta iniciar sesión.");
+      } else if (raw.toLowerCase().includes("password")) {
+        setMessage("La contraseña debe tener al menos 6 caracteres.");
+      } else if (raw.toLowerCase().includes("rate limit") || err?.status === 429) {
+        setMessage("Demasiados intentos. Espera unos minutos e intenta de nuevo.");
+      } else {
+        setMessage("Ocurrió un error. Intenta de nuevo.");
+      }
     } finally {
       setLoading(false);
     }

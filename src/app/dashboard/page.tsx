@@ -1,5 +1,7 @@
 'use client'
 
+export const runtime = "edge";
+
 import { useAuth } from '@/hooks/useAuth'
 import { useMatches } from '@/hooks/useMatches'
 import Link from 'next/link'
