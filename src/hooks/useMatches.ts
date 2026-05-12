@@ -27,7 +27,7 @@ export function useMatches() {
     try {
       const { data, error } = await supabase
         .from('matches')
-        .select('*')
+        .select('id, title, location, date, max_players, created_by')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -56,10 +56,15 @@ export function useMatches() {
 
   const createMatch = async (matchData: Omit<Match, 'id'>) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return { data: null, error: new Error('Debes iniciar sesión para crear un encuentro.') }
+      }
+
       const { data, error } = await supabase
         .from('matches')
         .insert([matchData])
-        .select()
+        .select('id, title, location, date, max_players, created_by, created_at')
         .single()
 
       if (error) throw error
@@ -76,11 +81,30 @@ export function useMatches() {
     updates: Pick<Match, 'title' | 'location' | 'date' | 'max_players'>,
   ) => {
     try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return { data: null, error: new Error('Debes iniciar sesión para editar un encuentro.') }
+      }
+
+      // Verify ownership before updating
+      const { data: existing, error: fetchError } = await supabase
+        .from('matches')
+        .select('created_by')
+        .eq('id', matchId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      if (existing.created_by !== user.id) {
+        return { data: null, error: new Error('No tienes permiso para editar este encuentro.') }
+      }
+
       const { data, error } = await supabase
         .from('matches')
         .update(updates)
         .eq('id', matchId)
-        .select()
+        .eq('created_by', user.id)
+        .select('id, title, location, date, max_players, created_by')
         .single()
 
       if (error) throw error
@@ -98,7 +122,7 @@ export function useMatches() {
     try {
       const { data, error } = await supabase
         .from('matches')
-        .select('*')
+        .select('id, title, location, date, max_players, created_by, created_at')
         .eq('id', id)
         .single()
 
@@ -114,7 +138,7 @@ export function useMatches() {
     try {
       const { data, error } = await supabase
         .from('match_registrations')
-        .select('*')
+        .select('id, name, is_goalkeeper, registered_at')
         .eq('match_id', matchId)
         .order('registered_at', { ascending: true })
 
@@ -128,7 +152,14 @@ export function useMatches() {
 
   const registerForMatch = async (matchId: string, name: string, isGoalkeeper: boolean) => {
     try {
-      console.log('[DB] INSERT match_registrations:', { matchId, name, isGoalkeeper })
+      // Validate inputs
+      const trimmedName = name.trim()
+      if (!trimmedName || trimmedName.length < 2) {
+        throw new Error('El nombre debe tener al menos 2 caracteres.')
+      }
+      if (trimmedName.length > 100) {
+        throw new Error('El nombre no puede superar los 100 caracteres.')
+      }
 
       const { data: match, error: matchError } = await supabase
         .from('matches')
@@ -172,48 +203,61 @@ export function useMatches() {
 
       const { data, error } = await supabase
         .from('match_registrations')
-        .insert([{ match_id: matchId, name, is_goalkeeper: isGoalkeeper }])
-        .select()
+        .insert([{ match_id: matchId, name: trimmedName, is_goalkeeper: isGoalkeeper }])
+        .select('id, name, is_goalkeeper, registered_at')
         .single()
 
       if (error) throw error
-      console.log('[DB] ✅ INSERT exitoso:', data)
       return { data, error: null }
     } catch (error) {
-      console.error('[DB] ❌ Error INSERT:', error)
+      console.error('Error registering for match:', error)
       return { data: null, error }
     }
   }
 
   const unregisterFromMatch = async (registrationId: string) => {
     try {
-      console.log('[DB] DELETE match_registrations ID:', registrationId)
       const { error } = await supabase
         .from('match_registrations')
         .delete()
         .eq('id', registrationId)
 
       if (error) throw error
-      console.log('[DB] ✅ DELETE exitoso')
       return { error: null }
     } catch (error) {
-      console.error('[DB] ❌ Error DELETE:', error)
+      console.error('Error unregistering from match:', error)
       return { error }
     }
   }
 
   const registerRentedGoalkeepers = async (matchId: string, count: number) => {
     try {
-      console.log('[DB] Registering rented goalkeepers:', { matchId, count })
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return { error: new Error('Debes iniciar sesión para realizar esta acción.') }
+      }
+
+      // Verify ownership
+      const { data: existing, error: fetchError } = await supabase
+        .from('matches')
+        .select('created_by')
+        .eq('id', matchId)
+        .single()
+
+      if (fetchError) throw fetchError
+
+      if (existing.created_by !== user.id) {
+        return { error: new Error('No tienes permiso para modificar este encuentro.') }
+      }
 
       // Get existing rented goalkeeper registrations
-      const { data: existingRegistrations, error: fetchError } = await supabase
+      const { data: existingRegistrations, error: fetchRegError } = await supabase
         .from('match_registrations')
         .select('id')
         .eq('match_id', matchId)
         .ilike('name', 'Arquero Alquilado%')
 
-      if (fetchError) throw fetchError
+      if (fetchRegError) throw fetchRegError
 
       const existingCount = existingRegistrations?.length || 0
 
@@ -244,10 +288,9 @@ export function useMatches() {
         if (insertError) throw insertError
       }
 
-      console.log('[DB] ✅ Rented goalkeepers registered successfully')
       return { error: null }
     } catch (error) {
-      console.error('[DB] ❌ Error registering rented goalkeepers:', error)
+      console.error('Error registering rented goalkeepers:', error)
       return { error }
     }
   }

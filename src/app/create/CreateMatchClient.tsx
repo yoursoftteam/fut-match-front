@@ -51,11 +51,12 @@ export default function CreateMatchClient() {
         throw createError;
       }
 
+      if (!newMatch) {
+        throw new Error("No se pudo crear el partido");
+      }
+
       if (data.hasRentedGoalkeepers && data.rentedGoalkeepersCount > 0) {
-        const { error: rentedError } = await registerRentedGoalkeepers(newMatch.id, data.rentedGoalkeepersCount);
-        if (rentedError) {
-          console.error("Error registering rented goalkeepers:", rentedError);
-        }
+        await registerRentedGoalkeepers(newMatch.id, data.rentedGoalkeepersCount);
       }
 
       const fullMatchData = {
@@ -67,20 +68,19 @@ export default function CreateMatchClient() {
       setCreatedMatch(fullMatchData);
 
       try {
-        const storedMatches = localStorage.getItem("matches");
+        const storedMatches = sessionStorage.getItem("matches");
         const matches = storedMatches ? JSON.parse(storedMatches) : [];
         matches.push({
           ...data,
           id: newMatch.id,
           created_at: newMatch.created_at,
         });
-        localStorage.setItem("matches", JSON.stringify(matches));
-      } catch (err) {
-        console.error("Error saving match to localStorage", err);
+        sessionStorage.setItem("matches", JSON.stringify(matches));
+      } catch {
+        // ignore storage errors
       }
 
     } catch (err: unknown) {
-      console.error("Error creating match:", err);
       setError(err instanceof Error ? err.message : "Error al crear el partido");
     } finally {
       setLoading(false);

@@ -137,7 +137,6 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
         setLoading(false);
 
       } catch (err) {
-        console.error('Error en fetchMatchData:', err);
         setError("Error al cargar los datos del encuentro");
         setLoading(false);
       }
@@ -148,7 +147,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
   useEffect(() => {
     try {
-      const storedMatches = localStorage.getItem("matches");
+      const storedMatches = sessionStorage.getItem("matches");
 
       if (!storedMatches) {
         setStoredMatchPricing(null);
@@ -174,8 +173,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       }
 
       setStoredMatchPricing(null);
-    } catch (err) {
-      console.error("Error loading match pricing from localStorage", err);
+    } catch {
       setStoredMatchPricing(null);
     }
   }, [matchId]);
@@ -213,28 +211,32 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
 
   const handleRegistrationSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!registrationForm.name.trim()) return;
+    const trimmedName = registrationForm.name.trim();
+
+    if (!trimmedName) {
+      setRegistrationMessage("Ingresa tu nombre para continuar.");
+      return;
+    }
+    if (trimmedName.length < 2) {
+      setRegistrationMessage("El nombre debe tener al menos 2 caracteres.");
+      return;
+    }
+    if (trimmedName.length > 100) {
+      setRegistrationMessage("El nombre no puede superar los 100 caracteres.");
+      return;
+    }
 
     setRegistrationLoading(true);
     setRegistrationMessage(null);
 
     try {
-      console.log('[Register] Intentando registrarse con:', {
-        matchId,
-        name: registrationForm.name,
-        isGoalkeeper: registrationForm.isGoalkeeper
-      });
-
       const { data, error } = await registerForMatch(
         matchId,
-        registrationForm.name.trim(),
+        trimmedName,
         registrationForm.isGoalkeeper
       );
 
-      console.log('[Register] Respuesta de registerForMatch:', { data, error });
-
       if (error) {
-        console.error('[Register] Error:', error);
         const errorMessage =
           error instanceof Error
             ? error.message
@@ -242,14 +244,13 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
               ? error
               : "Error al registrarte. Inténtalo de nuevo.";
         setRegistrationMessage(errorMessage);
-      } else {
-        console.log('[Register] ✅ Registrado exitosamente');
+      } else if (data) {
         setRegistrationMessage("¡Te has registrado exitosamente!");
         setRegistrationForm({ name: "", isGoalkeeper: false });
         setShowRegistrationForm(false);
       }
     } catch (err) {
-      console.error('[Register] Exception:', err);
+      console.error('Error en registro:', err);
       setRegistrationMessage("Error al registrarte. Inténtalo de nuevo.");
     } finally {
       setRegistrationLoading(false);
@@ -376,12 +377,6 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       const nextLocation = editForm.location.trim();
       const nextDate = `${editForm.date}T${editForm.time}:00`;
 
-      console.log('[EditMatch] Intentando guardar cambios:', {
-        location: nextLocation,
-        date: nextDate,
-        max_players: nextMaxPlayers,
-      });
-
       const { data, error } = await updateMatch(matchId, {
         title: `Encuentro en ${nextLocation}`,
         location: nextLocation,
@@ -390,27 +385,18 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       });
 
       if (error || !data) {
-        console.error('[EditMatch] Error en respuesta:', error);
         throw error || new Error("No se pudieron guardar los cambios");
       }
 
-      console.log('[EditMatch] ✅ Cambios guardados exitosamente:', data);
-      
       setMatchData(data as MatchData);
       setEditMessage("✓ ¡Encuentro actualizado correctamente!");
 
       // Register or update rented goalkeepers if configured
       if (editForm.hasRentedGoalkeepers && editForm.rentedGoalkeepersCount > 0) {
-        const { error: rentedError } = await registerRentedGoalkeepers(matchId, editForm.rentedGoalkeepersCount);
-        if (rentedError) {
-          console.error("Error registering rented goalkeepers:", rentedError);
-        }
+        await registerRentedGoalkeepers(matchId, editForm.rentedGoalkeepersCount);
       } else {
         // Remove rented goalkeepers if disabled
-        const { error: rentedError } = await registerRentedGoalkeepers(matchId, 0);
-        if (rentedError) {
-          console.error("Error removing rented goalkeepers:", rentedError);
-        }
+        await registerRentedGoalkeepers(matchId, 0);
       }
 
       // Update localStorage with new pricing info
@@ -435,7 +421,7 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
         };
 
         try {
-          const storedMatches = localStorage.getItem("matches");
+          const storedMatches = sessionStorage.getItem("matches");
           if (storedMatches) {
             const parsedMatches = JSON.parse(storedMatches) as Array<Record<string, unknown>>;
             const nextMatches = parsedMatches.map((storedMatch) => {
@@ -457,10 +443,10 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
                 rentalCost: editForm.hasRentedGoalkeepers ? editForm.rentalCost : 0,
               };
             });
-            localStorage.setItem("matches", JSON.stringify(nextMatches));
+            sessionStorage.setItem("matches", JSON.stringify(nextMatches));
           }
-        } catch (err) {
-          console.error("Error updating match pricing in localStorage", err);
+        } catch {
+          // ignore storage errors
         }
 
         return updatedPricing;
@@ -473,7 +459,6 @@ export default function MatchDetails({ matchId }: { matchId: string }) {
       }, 1500);
 
     } catch (err) {
-      console.error("[EditMatch] Exception:", err);
       const errorMessage = err instanceof Error ? err.message : "No se pudo actualizar el encuentro. Intenta nuevamente.";
       setEditMessage(`❌ ${errorMessage}`);
     } finally {

@@ -40,4 +40,4 @@ coverage/
 .cache/
 
 # Vercel (si aplica)
-.vercel
+.vercel.open-next
