@@ -1,5 +1,7 @@
 import MatchPageClient from "./MatchPageClient";
 
+export const runtime = "edge";
+
 interface MatchPageProps {
   params: Promise<{ id: string }>;
 }

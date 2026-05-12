@@ -2,7 +2,7 @@
 
 
 import { useState, useEffect, Suspense } from "react";
-import { supabase } from "@/lib/supabase";
+import { hasSupabaseEnv, supabase } from "@/lib/supabase";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -30,6 +30,12 @@ function AuthForm() {
     e.preventDefault();
     setMessage("");
     setLoading(true);
+
+    if (!hasSupabaseEnv) {
+      setMessage("Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY.");
+      setLoading(false);
+      return;
+    }
 
     if (!email || !password) {
       setMessage("Completa todos los campos para continuar.");

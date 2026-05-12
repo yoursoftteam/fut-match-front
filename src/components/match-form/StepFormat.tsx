@@ -58,7 +58,11 @@ export default function StepFormat({ onNext, onBack, isValid }: StepFormatProps)
           <ChipGroup
             options={playerOptions}
             value={playersPerTeam}
-            onChange={(val) => setValue("playersPerTeam", val, { shouldValidate: true })}
+            onChange={(val) => setValue("playersPerTeam", val, {
+              shouldValidate: true,
+              shouldDirty: true,
+              shouldTouch: true,
+            })}
             label="Seleccionar jugadores por equipo"
           />
           <p className="text-sm text-muted-foreground" aria-live="polite">
@@ -90,7 +94,11 @@ export default function StepFormat({ onNext, onBack, isValid }: StepFormatProps)
                 <ChipGroup
                   options={goalkeeperOptions}
                   value={rentedGoalkeepersCount}
-                  onChange={(val) => setValue("rentedGoalkeepersCount", val, { shouldValidate: true })}
+                  onChange={(val) => setValue("rentedGoalkeepersCount", val, {
+                    shouldValidate: true,
+                    shouldDirty: true,
+                    shouldTouch: true,
+                  })}
                   label="Cantidad de arqueros alquilados"
                 />
               </div>

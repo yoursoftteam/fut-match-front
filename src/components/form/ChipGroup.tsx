@@ -26,7 +26,7 @@ export function ChipGroup<T extends string | number>({
       {options.map((option) => (
         <Chip
           key={option.value}
-          selected={value === option.value}
+          selected={String(value) === String(option.value)}
           onClick={() => onChange(option.value)}
           ariaLabel={option.label}
         >
