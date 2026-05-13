@@ -5,6 +5,7 @@ import { UsersIcon, GoalIcon, ChevronRightIcon, ChevronLeftIcon } from "lucide-r
 
 import { PLAYER_OPTIONS } from "@/lib/match-schema";
 import { useMatchFormContext } from "@/contexts/MatchFormContext";
+import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -13,18 +14,19 @@ import { Separator } from "@/components/ui/separator";
 import { ChipGroup } from "@/components/form/ChipGroup";
 
 interface StepFormatProps {
-  onNext: () => void;
-  onBack: () => void;
-  isValid: boolean;
+  stepNumber: number;
 }
 
-export default function StepFormat({ onNext, onBack, isValid }: StepFormatProps) {
-  const { currentStep, formId, control, setValue } = useMatchFormContext();
-  const isActive = currentStep === 2;
+export default function StepFormat({ stepNumber }: StepFormatProps) {
+  const { control, formId, setValue } = useMatchFormContext();
+  const { handleNext, handleBack, isNavigating, getStepStatus, isStepActive } = useMatchFormNavigation();
+  const { isActive, isPast } = getStepStatus(stepNumber);
 
   const playersPerTeam = useWatch({ control, name: "playersPerTeam" });
   const hasRentedGoalkeepers = useWatch({ control, name: "hasRentedGoalkeepers" });
   const rentedGoalkeepersCount = useWatch({ control, name: "rentedGoalkeepersCount" });
+
+  const isValid = isStepActive(stepNumber) && playersPerTeam >= 6;
 
   const playerOptions = PLAYER_OPTIONS.map((num) => ({
     value: num,
@@ -38,8 +40,8 @@ export default function StepFormat({ onNext, onBack, isValid }: StepFormatProps)
 
   return (
     <Card
-      className={isActive || currentStep > 2 ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
-      aria-hidden={!isActive && currentStep <= 2}
+      className={isActive || isPast ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
+      aria-hidden={!isActive && !isPast}
     >
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
@@ -107,11 +109,11 @@ export default function StepFormat({ onNext, onBack, isValid }: StepFormatProps)
         </div>
 
         <div className="flex justify-between pt-2">
-          <Button type="button" variant="outline" onClick={onBack}>
+          <Button type="button" variant="outline" onClick={handleBack}>
             <ChevronLeftIcon className="mr-1 h-4 w-4" aria-hidden="true" />
             Atrás
           </Button>
-          <Button type="button" onClick={onNext} disabled={!isValid}>
+          <Button type="button" onClick={handleNext} disabled={!isValid || isNavigating}>
             Continuar
             <ChevronRightIcon className="ml-1 h-4 w-4" aria-hidden="true" />
           </Button>

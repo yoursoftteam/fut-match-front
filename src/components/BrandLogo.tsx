@@ -1,8 +1,8 @@
 "use client";
 
 import Image from "next/image";
-import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useTheme } from "@teispace/next-themes";
+import { useState, useEffect } from "react";
 
 interface BrandLogoProps {
   className?: string;
@@ -16,7 +16,8 @@ export function BrandLogo({ className, width, height, priority = false }: BrandL
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
+    const timer = setTimeout(() => setMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   if (!mounted) {

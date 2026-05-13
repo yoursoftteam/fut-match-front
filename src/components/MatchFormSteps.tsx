@@ -6,8 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { matchFormSchema, type MatchFormValues, type MatchFormSubmitData } from "@/lib/match-schema";
 
-import { MatchFormProvider, useMatchFormContext } from "@/contexts/MatchFormContext";
+import { MatchFormProvider } from "@/contexts/MatchFormContext";
 import { ProgressBar } from "@/components/ProgressBar";
+import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation";
 
 import StepLocationTime from "@/components/match-form/StepLocationTime";
 import StepFormat from "@/components/match-form/StepFormat";
@@ -65,35 +66,11 @@ function MatchFormStepsInner({
   onSubmitButtonClick,
   form,
 }: MatchFormStepsInnerProps) {
-  const { currentStep, nextStep, prevStep, formId } = useMatchFormContext();
-  const { watch, handleSubmit, trigger } = form;
+  const { formId } = useMatchFormNavigation();
+  const { watch, handleSubmit } = form;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const location = watch("location");
-  const date = watch("date");
-  const time = watch("time");
   const fieldCost = watch("fieldCost");
-  const playersPerTeam = watch("playersPerTeam");
-
-  const handleNext = async () => {
-    let fieldsToValidate: (keyof MatchFormValues)[] = [];
-
-    if (currentStep === 1) {
-      fieldsToValidate = ["location", "date", "time"];
-    } else if (currentStep === 2) {
-      fieldsToValidate = ["playersPerTeam"];
-    }
-
-    const isValidStep = await trigger(fieldsToValidate);
-
-    if (isValidStep) {
-      nextStep();
-    }
-  };
-
-  const handleBack = () => {
-    prevStep();
-  };
 
   const onSubmit = async (data: MatchFormValues) => {
     setIsSubmitting(true);
@@ -125,10 +102,6 @@ function MatchFormStepsInner({
     }
   };
 
-  const isStep1Valid = location && date && time;
-  const isStep2Valid = playersPerTeam >= 6;
-  const isStep3Valid = fieldCost > 0;
-
   return (
     <div className="w-full max-w-2xl mx-auto">
       <ProgressBar />
@@ -139,20 +112,12 @@ function MatchFormStepsInner({
         className="space-y-6"
         aria-label="Formulario para crear partido"
       >
-        <StepLocationTime
-          onNext={handleNext}
-          isValid={!!isStep1Valid}
-        />
+        <StepLocationTime stepNumber={1} />
 
-        <StepFormat
-          onNext={handleNext}
-          onBack={handleBack}
-          isValid={!!isStep2Valid}
-        />
+        <StepFormat stepNumber={2} />
 
         <StepCosts
-          onBack={handleBack}
-          isValid={!!isStep3Valid}
+          isValid={fieldCost > 0}
           disabled={disabled || isSubmitting}
           submitLabel={submitLabel}
           submitButtonType={submitButtonType}

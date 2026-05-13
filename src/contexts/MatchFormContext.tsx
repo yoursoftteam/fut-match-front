@@ -14,6 +14,8 @@ interface MatchFormContextValue {
   formState: FormState<MatchFormValues>;
   trigger: UseFormTrigger<MatchFormValues>;
   setValue: UseFormSetValue<MatchFormValues>;
+  isNavigating: boolean;
+  setNavigating: (value: boolean) => void;
 }
 
 const MatchFormContext = createContext<MatchFormContextValue | null>(null);
@@ -46,6 +48,7 @@ export function MatchFormProvider({
   setValue,
 }: MatchFormProviderProps) {
   const [currentStep, setCurrentStep] = useState(1);
+  const [isNavigating, setIsNavigating] = useState(false);
   const formId = useId();
 
   const goToStep = (step: number) => {
@@ -68,6 +71,8 @@ export function MatchFormProvider({
       formState,
       trigger,
       setValue,
+      isNavigating,
+      setNavigating: setIsNavigating,
     }}>
       {children}
     </MatchFormContext>

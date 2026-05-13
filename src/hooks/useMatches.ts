@@ -122,7 +122,7 @@ export function useMatches() {
     try {
       const { data, error } = await supabase
         .from('matches')
-        .select('id, title, location, date, max_players, created_by, created_at')
+        .select('*')
         .eq('id', id)
         .single()
 

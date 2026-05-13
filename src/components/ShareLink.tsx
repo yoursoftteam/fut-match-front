@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useId } from "react";
-import { Button } from "@/components/ui/button";
+import { Copy, Check } from "lucide-react";
 
 export default function ShareLink({ matchId }: { matchId: string }) {
   const [copied, setCopied] = useState(false);
@@ -29,33 +29,35 @@ export default function ShareLink({ matchId }: { matchId: string }) {
         <label htmlFor={fieldId} className="sr-only">
           Enlace del partido
         </label>
-        <input
-          id={fieldId}
-          type="text"
-          readOnly
-          value={shareableLink}
-          className="min-w-0 flex-1 rounded-l-lg rounded-r-lg border border-border bg-card px-4 py-3 text-foreground sm:rounded-r-none"
-        />
-        <Button
-          type="button"
-          variant="default"
-          onClick={copyToClipboard}
-          className={`rounded-l-lg rounded-r-lg sm:rounded-l-none sm:rounded-r-lg px-5 py-3 ${
-            copied ? "bg-green-600 hover:bg-green-600" : ""
-          }`}
-          aria-describedby={copied ? statusId : undefined}
-        >
-          {copied ? "¡Copiado!" : "Copiar"}
-        </Button>
+        <div className="relative flex-1">
+          <input
+            id={fieldId}
+            type="text"
+            readOnly
+            value={shareableLink}
+            className="w-full h-9 rounded-lg border border-border bg-card px-4 pr-10 text-foreground"
+          />
+          <button
+            type="button"
+            onClick={copyToClipboard}
+            className="absolute inset-y-0 right-0 flex items-center justify-center w-9 text-muted-foreground"
+            aria-label="Copiar enlace"
+            aria-describedby={copied ? statusId : undefined}
+          >
+            {copied ? (
+              <Check className="size-4 text-green-600" />
+            ) : (
+              <Copy className="size-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       <p id={statusId} role="status" aria-live="polite" className="sr-only">
         {copied ? "Enlace copiado al portapapeles" : ""}
       </p>
 
-      <div className="mt-4 text-sm text-muted-foreground">
-        <p>Los usuarios necesitan tener una cuenta en la plataforma para registrarse.</p>
-      </div>
+      
     </div>
   );
 }

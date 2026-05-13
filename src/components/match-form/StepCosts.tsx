@@ -5,6 +5,7 @@ import { DollarSignIcon, ChevronLeftIcon, Loader2Icon } from "lucide-react";
 
 import { formatCurrency } from "@/lib/currency";
 import { useMatchFormContext } from "@/contexts/MatchFormContext";
+import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -12,7 +13,6 @@ import { CurrencyInput } from "@/components/form/CurrencyInput";
 import { FieldGroup } from "@/components/form/FieldGroup";
 
 interface StepCostsProps {
-  onBack: () => void;
   isValid: boolean;
   disabled: boolean;
   submitLabel: string;
@@ -23,7 +23,6 @@ interface StepCostsProps {
 }
 
 export default function StepCosts({
-  onBack,
   isValid,
   disabled,
   submitLabel,
@@ -32,8 +31,9 @@ export default function StepCosts({
   onClick,
   fieldCost,
 }: StepCostsProps) {
-  const { currentStep, formId, control, setValue, trigger, formState: { errors } } = useMatchFormContext();
-  const isActive = currentStep === 3;
+  const { formId, control, setValue, trigger, formState: { errors } } = useMatchFormContext();
+  const { handleBack, getStepStatus } = useMatchFormNavigation();
+  const { isActive, isPast } = getStepStatus(3);
 
   const rentalCost = useWatch({ control, name: "rentalCost" });
   const hasRentedGoalkeepers = useWatch({ control, name: "hasRentedGoalkeepers" });
@@ -44,12 +44,10 @@ export default function StepCosts({
   const totalCost = hasRentedGoalkeepers ? fieldCost + rentalCost : fieldCost;
   const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0;
 
-  const isPastStep = currentStep > 3;
-
   return (
     <Card
-      className={isActive || isPastStep ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
-      aria-hidden={!isActive && !isPastStep}
+      className={isActive || isPast ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
+      aria-hidden={!isActive && !isPast}
     >
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
@@ -126,7 +124,7 @@ export default function StepCosts({
         )}
 
         <div className="flex justify-between pt-2">
-          <Button type="button" variant="outline" onClick={onBack}>
+          <Button type="button" variant="outline" onClick={handleBack}>
             <ChevronLeftIcon className="mr-1 h-4 w-4" aria-hidden="true" />
             Atrás
           </Button>
