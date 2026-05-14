@@ -5,6 +5,8 @@ import { supabase } from '@/lib/supabase'
 
 const MAX_SUBSTITUTE_SLOTS = 5
 
+// TODO: After running ALTER TABLE (supabase-schema.sql), add pricing fields:
+// field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team
 interface Match {
   id: string
   title: string
@@ -25,6 +27,7 @@ export function useMatches() {
 
   const fetchMatches = async () => {
     try {
+      // TODO: Add pricing columns to SELECT after ALTER TABLE migration
       const { data, error } = await supabase
         .from('matches')
         .select('id, title, location, date, max_players, created_by')
@@ -61,6 +64,7 @@ export function useMatches() {
         return { data: null, error: new Error('Debes iniciar sesión para crear un partido.') }
       }
 
+      // TODO: Add pricing columns to SELECT after ALTER TABLE migration
       const { data, error } = await supabase
         .from('matches')
         .insert([matchData])
@@ -76,6 +80,7 @@ export function useMatches() {
     }
   }
 
+  // TODO: Add pricing fields to updates type after ALTER TABLE migration
   const updateMatch = async (
     matchId: string,
     updates: Pick<Match, 'title' | 'location' | 'date' | 'max_players'>,
@@ -99,6 +104,7 @@ export function useMatches() {
         return { data: null, error: new Error('No tienes permiso para editar este partido.') }
       }
 
+      // TODO: Add pricing columns to SELECT after ALTER TABLE migration
       const { data, error } = await supabase
         .from('matches')
         .update(updates)
@@ -122,7 +128,7 @@ export function useMatches() {
     try {
       const { data, error } = await supabase
         .from('matches')
-        .select('id, title, location, date, max_players, created_by, created_at')
+        .select('*')
         .eq('id', id)
         .single()
 

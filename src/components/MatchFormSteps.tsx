@@ -6,8 +6,9 @@ import { zodResolver } from "@hookform/resolvers/zod";
 
 import { matchFormSchema, type MatchFormValues, type MatchFormSubmitData } from "@/lib/match-schema";
 
-import { MatchFormProvider, useMatchFormContext } from "@/contexts/MatchFormContext";
+import { MatchFormProvider } from "@/contexts/MatchFormContext";
 import { ProgressBar } from "@/components/ProgressBar";
+import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation";
 
 import StepLocationTime from "@/components/match-form/StepLocationTime";
 import StepFormat from "@/components/match-form/StepFormat";
@@ -65,35 +66,11 @@ function MatchFormStepsInner({
   onSubmitButtonClick,
   form,
 }: MatchFormStepsInnerProps) {
-  const { currentStep, nextStep, prevStep, formId } = useMatchFormContext();
-  const { watch, handleSubmit, trigger } = form;
+  const { formId, currentStep } = useMatchFormNavigation();
+  const { watch, handleSubmit } = form;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const location = watch("location");
-  const date = watch("date");
-  const time = watch("time");
   const fieldCost = watch("fieldCost");
-  const playersPerTeam = watch("playersPerTeam");
-
-  const handleNext = async () => {
-    let fieldsToValidate: (keyof MatchFormValues)[] = [];
-
-    if (currentStep === 1) {
-      fieldsToValidate = ["location", "date", "time"];
-    } else if (currentStep === 2) {
-      fieldsToValidate = ["playersPerTeam"];
-    }
-
-    const isValidStep = await trigger(fieldsToValidate);
-
-    if (isValidStep) {
-      nextStep();
-    }
-  };
-
-  const handleBack = () => {
-    prevStep();
-  };
 
   const onSubmit = async (data: MatchFormValues) => {
     setIsSubmitting(true);
@@ -125,10 +102,6 @@ function MatchFormStepsInner({
     }
   };
 
-  const isStep1Valid = location && date && time;
-  const isStep2Valid = playersPerTeam >= 6;
-  const isStep3Valid = fieldCost > 0;
-
   return (
     <div className="w-full max-w-2xl mx-auto">
       <ProgressBar />
@@ -136,30 +109,32 @@ function MatchFormStepsInner({
       <form
         id={formId}
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-6"
         aria-label="Formulario para crear partido"
       >
-        <StepLocationTime
-          onNext={handleNext}
-          isValid={!!isStep1Valid}
-        />
-
-        <StepFormat
-          onNext={handleNext}
-          onBack={handleBack}
-          isValid={!!isStep2Valid}
-        />
-
-        <StepCosts
-          onBack={handleBack}
-          isValid={!!isStep3Valid}
-          disabled={disabled || isSubmitting}
-          submitLabel={submitLabel}
-          submitButtonType={submitButtonType}
-          onSubmitButtonClick={onSubmitButtonClick}
-          onClick={handleButtonClick}
-          fieldCost={fieldCost}
-        />
+        <div className="relative overflow-x-hidden w-full">
+          <div
+            className="flex w-full transition-transform duration-300 ease-in-out"
+            style={{ transform: `translateX(-${(currentStep - 1) * 100}%)` }}
+          >
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 1}>
+              <StepLocationTime stepNumber={1} />
+            </div>
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 2}>
+              <StepFormat stepNumber={2} />
+            </div>
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 3}>
+              <StepCosts
+                isValid={fieldCost > 0}
+                disabled={disabled || isSubmitting}
+                submitLabel={submitLabel}
+                submitButtonType={submitButtonType}
+                onSubmitButtonClick={onSubmitButtonClick}
+                onClick={handleButtonClick}
+                fieldCost={fieldCost}
+              />
+            </div>
+          </div>
+        </div>
       </form>
     </div>
   );
