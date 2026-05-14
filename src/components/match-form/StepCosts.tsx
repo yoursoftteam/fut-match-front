@@ -32,8 +32,7 @@ export default function StepCosts({
   fieldCost,
 }: StepCostsProps) {
   const { formId, control, setValue, trigger, formState: { errors } } = useMatchFormContext();
-  const { handleBack, getStepStatus } = useMatchFormNavigation();
-  const { isActive, isPast } = getStepStatus(3);
+  const { handleBack } = useMatchFormNavigation();
 
   const rentalCost = useWatch({ control, name: "rentalCost" });
   const hasRentedGoalkeepers = useWatch({ control, name: "hasRentedGoalkeepers" });
@@ -45,10 +44,7 @@ export default function StepCosts({
   const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0;
 
   return (
-    <Card
-      className={isActive || isPast ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
-      aria-hidden={!isActive && !isPast}
-    >
+    <Card>
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

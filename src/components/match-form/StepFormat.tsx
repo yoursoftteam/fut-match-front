@@ -19,8 +19,7 @@ interface StepFormatProps {
 
 export default function StepFormat({ stepNumber }: StepFormatProps) {
   const { control, formId, setValue } = useMatchFormContext();
-  const { handleNext, handleBack, isNavigating, getStepStatus, isStepActive } = useMatchFormNavigation();
-  const { isActive, isPast } = getStepStatus(stepNumber);
+  const { handleNext, handleBack, isNavigating, isStepActive } = useMatchFormNavigation();
 
   const playersPerTeam = useWatch({ control, name: "playersPerTeam" });
   const hasRentedGoalkeepers = useWatch({ control, name: "hasRentedGoalkeepers" });
@@ -39,10 +38,7 @@ export default function StepFormat({ stepNumber }: StepFormatProps) {
   ];
 
   return (
-    <Card
-      className={isActive || isPast ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
-      aria-hidden={!isActive && !isPast}
-    >
+    <Card>
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">

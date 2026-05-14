@@ -66,7 +66,7 @@ function MatchFormStepsInner({
   onSubmitButtonClick,
   form,
 }: MatchFormStepsInnerProps) {
-  const { formId } = useMatchFormNavigation();
+  const { formId, currentStep } = useMatchFormNavigation();
   const { watch, handleSubmit } = form;
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -109,22 +109,32 @@ function MatchFormStepsInner({
       <form
         id={formId}
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-6"
         aria-label="Formulario para crear partido"
       >
-        <StepLocationTime stepNumber={1} />
-
-        <StepFormat stepNumber={2} />
-
-        <StepCosts
-          isValid={fieldCost > 0}
-          disabled={disabled || isSubmitting}
-          submitLabel={submitLabel}
-          submitButtonType={submitButtonType}
-          onSubmitButtonClick={onSubmitButtonClick}
-          onClick={handleButtonClick}
-          fieldCost={fieldCost}
-        />
+        <div className="relative overflow-x-hidden w-full">
+          <div
+            className="flex w-full transition-transform duration-300 ease-in-out"
+            style={{ transform: `translateX(-${(currentStep - 1) * 100}%)` }}
+          >
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 1}>
+              <StepLocationTime stepNumber={1} />
+            </div>
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 2}>
+              <StepFormat stepNumber={2} />
+            </div>
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 3}>
+              <StepCosts
+                isValid={fieldCost > 0}
+                disabled={disabled || isSubmitting}
+                submitLabel={submitLabel}
+                submitButtonType={submitButtonType}
+                onSubmitButtonClick={onSubmitButtonClick}
+                onClick={handleButtonClick}
+                fieldCost={fieldCost}
+              />
+            </div>
+          </div>
+        </div>
       </form>
     </div>
   );
