@@ -5,6 +5,8 @@ import { useMatches } from "@/hooks/useMatches";
 import { useMatchRegistrationsRealtime } from "@/hooks/useMatchRegistrationsRealtime";
 import { useAuth } from "@/hooks/useAuth";
 
+// TODO: After ALTER TABLE migration, add pricing fields to MatchData,
+// remove StoredMatchPricing, and read pricing from matchData instead of sessionStorage.
 export interface MatchData {
   id: string;
   title: string;
@@ -43,8 +45,8 @@ interface MatchDetailsContextValue {
   storedMatchPricing: StoredMatchPricing | null;
   user: ReturnType<typeof useAuth>["user"];
   isCreator: boolean;
-  setMatchData: (data: MatchData) => void;
-  setStoredMatchPricing: (data: StoredMatchPricing | null) => void;
+  setMatchData: React.Dispatch<React.SetStateAction<MatchData | null>>;
+  setStoredMatchPricing: React.Dispatch<React.SetStateAction<StoredMatchPricing | null>>;
   refreshMatchData: () => Promise<void>;
 }
 
@@ -98,6 +100,7 @@ export function MatchDetailsProvider({ matchId, children }: MatchDetailsProvider
     refreshMatchData();
   }, [refreshMatchData]);
 
+  // TODO: After ALTER TABLE migration, read pricing from matchData directly (remove sessionStorage)
   useEffect(() => {
     try {
       const storedMatches = sessionStorage.getItem("matches");

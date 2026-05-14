@@ -7,7 +7,12 @@ CREATE TABLE matches (
   max_players INTEGER NOT NULL,
   created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  field_cost NUMERIC NOT NULL DEFAULT 0,
+  rental_cost NUMERIC NOT NULL DEFAULT 0,
+  has_rented_goalkeepers BOOLEAN NOT NULL DEFAULT FALSE,
+  rented_goalkeepers_count INTEGER NOT NULL DEFAULT 0,
+  players_per_team INTEGER NOT NULL DEFAULT 5
 );
 
 -- Enable Row Level Security

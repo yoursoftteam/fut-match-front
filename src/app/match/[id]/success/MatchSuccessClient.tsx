@@ -14,6 +14,7 @@ interface MatchSuccessProps {
   matchId: string;
 }
 
+// TODO: After ALTER TABLE migration, remove useMatchSummary and read from DB directly
 export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
   const router = useRouter();
   const summary = useMatchSummary(matchId);

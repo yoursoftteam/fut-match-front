@@ -58,6 +58,8 @@ function formatCurrencyInput(value: string, ref: React.RefObject<HTMLInputElemen
   return { formatted: formattedValue, numeric: numericValue === "" ? 0 : Number(numericValue) };
 }
 
+// TODO: After ALTER TABLE migration, read pricing from matchData.field_cost etc.
+// and remove storedMatchPricing / sessionStorage fallback.
 export function useMatchEditing(): UseMatchEditingReturn {
   const { matchId, matchData, registrations, isCreator, storedMatchPricing, setMatchData, setStoredMatchPricing } = useMatchDetailsContext();
   const { updateMatch, registerRentedGoalkeepers } = useMatches();
@@ -171,6 +173,8 @@ export function useMatchEditing(): UseMatchEditingReturn {
       const nextLocation = form.location.trim();
       const nextDate = `${form.date}T${form.time}:00`;
 
+      // TODO: After ALTER TABLE migration, include pricing fields in updateMatch
+      // (field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team)
       const { data, error } = await updateMatch(matchId, {
         title: `Partido en ${nextLocation}`,
         location: nextLocation,
@@ -190,6 +194,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
         await registerRentedGoalkeepers(matchId, 0);
       }
 
+      // TODO: Remove sessionStorage fallback — persist pricing to DB directly
       setStoredMatchPricing((currentPricing) => {
         if (!currentPricing) return currentPricing;
 

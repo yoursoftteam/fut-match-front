@@ -9,6 +9,7 @@ interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
 }
 
+// TODO: After ALTER TABLE migration, read pricing from matchData instead of storedMatchPricing
 export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
   const { matchData, isCreator, storedMatchPricing } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();

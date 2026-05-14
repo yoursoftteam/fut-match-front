@@ -46,6 +46,9 @@ export function useMatchCreation(): UseMatchCreationReturn {
     setError(null);
 
     try {
+      // TODO: After ALTER TABLE migration, include pricing fields in matchData
+      // (field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team)
+      // and remove sessionStorage fallback below.
       const matchData = {
         title: `Partido en ${data.location}`,
         location: data.location,
@@ -68,6 +71,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
         await registerRentedGoalkeepers(newMatch.id, data.rentedGoalkeepersCount);
       }
 
+      // TODO: Remove sessionStorage fallback once pricing is persisted in DB
       const summary: MatchSummary = {
         matchId: newMatch.id,
         location: data.location,
@@ -101,6 +105,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
   };
 }
 
+// TODO: Remove this hook once pricing is persisted in DB and MatchSuccessClient reads from there
 export function useMatchSummary(matchId: string): MatchSummary | null {
   const [cached, setCached] = useState<MatchSummary | null | undefined>(undefined);
   const [initialized, setInitialized] = useState(false);
