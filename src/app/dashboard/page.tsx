@@ -6,6 +6,8 @@ import { useMatches } from '@/hooks/useMatches'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect } from 'react'
+import FrecuentesSection from '@/components/FrecuentesSection'
+import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 
 function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
   if (maxPlayers <= 6)  return { label: 'Casual',  cls: 'level-casual'  }
@@ -95,6 +97,9 @@ export default function DashboardPage() {
           </div>
         </section>
 
+        {/* Partidos Frecuentes */}
+        <FrecuentesSection />
+
         {/* Recent Matches */}
         <section>
           <div className="flex justify-between items-center mb-6">
@@ -137,12 +142,16 @@ export default function DashboardPage() {
                 return (
                   <div key={match.id} className="card match-card p-5 relative">
                     <div className="flex items-start justify-between mb-3">
-                      <span className="text-2xl" aria-hidden>⚽</span>
+                      <span className="text-2xl shrink-0" aria-hidden>⚽</span>
                       <div className="flex items-center gap-1.5">
                         <span className={`level-badge ${level.cls}`}>{level.label}</span>
                         {isFull && (
                           <span className="level-badge bg-red-600/15 text-red-400">Completo</span>
                         )}
+                        <SaveFrecuenteButton
+                          location={match.location}
+                          playersPerTeam={Math.round(match.max_players / 2)}
+                        />
                       </div>
                     </div>
                     <h3 className="text-base font-semibold text-card-foreground mb-1 leading-tight">
