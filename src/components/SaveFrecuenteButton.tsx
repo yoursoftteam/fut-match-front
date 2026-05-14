@@ -7,9 +7,10 @@ import { useFrecuentes } from "@/hooks/useFrecuentes"
 interface SaveFrecuenteButtonProps {
   location: string
   playersPerTeam: number
+  matchId?: string | null
 }
 
-export default function SaveFrecuenteButton({ location, playersPerTeam }: SaveFrecuenteButtonProps) {
+export default function SaveFrecuenteButton({ location, playersPerTeam, matchId }: SaveFrecuenteButtonProps) {
   const { createTemplate } = useFrecuentes()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -28,6 +29,7 @@ export default function SaveFrecuenteButton({ location, playersPerTeam }: SaveFr
       field_cost: 0,
       rental_cost: 0,
       save_participants: false,
+      match_id: matchId,
     })
 
     if (result) {

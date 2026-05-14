@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { ArrowLeftIcon } from "lucide-react";
 import ShareLink from "@/components/ShareLink";
+import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -101,6 +102,18 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
           </Button>
 
           <ShareLink matchId={matchId} />
+
+          <SaveFrecuenteCard
+            location={summary.location}
+            defaultName={`Partido en ${summary.location}`}
+            playersPerTeam={summary.playersPerTeam}
+            hasRentedGoalkeepers={summary.hasRentedGoalkeepers}
+            rentedGoalkeepersCount={summary.rentedGoalkeepersCount}
+            fieldCost={summary.fieldCost}
+            rentalCost={summary.rentalCost}
+            time={summary.time}
+            matchId={matchId}
+          />
 
           <div className="text-center">
             <Link

@@ -151,6 +151,7 @@ export default function DashboardPage() {
                         <SaveFrecuenteButton
                           location={match.location}
                           playersPerTeam={Math.round(match.max_players / 2)}
+                          matchId={match.id}
                         />
                       </div>
                     </div>
