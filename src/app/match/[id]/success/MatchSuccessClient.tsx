@@ -1,26 +1,66 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeftIcon } from "lucide-react";
+import { ArrowLeftIcon, Loader2 } from "lucide-react";
 import ShareLink from "@/components/ShareLink";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { BrandLogo } from "@/components/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { useMatchSummary } from "@/hooks/useMatchCreation";
+import { useMatches } from "@/hooks/useMatches";
 
 interface MatchSuccessProps {
   matchId: string;
 }
 
-// TODO: After ALTER TABLE migration, remove useMatchSummary and read from DB directly
 export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
   const router = useRouter();
-  const summary = useMatchSummary(matchId);
+  const { getMatchById } = useMatches();
+  const [match, setMatch] = useState<{
+    location: string;
+    date: string;
+    field_cost: number;
+    rental_cost: number;
+    has_rented_goalkeepers: boolean;
+    rented_goalkeepers_count: number;
+    players_per_team: number;
+    max_players: number;
+  } | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  if (!summary) {
+  useEffect(() => {
+    (async () => {
+      const { data, error } = await getMatchById(matchId);
+      if (error || !data) {
+        setLoading(false);
+        return;
+      }
+      setMatch({
+        location: data.location,
+        date: data.date,
+        field_cost: data.field_cost,
+        rental_cost: data.rental_cost,
+        has_rented_goalkeepers: data.has_rented_goalkeepers,
+        rented_goalkeepers_count: data.rented_goalkeepers_count,
+        players_per_team: data.players_per_team,
+        max_players: data.max_players,
+      });
+      setLoading(false);
+    })();
+  }, [matchId, getMatchById]);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="size-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
+  if (!match) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md w-full mx-4">
@@ -36,13 +76,23 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
     );
   }
 
-  const dateObj = new Date(summary.date);
+  const dateObj = new Date(match.date);
   const formattedDate = dateObj.toLocaleDateString("es-ES", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  const totalPlayers = match.max_players;
+  const costPerPlayer = totalPlayers > 0
+    ? Math.ceil((match.field_cost + match.rental_cost) / totalPlayers)
+    : 0;
+
+  const matchTime =
+    match.date.includes("T")
+      ? match.date.split("T")[1].slice(0, 5)
+      : "";
 
   return (
     <div className="min-h-screen bg-background py-8 px-4">
@@ -61,7 +111,7 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
             <div className="space-y-4">
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="font-medium text-muted-foreground">Lugar:</span>
-                <span className="text-card-foreground font-medium">{summary.location}</span>
+                <span className="text-card-foreground font-medium">{match.location}</span>
               </div>
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="font-medium text-muted-foreground">Fecha:</span>
@@ -69,24 +119,32 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
               </div>
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="font-medium text-muted-foreground">Hora:</span>
-                <span className="text-card-foreground font-medium">{summary.time}</span>
+                <span className="text-card-foreground font-medium">{matchTime}</span>
               </div>
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="font-medium text-muted-foreground">Formato:</span>
                 <span className="text-card-foreground font-medium tabular-nums">
-                  {summary.playersPerTeam} vs {summary.playersPerTeam}
+                  {match.players_per_team} vs {match.players_per_team}
                 </span>
               </div>
               <div className="flex justify-between items-center border-b border-border pb-3">
                 <span className="font-medium text-muted-foreground">Valor de la cancha:</span>
                 <span className="text-card-foreground font-medium tabular-nums">
-                  {formatCurrency(summary.fieldCost)}
+                  {formatCurrency(match.field_cost)}
                 </span>
               </div>
+              {match.has_rented_goalkeepers && match.rental_cost > 0 && (
+                <div className="flex justify-between items-center border-b border-border pb-3">
+                  <span className="font-medium text-muted-foreground">Alquiler arqueros ({match.rented_goalkeepers_count}):</span>
+                  <span className="text-card-foreground font-medium tabular-nums">
+                    {formatCurrency(match.rental_cost)}
+                  </span>
+                </div>
+              )}
               <div className="flex justify-between items-center pt-3">
                 <span className="font-medium text-muted-foreground">Aporte por jugador:</span>
                 <span className="font-bold text-primary text-xl tabular-nums">
-                  {formatCurrency(summary.costPerPlayer)}
+                  {formatCurrency(costPerPlayer)}
                 </span>
               </div>
             </div>
@@ -104,14 +162,14 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
           <ShareLink matchId={matchId} />
 
           <SaveFrecuenteCard
-            location={summary.location}
-            defaultName={`Partido en ${summary.location}`}
-            playersPerTeam={summary.playersPerTeam}
-            hasRentedGoalkeepers={summary.hasRentedGoalkeepers}
-            rentedGoalkeepersCount={summary.rentedGoalkeepersCount}
-            fieldCost={summary.fieldCost}
-            rentalCost={summary.rentalCost}
-            time={summary.time}
+            location={match.location}
+            defaultName={`Partido en ${match.location}`}
+            playersPerTeam={match.players_per_team}
+            hasRentedGoalkeepers={match.has_rented_goalkeepers}
+            rentedGoalkeepersCount={match.rented_goalkeepers_count}
+            fieldCost={match.field_cost}
+            rentalCost={match.rental_cost}
+            time={matchTime}
             matchId={matchId}
           />
 
