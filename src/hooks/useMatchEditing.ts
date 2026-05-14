@@ -58,10 +58,8 @@ function formatCurrencyInput(value: string, ref: React.RefObject<HTMLInputElemen
   return { formatted: formattedValue, numeric: numericValue === "" ? 0 : Number(numericValue) };
 }
 
-// TODO: After ALTER TABLE migration, read pricing from matchData.field_cost etc.
-// and remove storedMatchPricing / sessionStorage fallback.
 export function useMatchEditing(): UseMatchEditingReturn {
-  const { matchId, matchData, registrations, isCreator, storedMatchPricing, setMatchData, setStoredMatchPricing } = useMatchDetailsContext();
+  const { matchId, matchData, registrations, isCreator, setMatchData } = useMatchDetailsContext();
   const { updateMatch, registerRentedGoalkeepers } = useMatches();
 
   const [showForm, setShowForm] = useState(false);
@@ -86,24 +84,20 @@ export function useMatchEditing(): UseMatchEditingReturn {
     if (!matchData) return;
 
     const [datePart = "", timePartRaw = ""] = matchData.date.split("T");
-    const initialFieldCost = storedMatchPricing?.fieldCost ?? 0;
-    const initialHasRentedGoalkeepers = storedMatchPricing?.hasRentedGoalkeepers ?? false;
-    const initialRentedGoalkeepersCount = storedMatchPricing?.rentedGoalkeepersCount ?? 1;
-    const initialRentalCost = storedMatchPricing?.rentalCost ?? 0;
 
     setForm({
       location: matchData.location,
       date: datePart,
       time: timePartRaw.slice(0, 5),
       playersPerTeam: clampPlayersPerTeam(Math.round(matchData.max_players / 2)),
-      fieldCost: initialFieldCost,
-      hasRentedGoalkeepers: initialHasRentedGoalkeepers,
-      rentedGoalkeepersCount: initialRentedGoalkeepersCount,
-      rentalCost: initialRentalCost,
+      fieldCost: matchData.field_cost,
+      hasRentedGoalkeepers: matchData.has_rented_goalkeepers,
+      rentedGoalkeepersCount: matchData.rented_goalkeepers_count || 1,
+      rentalCost: matchData.rental_cost,
     });
-    setFieldCostInput(initialFieldCost > 0 ? formatCurrency(initialFieldCost) : "");
-    setRentalCostInput(initialRentalCost > 0 ? formatCurrency(initialRentalCost) : "");
-  }, [matchData, storedMatchPricing]);
+    setFieldCostInput(matchData.field_cost > 0 ? formatCurrency(matchData.field_cost) : "");
+    setRentalCostInput(matchData.rental_cost > 0 ? formatCurrency(matchData.rental_cost) : "");
+  }, [matchData]);
 
   const openForm = useCallback(() => {
     setShowForm(true);
@@ -173,13 +167,16 @@ export function useMatchEditing(): UseMatchEditingReturn {
       const nextLocation = form.location.trim();
       const nextDate = `${form.date}T${form.time}:00`;
 
-      // TODO: After ALTER TABLE migration, include pricing fields in updateMatch
-      // (field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team)
       const { data, error } = await updateMatch(matchId, {
         title: `Partido en ${nextLocation}`,
         location: nextLocation,
         date: nextDate,
         max_players: nextMaxPlayers,
+        field_cost: form.fieldCost,
+        rental_cost: form.hasRentedGoalkeepers ? form.rentalCost : 0,
+        has_rented_goalkeepers: form.hasRentedGoalkeepers,
+        rented_goalkeepers_count: form.rentedGoalkeepersCount,
+        players_per_team: selectedPlayersPerTeam,
       });
 
       if (error || !data) {
@@ -194,38 +191,6 @@ export function useMatchEditing(): UseMatchEditingReturn {
         await registerRentedGoalkeepers(matchId, 0);
       }
 
-      // TODO: Remove sessionStorage fallback — persist pricing to DB directly
-      setStoredMatchPricing((currentPricing) => {
-        if (!currentPricing) return currentPricing;
-
-        const nextFieldCost = form.fieldCost > 0 ? form.fieldCost : currentPricing.fieldCost;
-        const totalCost = form.hasRentedGoalkeepers ? nextFieldCost + form.rentalCost : nextFieldCost;
-
-        const updatedPricing = {
-          ...currentPricing,
-          fieldCost: nextFieldCost,
-          playersPerTeam: selectedPlayersPerTeam,
-          costPerPlayer: Math.round(totalCost / nextMaxPlayers),
-          hasRentedGoalkeepers: form.hasRentedGoalkeepers,
-          rentedGoalkeepersCount: form.rentedGoalkeepersCount,
-          rentalCost: form.hasRentedGoalkeepers ? form.rentalCost : 0,
-        };
-
-        try {
-          const storedMatches = sessionStorage.getItem("matches");
-          if (storedMatches) {
-            const parsed = JSON.parse(storedMatches) as Array<Record<string, unknown>>;
-            const next = parsed.map((stored) => {
-              if (stored.id !== matchId) return stored;
-              return { ...stored, location: nextLocation, date: form.date, time: form.time, fieldCost: updatedPricing.fieldCost, playersPerTeam: selectedPlayersPerTeam, totalPlayers: nextMaxPlayers, costPerPlayer: updatedPricing.costPerPlayer, hasRentedGoalkeepers: form.hasRentedGoalkeepers, rentedGoalkeepersCount: form.rentedGoalkeepersCount, rentalCost: form.hasRentedGoalkeepers ? form.rentalCost : 0 };
-            });
-            sessionStorage.setItem("matches", JSON.stringify(next));
-          }
-        } catch { /* ignore */ }
-
-        return updatedPricing;
-      });
-
       setMessage("✓ ¡Partido actualizado correctamente!");
       setTimeout(() => { setShowForm(false); setMessage(null); }, 1500);
 
@@ -235,7 +200,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
     } finally {
       setLoading(false);
     }
-  }, [form, matchData, isCreator, registrations.length, matchId, updateMatch, registerRentedGoalkeepers, setMatchData, setStoredMatchPricing]);
+  }, [form, matchData, isCreator, registrations.length, matchId, updateMatch, registerRentedGoalkeepers, setMatchData]);
 
   return { showForm, loading, message, form, fieldCostInput, rentalCostInput, openForm, closeForm, handleInputChange, handleSubmit };
 }

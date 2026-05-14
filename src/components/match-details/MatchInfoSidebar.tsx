@@ -12,9 +12,8 @@ interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
 }
 
-// TODO: After ALTER TABLE migration, read pricing from matchData instead of storedMatchPricing
 export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
-  const { matchData, isCreator, storedMatchPricing, registrations } = useMatchDetailsContext();
+  const { matchData, isCreator, registrations } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();
   const { showForm, openForm, message } = useMatchEditing();
   const { templates, getTemplateByMatchId, deleteTemplateByMatchId, loading: loadingFrec } = useFrecuentes();
@@ -27,14 +26,12 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
     const matchLocation = matchData.location;
     const matchPlayersPerTeam = Math.round(matchData.max_players / 2);
 
-    // 1) Direct match by match_id (new templates)
     const byMatchId = templates.find((t) => t.match_id === matchData.id);
     if (byMatchId) {
       setExistingTemplateId(byMatchId.id);
       return;
     }
 
-    // 2) Content match for old templates saved before match_id existed
     const byContent = templates.find(
       (t) =>
         t.location === matchLocation &&
@@ -45,13 +42,17 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
       return;
     }
 
-    // 3) DB fallback (template not yet in local state)
     getTemplateByMatchId(matchData.id).then((tmpl) => {
       setExistingTemplateId(tmpl?.id ?? null);
     });
   }, [matchData?.id, getTemplateByMatchId, templates]);
 
   if (!matchData) return null;
+
+  const totalPlayers = matchData.max_players;
+  const costPerPlayer = totalPlayers > 0
+    ? Math.ceil((matchData.field_cost + matchData.rental_cost) / totalPlayers)
+    : 0;
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
@@ -67,14 +68,14 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
           <p className="mt-1 text-sm text-muted-foreground">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>
         )}
 
-        {storedMatchPricing && (
+        {matchData.field_cost > 0 && (
           <div className="mt-4 space-y-2 rounded border border-border bg-muted p-3 text-sm text-foreground">
-            <p><span className="text-muted-foreground">Cancha:</span> {formatCurrency(storedMatchPricing.fieldCost)}</p>
-            {storedMatchPricing.hasRentedGoalkeepers && storedMatchPricing.rentalCost ? (
-              <p><span className="text-muted-foreground">Alquiler arqueros ({storedMatchPricing.rentedGoalkeepersCount}):</span> {formatCurrency(storedMatchPricing.rentalCost)}</p>
+            <p><span className="text-muted-foreground">Cancha:</span> {formatCurrency(matchData.field_cost)}</p>
+            {matchData.has_rented_goalkeepers && matchData.rental_cost > 0 ? (
+              <p><span className="text-muted-foreground">Alquiler arqueros ({matchData.rented_goalkeepers_count}):</span> {formatCurrency(matchData.rental_cost)}</p>
             ) : null}
-            <p><span className="text-muted-foreground">Por jugador:</span> {formatCurrency(storedMatchPricing.costPerPlayer)}</p>
-            <p><span className="text-muted-foreground">Formato:</span> {storedMatchPricing.playersPerTeam} vs {storedMatchPricing.playersPerTeam}</p>
+            <p><span className="text-muted-foreground">Por jugador:</span> {formatCurrency(costPerPlayer)}</p>
+            <p><span className="text-muted-foreground">Formato:</span> {matchData.players_per_team} vs {matchData.players_per_team}</p>
           </div>
         )}
 
@@ -126,11 +127,11 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
             <SaveFrecuenteCard
               location={matchData.location}
               defaultName={`Partido en ${matchData.location}`}
-              playersPerTeam={storedMatchPricing?.playersPerTeam ?? 5}
-              hasRentedGoalkeepers={storedMatchPricing?.hasRentedGoalkeepers}
-              rentedGoalkeepersCount={storedMatchPricing?.rentedGoalkeepersCount}
-              fieldCost={storedMatchPricing?.fieldCost ?? 0}
-              rentalCost={storedMatchPricing?.rentalCost ?? 0}
+              playersPerTeam={matchData.players_per_team}
+              hasRentedGoalkeepers={matchData.has_rented_goalkeepers}
+              rentedGoalkeepersCount={matchData.rented_goalkeepers_count}
+              fieldCost={matchData.field_cost}
+              rentalCost={matchData.rental_cost}
               time={formattedTime}
               matchId={matchData.id}
               participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))}
