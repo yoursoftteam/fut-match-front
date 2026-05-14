@@ -43,3 +43,9 @@ coverage/
 # Vercel / next-on-pages output
 .vercel/
 .vercel.open-next
+
+# Build artifacts
+tsconfig.tsbuildinfo
+
+# Misc
+mobile-viewport.png
