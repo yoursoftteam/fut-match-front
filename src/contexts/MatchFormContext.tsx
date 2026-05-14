@@ -16,6 +16,8 @@ interface MatchFormContextValue {
   setValue: UseFormSetValue<MatchFormValues>;
   isNavigating: boolean;
   setNavigating: (value: boolean) => void;
+  selectedParticipants: string[];
+  toggleParticipant: (id: string) => void;
 }
 
 const MatchFormContext = createContext<MatchFormContextValue | null>(null);
@@ -49,6 +51,7 @@ export function MatchFormProvider({
 }: MatchFormProviderProps) {
   const [currentStep, setCurrentStep] = useState(1);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [selectedParticipants, setSelectedParticipants] = useState<string[]>([]);
   const formId = useId();
 
   const goToStep = (step: number) => {
@@ -57,6 +60,12 @@ export function MatchFormProvider({
 
   const nextStep = () => goToStep(currentStep + 1);
   const prevStep = () => goToStep(currentStep - 1);
+
+  const toggleParticipant = (id: string) => {
+    setSelectedParticipants((prev) =>
+      prev.includes(id) ? prev.filter((pid) => pid !== id) : [...prev, id]
+    );
+  };
 
   return (
     <MatchFormContext value={{
@@ -73,6 +82,8 @@ export function MatchFormProvider({
       setValue,
       isNavigating,
       setNavigating: setIsNavigating,
+      selectedParticipants,
+      toggleParticipant,
     }}>
       {children}
     </MatchFormContext>

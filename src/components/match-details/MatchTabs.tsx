@@ -142,9 +142,9 @@ export function RegistrationPanel() {
 }
 
 export function PlayersPanel() {
-  const { registrations } = useMatchDetailsContext();
+  const { matchData, registrations } = useMatchDetailsContext();
   const { openModal } = useMatchUnregister();
-  const { matchData, titulares, suplentes } = useMatchPricing();
+  const { titulares, suplentes } = useMatchPricing();
 
   return (
     <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">

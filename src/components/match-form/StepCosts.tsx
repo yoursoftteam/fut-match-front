@@ -32,7 +32,7 @@ export default function StepCosts({
   fieldCost,
 }: StepCostsProps) {
   const { formId, control, setValue, trigger, formState: { errors } } = useMatchFormContext();
-  const { handleBack } = useMatchFormNavigation();
+  const { handleBack, handleNext, currentStep, totalSteps } = useMatchFormNavigation();
 
   const rentalCost = useWatch({ control, name: "rentalCost" });
   const hasRentedGoalkeepers = useWatch({ control, name: "hasRentedGoalkeepers" });
@@ -124,20 +124,26 @@ export default function StepCosts({
             <ChevronLeftIcon className="mr-1 h-4 w-4" aria-hidden="true" />
             Atrás
           </Button>
-          <Button
-            type={submitButtonType}
-            disabled={disabled || !isValid}
-            onClick={onSubmitButtonClick ? undefined : onClick}
-          >
-            {disabled ? (
-              <>
-                <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
-                Creando…
-              </>
-            ) : (
-              submitLabel
-            )}
-          </Button>
+          {currentStep < totalSteps ? (
+            <Button type="button" onClick={handleNext}>
+              Siguiente
+            </Button>
+          ) : (
+            <Button
+              type={submitButtonType}
+              disabled={disabled || !isValid}
+              onClick={onSubmitButtonClick ? undefined : onClick}
+            >
+              {disabled ? (
+                <>
+                  <Loader2Icon className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
+                  Creando…
+                </>
+              ) : (
+                submitLabel
+              )}
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

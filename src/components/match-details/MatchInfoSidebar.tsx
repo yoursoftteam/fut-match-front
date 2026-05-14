@@ -1,9 +1,12 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
+import { useFrecuentes } from "@/hooks/useFrecuentes";
 import { formatCurrency } from "@/lib/currency";
+import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
@@ -11,9 +14,42 @@ interface MatchInfoSidebarProps {
 
 // TODO: After ALTER TABLE migration, read pricing from matchData instead of storedMatchPricing
 export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
-  const { matchData, isCreator, storedMatchPricing } = useMatchDetailsContext();
+  const { matchData, isCreator, storedMatchPricing, registrations } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();
   const { showForm, openForm, message } = useMatchEditing();
+  const { templates, getTemplateByMatchId, deleteTemplateByMatchId, loading: loadingFrec } = useFrecuentes();
+  const [showSaveFrecuente, setShowSaveFrecuente] = useState(false);
+  const [existingTemplateId, setExistingTemplateId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!matchData?.id) return;
+
+    const matchLocation = matchData.location;
+    const matchPlayersPerTeam = Math.round(matchData.max_players / 2);
+
+    // 1) Direct match by match_id (new templates)
+    const byMatchId = templates.find((t) => t.match_id === matchData.id);
+    if (byMatchId) {
+      setExistingTemplateId(byMatchId.id);
+      return;
+    }
+
+    // 2) Content match for old templates saved before match_id existed
+    const byContent = templates.find(
+      (t) =>
+        t.location === matchLocation &&
+        t.players_per_team === matchPlayersPerTeam,
+    );
+    if (byContent) {
+      setExistingTemplateId(byContent.id);
+      return;
+    }
+
+    // 3) DB fallback (template not yet in local state)
+    getTemplateByMatchId(matchData.id).then((tmpl) => {
+      setExistingTemplateId(tmpl?.id ?? null);
+    });
+  }, [matchData?.id, getTemplateByMatchId, templates]);
 
   if (!matchData) return null;
 
@@ -60,6 +96,46 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
             >
               Armar equipos
             </button>
+
+            {existingTemplateId ? (
+              <button
+                type="button"
+                disabled={loadingFrec}
+                onClick={async () => {
+                  const ok = await deleteTemplateByMatchId(matchData.id)
+                  if (ok) setExistingTemplateId(null)
+                }}
+                className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10"
+              >
+                {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowSaveFrecuente(!showSaveFrecuente)}
+                className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10"
+              >
+                {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {isCreator && !existingTemplateId && showSaveFrecuente && (
+          <div className="mt-4">
+            <SaveFrecuenteCard
+              location={matchData.location}
+              defaultName={`Partido en ${matchData.location}`}
+              playersPerTeam={storedMatchPricing?.playersPerTeam ?? 5}
+              hasRentedGoalkeepers={storedMatchPricing?.hasRentedGoalkeepers}
+              rentedGoalkeepersCount={storedMatchPricing?.rentedGoalkeepersCount}
+              fieldCost={storedMatchPricing?.fieldCost ?? 0}
+              rentalCost={storedMatchPricing?.rentalCost ?? 0}
+              time={formattedTime}
+              matchId={matchData.id}
+              participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))}
+              onSaved={() => setShowSaveFrecuente(false)}
+            />
           </div>
         )}
 
