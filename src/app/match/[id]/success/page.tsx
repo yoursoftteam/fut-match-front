@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import MatchSuccessClient from "./MatchSuccessClient";
 
+export const runtime = "edge";
+
 interface MatchSuccessPageProps {
   params: Promise<{ id: string }>;
 }
