@@ -28,3 +28,50 @@ export type MatchFormSubmitData = MatchFormValues & {
 };
 
 export const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11];
+
+// --- Partidos Frecuentes ---
+
+export interface MatchTemplate {
+  id: string;
+  user_id: string;
+  name: string;
+  location: string;
+  time: string;
+  players_per_team: number;
+  has_rented_goalkeepers: boolean;
+  rented_goalkeepers_count: number;
+  field_cost: number;
+  rental_cost: number;
+  save_participants: boolean;
+  usage_count: number;
+  last_used_at: string | null;
+  created_at: string;
+  updated_at: string;
+  match_id?: string | null;
+}
+
+export interface MatchTemplateParticipant {
+  id: string;
+  template_id: string;
+  name: string;
+  is_goalkeeper: boolean;
+  sort_order: number;
+}
+
+export interface MatchTemplateWithParticipants extends MatchTemplate {
+  participants: MatchTemplateParticipant[];
+}
+
+export interface CreateTemplateData {
+  name: string;
+  location: string;
+  time: string;
+  players_per_team: number;
+  has_rented_goalkeepers: boolean;
+  rented_goalkeepers_count: number;
+  field_cost: number;
+  rental_cost: number;
+  save_participants: boolean;
+  match_id?: string | null;
+  participants?: { name: string; is_goalkeeper: boolean }[];
+}

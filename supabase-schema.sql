@@ -7,7 +7,12 @@ CREATE TABLE matches (
   max_players INTEGER NOT NULL,
   created_by UUID REFERENCES auth.users(id) ON DELETE CASCADE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  field_cost NUMERIC NOT NULL DEFAULT 0,
+  rental_cost NUMERIC NOT NULL DEFAULT 0,
+  has_rented_goalkeepers BOOLEAN NOT NULL DEFAULT FALSE,
+  rented_goalkeepers_count INTEGER NOT NULL DEFAULT 0,
+  players_per_team INTEGER NOT NULL DEFAULT 5
 );
 
 -- Enable Row Level Security
@@ -130,4 +135,74 @@ $$;
 
 -- Recommended so DELETE/UPDATE payloads include previous row values
 ALTER TABLE match_registrations REPLICA IDENTITY FULL;
+
+-- ============================================================
+-- PARTIDOS FRECUENTES (plantillas)
+-- ============================================================
+
+CREATE TABLE match_templates (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  location TEXT NOT NULL,
+  time TEXT NOT NULL DEFAULT '',
+  players_per_team INTEGER NOT NULL DEFAULT 6,
+  has_rented_goalkeepers BOOLEAN NOT NULL DEFAULT FALSE,
+  rented_goalkeepers_count INTEGER NOT NULL DEFAULT 0,
+  field_cost NUMERIC NOT NULL DEFAULT 0,
+  rental_cost NUMERIC NOT NULL DEFAULT 0,
+  save_participants BOOLEAN NOT NULL DEFAULT FALSE,
+  usage_count INTEGER NOT NULL DEFAULT 0,
+  last_used_at TIMESTAMP WITH TIME ZONE,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+ALTER TABLE match_templates ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own templates" ON match_templates
+  FOR SELECT USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can create own templates" ON match_templates
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update own templates" ON match_templates
+  FOR UPDATE USING (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete own templates" ON match_templates
+  FOR DELETE USING (auth.uid() = user_id);
+
+CREATE INDEX idx_match_templates_user_id ON match_templates (user_id);
+
+CREATE TABLE match_template_participants (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  template_id UUID REFERENCES match_templates(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  is_goalkeeper BOOLEAN NOT NULL DEFAULT FALSE,
+  sort_order INTEGER NOT NULL DEFAULT 0
+);
+
+ALTER TABLE match_template_participants ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can view own template participants" ON match_template_participants
+  FOR SELECT USING (
+    EXISTS (SELECT 1 FROM match_templates WHERE id = template_id AND user_id = auth.uid())
+  );
+
+CREATE POLICY "Users can create own template participants" ON match_template_participants
+  FOR INSERT WITH CHECK (
+    EXISTS (SELECT 1 FROM match_templates WHERE id = template_id AND user_id = auth.uid())
+  );
+
+CREATE POLICY "Users can update own template participants" ON match_template_participants
+  FOR UPDATE USING (
+    EXISTS (SELECT 1 FROM match_templates WHERE id = template_id AND user_id = auth.uid())
+  );
+
+CREATE POLICY "Users can delete own template participants" ON match_template_participants
+  FOR DELETE USING (
+    EXISTS (SELECT 1 FROM match_templates WHERE id = template_id AND user_id = auth.uid())
+  );
+
+CREATE INDEX idx_mtp_template_id ON match_template_participants (template_id);
 

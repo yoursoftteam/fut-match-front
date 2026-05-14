@@ -1,29 +1,36 @@
-"use client";
+"use client"
 
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
 
-import { matchFormSchema, type MatchFormValues, type MatchFormSubmitData } from "@/lib/match-schema";
+import { matchFormSchema, type MatchFormValues, type MatchFormSubmitData, type MatchTemplateParticipant } from "@/lib/match-schema"
 
-import { MatchFormProvider, useMatchFormContext } from "@/contexts/MatchFormContext";
-import { ProgressBar } from "@/components/ProgressBar";
+import { MatchFormProvider, useMatchFormContext } from "@/contexts/MatchFormContext"
+import { ProgressBar } from "@/components/ProgressBar"
+import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation"
 
-import StepLocationTime from "@/components/match-form/StepLocationTime";
-import StepFormat from "@/components/match-form/StepFormat";
-import StepCosts from "@/components/match-form/StepCosts";
+import StepLocationTime from "@/components/match-form/StepLocationTime"
+import StepFormat from "@/components/match-form/StepFormat"
+import StepCosts from "@/components/match-form/StepCosts"
+import StepParticipants from "@/components/match-form/StepParticipants"
 
-export type { MatchFormSubmitData, MatchFormValues };
+export type { MatchFormSubmitData, MatchFormValues }
 
 interface MatchFormStepsProps {
-  onMatchCreate: (data: MatchFormSubmitData) => Promise<void>;
-  disabled?: boolean;
-  submitLabel?: string;
-  submitButtonType?: "button" | "submit";
-  onSubmitButtonClick?: () => void;
+  onMatchCreate: (data: MatchFormSubmitData, participantsToRegister?: { name: string; is_goalkeeper: boolean }[]) => Promise<void>
+  disabled?: boolean
+  submitLabel?: string
+  submitButtonType?: "button" | "submit"
+  onSubmitButtonClick?: () => void
+  templateParticipants?: MatchTemplateParticipant[]
+  defaultValues?: Partial<MatchFormValues>
 }
 
 export default function MatchFormSteps(props: MatchFormStepsProps) {
+  const hasTemplate = (props.templateParticipants?.length ?? 0) > 0
+  const totalSteps = hasTemplate ? 4 : 3
+
   const form = useForm<MatchFormValues>({
     resolver: zodResolver(matchFormSchema),
     defaultValues: {
@@ -35,11 +42,16 @@ export default function MatchFormSteps(props: MatchFormStepsProps) {
       hasRentedGoalkeepers: false,
       rentedGoalkeepersCount: 1,
       rentalCost: 0,
+      ...props.defaultValues,
     },
     mode: "onBlur",
-  });
+  })
 
-  const { control, formState, trigger, setValue } = form;
+  const { control, formState, trigger, setValue } = form
+
+  const labels = hasTemplate
+    ? ["Lugar & Hora", "Formato", "Costos", "Participantes"]
+    : ["Lugar & Hora", "Formato", "Costos"]
 
   return (
     <MatchFormProvider
@@ -47,14 +59,17 @@ export default function MatchFormSteps(props: MatchFormStepsProps) {
       formState={formState}
       trigger={trigger}
       setValue={setValue}
+      totalSteps={totalSteps}
+      labels={labels}
     >
-      <MatchFormStepsInner {...props} form={form} />
+      <MatchFormStepsInner {...props} form={form} hasTemplate={hasTemplate} />
     </MatchFormProvider>
-  );
+  )
 }
 
 interface MatchFormStepsInnerProps extends MatchFormStepsProps {
-  form: ReturnType<typeof useForm<MatchFormValues>>;
+  form: ReturnType<typeof useForm<MatchFormValues>>
+  hasTemplate: boolean
 }
 
 function MatchFormStepsInner({
@@ -64,42 +79,22 @@ function MatchFormStepsInner({
   submitButtonType = "submit",
   onSubmitButtonClick,
   form,
+  hasTemplate,
+  templateParticipants = [],
 }: MatchFormStepsInnerProps) {
-  const { currentStep, nextStep, prevStep, formId } = useMatchFormContext();
-  const { watch, handleSubmit, trigger } = form;
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { currentStep, totalSteps, handleBack } = useMatchFormNavigation()
+  const { watch, handleSubmit } = form
+  const { formId, selectedParticipants } = useMatchFormContext()
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
-  const location = watch("location");
-  const date = watch("date");
-  const time = watch("time");
-  const fieldCost = watch("fieldCost");
-  const playersPerTeam = watch("playersPerTeam");
-
-  const handleNext = async () => {
-    let fieldsToValidate: (keyof MatchFormValues)[] = [];
-
-    if (currentStep === 1) {
-      fieldsToValidate = ["location", "date", "time"];
-    } else if (currentStep === 2) {
-      fieldsToValidate = ["playersPerTeam"];
-    }
-
-    const isValidStep = await trigger(fieldsToValidate);
-
-    if (isValidStep) {
-      nextStep();
-    }
-  };
-
-  const handleBack = () => {
-    prevStep();
-  };
+  const fieldCost = watch("fieldCost")
+  const isLastStep = currentStep === totalSteps
 
   const onSubmit = async (data: MatchFormValues) => {
-    setIsSubmitting(true);
-    const totalPlayers = data.playersPerTeam * 2;
-    const totalCost = data.hasRentedGoalkeepers ? data.fieldCost + data.rentalCost : data.fieldCost;
-    const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0;
+    setIsSubmitting(true)
+    const totalPlayers = data.playersPerTeam * 2
+    const totalCost = data.hasRentedGoalkeepers ? data.fieldCost + data.rentalCost : data.fieldCost
+    const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0
 
     const submitData: MatchFormSubmitData = {
       location: data.location,
@@ -112,22 +107,23 @@ function MatchFormStepsInner({
       rentalCost: data.rentalCost,
       totalPlayers,
       costPerPlayer,
-    };
-    await onMatchCreate(submitData);
-    setIsSubmitting(false);
-  };
+    }
+    const selectedParts = hasTemplate
+      ? templateParticipants
+          .filter((p) => selectedParticipants.includes(p.id))
+          .map((p) => ({ name: p.name, is_goalkeeper: p.is_goalkeeper }))
+      : undefined
+    await onMatchCreate(submitData, selectedParts)
+    setIsSubmitting(false)
+  }
 
   const handleButtonClick = () => {
     if (onSubmitButtonClick) {
-      onSubmitButtonClick();
+      onSubmitButtonClick()
     } else {
-      handleSubmit(onSubmit)();
+      handleSubmit(onSubmit)()
     }
-  };
-
-  const isStep1Valid = location && date && time;
-  const isStep2Valid = playersPerTeam >= 6;
-  const isStep3Valid = fieldCost > 0;
+  }
 
   return (
     <div className="w-full max-w-2xl mx-auto">
@@ -136,31 +132,71 @@ function MatchFormStepsInner({
       <form
         id={formId}
         onSubmit={handleSubmit(onSubmit)}
-        className="space-y-6"
         aria-label="Formulario para crear partido"
       >
-        <StepLocationTime
-          onNext={handleNext}
-          isValid={!!isStep1Valid}
-        />
-
-        <StepFormat
-          onNext={handleNext}
-          onBack={handleBack}
-          isValid={!!isStep2Valid}
-        />
-
-        <StepCosts
-          onBack={handleBack}
-          isValid={!!isStep3Valid}
-          disabled={disabled || isSubmitting}
-          submitLabel={submitLabel}
-          submitButtonType={submitButtonType}
-          onSubmitButtonClick={onSubmitButtonClick}
-          onClick={handleButtonClick}
-          fieldCost={fieldCost}
-        />
+        <div className="relative overflow-x-hidden w-full">
+          <div
+            className="flex w-full transition-transform duration-300 ease-in-out"
+            style={{ transform: `translateX(-${(currentStep - 1) * 100}%)` }}
+          >
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 1}>
+              <StepLocationTime stepNumber={1} />
+            </div>
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 2}>
+              <StepFormat stepNumber={2} />
+            </div>
+            <div className="w-full shrink-0" aria-hidden={currentStep !== 3}>
+              {hasTemplate ? (
+                <StepCosts
+                  isValid={fieldCost > 0}
+                  disabled={disabled || isSubmitting}
+                  submitLabel={submitLabel}
+                  submitButtonType={submitButtonType}
+                  onSubmitButtonClick={onSubmitButtonClick}
+                  onClick={handleButtonClick}
+                  fieldCost={fieldCost}
+                />
+              ) : (
+                <StepCosts
+                  isValid={fieldCost > 0}
+                  disabled={disabled || isSubmitting}
+                  submitLabel={submitLabel}
+                  submitButtonType={submitButtonType}
+                  onSubmitButtonClick={onSubmitButtonClick}
+                  onClick={handleButtonClick}
+                  fieldCost={fieldCost}
+                />
+              )}
+            </div>
+            {hasTemplate && (
+              <div className="w-full shrink-0" aria-hidden={currentStep !== 4}>
+                <div className="space-y-6">
+                  <StepParticipants participants={templateParticipants} />
+                  {isLastStep && (
+                    <div className="flex items-center justify-between pt-4">
+                      <button
+                        type="button"
+                        onClick={handleBack}
+                        className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition"
+                      >
+                        Atrás
+                      </button>
+                      <button
+                        type={submitButtonType === "submit" ? "submit" : "button"}
+                        onClick={handleButtonClick}
+                        disabled={disabled || isSubmitting}
+                        className="btn-primary-fm neon-glow px-8 py-3 rounded-lg font-semibold text-sm"
+                      >
+                        {isSubmitting ? "Creando partido..." : submitLabel}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
       </form>
     </div>
-  );
+  )
 }

@@ -1,33 +1,31 @@
 "use client";
 
 import { useController } from "react-hook-form";
-import { MapPinIcon, CalendarIcon, ClockIcon, ChevronRightIcon } from "lucide-react";
+import { MapPinIcon, ChevronRightIcon } from "lucide-react";
 
 import { useMatchFormContext } from "@/contexts/MatchFormContext";
+import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldGroup } from "@/components/form/FieldGroup";
 
 interface StepLocationTimeProps {
-  onNext: () => void;
-  isValid: boolean;
+  stepNumber: number;
 }
 
-export default function StepLocationTime({ onNext, isValid }: StepLocationTimeProps) {
-  const { currentStep, formId, control, formState: { errors } } = useMatchFormContext();
-  const isActive = currentStep === 1;
-  const isPast = currentStep > 1;
+export default function StepLocationTime({ stepNumber }: StepLocationTimeProps) {
+  const { control, formId, formState: { errors } } = useMatchFormContext();
+  const { handleNext, isNavigating, isStepActive } = useMatchFormNavigation();
 
   const { field: locationField } = useController({ name: "location", control });
   const { field: dateField } = useController({ name: "date", control });
   const { field: timeField } = useController({ name: "time", control });
 
+  const isValid = isStepActive(stepNumber) && locationField.value && dateField.value && timeField.value;
+
   return (
-    <Card
-      className={isActive || isPast ? "opacity-100 grayscale-0" : "opacity-40 grayscale pointer-events-none"}
-      aria-hidden={!isActive && !isPast}
-    >
+    <Card>
       <CardHeader className="pb-4">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary/10">
@@ -61,11 +59,10 @@ export default function StepLocationTime({ onNext, isValid }: StepLocationTimePr
             error={errors.date?.message}
           >
             <div className="relative">
-              <CalendarIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
                 id={`${formId}-date`}
                 type="date"
-                className="pl-10"
+                className="appearance-none"
                 aria-invalid={!!errors.date}
                 {...dateField}
               />
@@ -78,11 +75,10 @@ export default function StepLocationTime({ onNext, isValid }: StepLocationTimePr
             error={errors.time?.message}
           >
             <div className="relative">
-              <ClockIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" aria-hidden="true" />
               <Input
                 id={`${formId}-time`}
                 type="time"
-                className="pl-10"
+                className="appearance-none"
                 aria-invalid={!!errors.time}
                 {...timeField}
               />
@@ -91,7 +87,7 @@ export default function StepLocationTime({ onNext, isValid }: StepLocationTimePr
         </div>
 
         <div className="flex justify-end pt-2">
-          <Button type="button" onClick={onNext} disabled={!isValid}>
+          <Button type="button" onClick={handleNext} disabled={!isValid || isNavigating}>
             Continuar
             <ChevronRightIcon className="ml-1 h-4 w-4" aria-hidden="true" />
           </Button>

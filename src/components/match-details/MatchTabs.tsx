@@ -1,0 +1,205 @@
+"use client";
+
+import { Trash2 } from "lucide-react";
+import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
+import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
+import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
+
+type PanelTab = "register" | "players" | "teams";
+
+interface MatchTabsProps {
+  activeTab: PanelTab;
+  onTabChange: (tab: PanelTab) => void;
+  onOpenTeams?: () => void;
+}
+
+export function MatchTabs({ activeTab, onTabChange, onOpenTeams }: MatchTabsProps) {
+  const { isCreator } = useMatchDetailsContext();
+  useMatchPricing();
+
+  return (
+    <div className="mb-4 flex flex-wrap gap-2" role="tablist" aria-label="Secciones del partido">
+      <button
+        type="button"
+        role="tab"
+        id="tab-register"
+        aria-selected={activeTab === "register"}
+        aria-controls="panel-register"
+        tabIndex={activeTab === "register" ? 0 : -1}
+        onClick={() => onTabChange("register")}
+        className={`rounded px-3 py-1.5 text-sm font-semibold transition ${activeTab === "register" ? "bg-green-600 text-white" : "bg-muted text-foreground border border-border hover:bg-secondary"}`}
+      >
+        Inscripción
+      </button>
+      <button
+        type="button"
+        role="tab"
+        id="tab-players"
+        aria-selected={activeTab === "players"}
+        aria-controls="panel-players"
+        tabIndex={activeTab === "players" ? 0 : -1}
+        onClick={() => onTabChange("players")}
+        className={`rounded px-3 py-1.5 text-sm font-semibold transition ${activeTab === "players" ? "bg-green-600 text-white" : "bg-muted text-foreground border border-border hover:bg-secondary"}`}
+      >
+        Jugadores
+      </button>
+      {isCreator && (
+        <button
+          type="button"
+          role="tab"
+          id="tab-teams"
+          aria-selected={activeTab === "teams"}
+          aria-controls="panel-teams"
+          tabIndex={activeTab === "teams" ? 0 : -1}
+          onClick={onOpenTeams}
+          className={`rounded px-3 py-1.5 text-sm font-semibold transition ${activeTab === "teams" ? "bg-blue-600 text-white" : "bg-muted text-foreground border border-border hover:bg-secondary"}`}
+        >
+          Equipos
+        </button>
+      )}
+    </div>
+  );
+}
+
+export function RegistrationPanel() {
+  useMatchDetailsContext();
+  const { form, loading, message, showForm, setShowForm, handleInputChange, handleCheckboxChange, handleSubmit, resetForm } = useMatchRegistration();
+  const { isTitularFull, isSubstituteFull, goalkeepersRemaining, fieldPlayersRemaining, maxGoalkeepers, maxFieldPlayers, goalkeepersCount, fieldPlayersCount } = useMatchPricing();
+
+  return (
+    <div id="panel-register" role="tabpanel" aria-labelledby="tab-register">
+      <h2 className="mb-2 text-xl font-bold text-foreground">Inscribirme al partido</h2>
+      <p className="mb-4 text-sm text-muted-foreground">Deja tu nombre y elige si vienes como portero.</p>
+      <div className="mb-4 rounded border border-border bg-muted p-3 text-sm text-muted-foreground">
+        <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
+        <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
+        <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
+      </div>
+
+      {message && (
+        <div role="status" aria-live="polite" className={`mb-4 rounded p-3 text-sm ${message.includes("exitosamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}>
+          {message}
+        </div>
+      )}
+
+      {!showForm ? (
+        <button
+          type="button"
+          onClick={() => setShowForm(true)}
+          className={`w-full rounded py-2 px-4 font-semibold transition ${isTitularFull && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
+          disabled={isTitularFull && isSubstituteFull}
+        >
+          {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : isTitularFull ? "Inscribirme como suplente" : "Inscribirme"}
+        </button>
+      ) : (
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label htmlFor="register-fullname" className="mb-2 block text-sm font-medium text-foreground">Nombre completo</label>
+            <input
+              id="register-fullname"
+              type="text"
+              name="name"
+              autoComplete="name"
+              value={form.name}
+              onChange={handleInputChange}
+              className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
+              placeholder="Ingresa tu nombre…"
+              required
+            />
+          </div>
+          <div className="flex items-center gap-3 rounded border border-border bg-muted p-3">
+            <input
+              id="register-gk"
+              type="checkbox"
+              name="isGoalkeeper"
+              checked={form.isGoalkeeper}
+              onChange={handleCheckboxChange}
+              className="h-5 w-5"
+              disabled={goalkeepersRemaining <= 0}
+            />
+            <label htmlFor="register-gk" className="text-sm text-foreground">Me registro como portero</label>
+          </div>
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              className="flex-1 rounded bg-green-500 py-2 px-4 font-semibold text-white transition hover:bg-green-600"
+              disabled={loading || (isTitularFull && isSubstituteFull) || (!isTitularFull && form.isGoalkeeper && goalkeepersRemaining <= 0) || (!isTitularFull && !form.isGoalkeeper && fieldPlayersRemaining <= 0)}
+            >
+              {loading ? "Registrando…" : "Confirmar inscripción"}
+            </button>
+            <button
+              type="button"
+              onClick={() => { setShowForm(false); resetForm(); }}
+              className="flex-1 rounded border border-border bg-muted py-2 px-4 font-medium text-foreground transition hover:bg-secondary"
+            >
+              Cancelar
+            </button>
+          </div>
+        </form>
+      )}
+    </div>
+  );
+}
+
+export function PlayersPanel() {
+  const { matchData, registrations } = useMatchDetailsContext();
+  const { openModal } = useMatchUnregister();
+  const { titulares, suplentes } = useMatchPricing();
+
+  return (
+    <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
+      <h2 className="mb-3 text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
+      <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
+        {titulares.length > 0 && (
+          <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-400">Titulares ({titulares.length}/{matchData?.max_players})</p>
+        )}
+        {titulares.map((registration, index) => (
+          <div key={registration.id} className="flex items-center justify-between rounded border border-border bg-muted p-2.5 transition hover:bg-muted">
+            <div className="flex-1">
+              <span className="mr-2 text-xs text-muted-foreground">#{index + 1}</span>
+              <span className="font-medium text-foreground">{registration.name}</span>
+              <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+            </div>
+            <button
+              type="button"
+              onClick={() => openModal(registration)}
+              className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+              title="Darse de baja"
+              aria-label={`Dar de baja a ${registration.name}`}
+            >
+              <Trash2 size={16} aria-hidden />
+            </button>
+          </div>
+        ))}
+
+        {suplentes.length > 0 && (
+          <>
+            <p className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400">Suplentes ({suplentes.length}/{MAX_SUBSTITUTE_SLOTS})</p>
+            {suplentes.map((registration, index) => (
+              <div key={registration.id} className="flex items-center justify-between rounded border border-amber-800/40 bg-muted p-2.5 transition hover:bg-muted">
+                <div className="flex-1">
+                  <span className="mr-2 inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300">S{index + 1}</span>
+                  <span className="font-medium text-foreground">{registration.name}</span>
+                  <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => openModal(registration)}
+                  className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                  title="Darse de baja"
+                  aria-label={`Dar de baja a ${registration.name}`}
+                >
+                  <Trash2 size={16} aria-hidden />
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+
+        {registrations.length === 0 && (
+          <p className="py-4 text-center text-muted-foreground">Aún no hay jugadores inscritos</p>
+        )}
+      </div>
+    </div>
+  );
+}

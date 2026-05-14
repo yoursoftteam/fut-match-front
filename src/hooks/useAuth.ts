@@ -10,12 +10,13 @@ export function useAuth() {
 
   useEffect(() => {
     if (!hasSupabaseEnv) {
-      setUser(null)
-      setLoading(false)
-      return
+      const timer = setTimeout(() => {
+        setUser(null)
+        setLoading(false)
+      }, 0)
+      return () => clearTimeout(timer)
     }
 
-    // Get initial session
     const getSession = async () => {
       const { data: { session } } = await supabase.auth.getSession()
       setUser(session?.user ?? null)
@@ -24,7 +25,6 @@ export function useAuth() {
 
     getSession()
 
-    // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setUser(session?.user ?? null)
