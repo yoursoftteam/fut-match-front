@@ -112,7 +112,7 @@ export default function Home() {
 
       <section className="py-20 px-4 bg-background">
         <div className="max-w-4xl mx-auto text-center">
-          <h2 className="text-3xl font-heading font-bold text-foreground mb-4">¿A qué esperas?</h2>
+           <h2 className="text-3xl font-heading font-bold text-foreground mb-4">¿Qué esperas?</h2>
           <p className="text-xl text-muted-foreground mb-8">
             El partido de tu vida te está esperando. <span className="text-foreground font-semibold">Entra al campo.</span>
           </p>
