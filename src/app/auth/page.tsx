@@ -51,8 +51,8 @@ function AuthForm() {
 
     try {
       if (isSignUp) {
-        const redirectTo =
-          typeof window !== "undefined" ? `${window.location.origin}/dashboard` : undefined;
+        const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+        const redirectTo = `${siteUrl}/dashboard`;
 
         const { error } = await supabase.auth.signUp({
           email,
