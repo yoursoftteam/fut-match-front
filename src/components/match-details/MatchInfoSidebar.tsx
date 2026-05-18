@@ -1,24 +1,34 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
+import type { UseMatchEditingReturn } from "@/hooks/useMatchEditing";
+import { useMatches } from "@/hooks/useMatches";
 import { useFrecuentes } from "@/hooks/useFrecuentes";
 import { formatCurrency } from "@/lib/currency";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
+import ShareLink from "@/components/ShareLink";
 
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
+  editing?: UseMatchEditingReturn;
 }
 
-export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
+export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSidebarProps) {
   const { matchData, isCreator, registrations } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();
-  const { showForm, openForm, message } = useMatchEditing();
+  const router = useRouter();
+  const { deleteMatch } = useMatches();
+  const fallbackEditing = useMatchEditing();
+  const { showForm, openForm, message } = editing ?? fallbackEditing;
   const { templates, getTemplateByMatchId, deleteTemplateByMatchId, loading: loadingFrec } = useFrecuentes();
   const [showSaveFrecuente, setShowSaveFrecuente] = useState(false);
   const [existingTemplateId, setExistingTemplateId] = useState<string | null>(null);
+  const [deletingMatch, setDeletingMatch] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!matchData?.id) return;
@@ -53,6 +63,25 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
   const costPerPlayer = totalPlayers > 0
     ? Math.ceil((matchData.field_cost + matchData.rental_cost) / totalPlayers)
     : 0;
+
+  const handleDeleteMatch = async () => {
+    if (!confirm("¿Eliminar este partido? Esta acción no se puede deshacer.")) return;
+
+    setDeletingMatch(true);
+    setDeleteError(null);
+    try {
+      const result = await deleteMatch(matchData.id);
+      if (result.error) {
+        throw result.error;
+      }
+
+      router.push("/dashboard");
+    } catch {
+      setDeleteError("No se pudo eliminar el partido. Intenta nuevamente.");
+    } finally {
+      setDeletingMatch(false);
+    }
+  };
 
   return (
     <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
@@ -119,7 +148,20 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
                 {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
               </button>
             )}
+
+            <button
+              type="button"
+              onClick={handleDeleteMatch}
+              disabled={deletingMatch}
+              className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              {deletingMatch ? "Eliminando..." : "Eliminar partido"}
+            </button>
           </div>
+        )}
+
+        {isCreator && deleteError && (
+          <p className="mt-3 text-sm text-red-400">{deleteError}</p>
         )}
 
         {isCreator && !existingTemplateId && showSaveFrecuente && (
@@ -144,6 +186,12 @@ export function MatchInfoSidebar({ onOpenTeamBuilder }: MatchInfoSidebarProps) {
           <p className={`mt-3 text-sm ${message.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
             {message}
           </p>
+        )}
+
+        {isCreator && matchData && (
+          <div className="mt-4">
+            <ShareLink matchId={matchData.id} />
+          </div>
         )}
       </div>
     </aside>

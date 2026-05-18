@@ -1,16 +1,40 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
+import type { UseMatchEditingReturn } from "@/hooks/useMatchEditing";
 
-export function MatchEditForm() {
-  const { showForm, loading, message, form, fieldCostInput, rentalCostInput, closeForm, handleInputChange, handleSubmit } = useMatchEditing();
+interface MatchEditFormProps {
+  editing?: UseMatchEditingReturn;
+}
+
+export function MatchEditForm({ editing }: MatchEditFormProps) {
+  const fallbackEditing = useMatchEditing();
+  const {
+    showForm,
+    loading,
+    message,
+    form,
+    fieldCostInput,
+    rentalCostInput,
+    closeForm,
+    handleInputChange,
+    handleSubmit,
+  } = editing ?? fallbackEditing;
   const { goalkeepersCount } = useMatchPricing();
+  const formRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!showForm) return;
+
+    formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [showForm]);
 
   if (!showForm) return null;
 
   return (
-    <div className="rounded-lg border border-green-700/50 bg-card p-6 shadow">
+    <div ref={formRef} className="rounded-lg border border-green-700/50 bg-card p-6 shadow">
       <h2 className="mb-4 text-2xl font-bold text-foreground">Editar partido</h2>
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
