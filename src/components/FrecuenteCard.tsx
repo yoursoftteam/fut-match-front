@@ -30,8 +30,13 @@ export default function FrecuenteCard({ template }: FrecuenteCardProps) {
 
   const handleDelete = async () => {
     if (!confirm("¿Eliminar esta plantilla?")) return
+
     setDeleting(true)
-    await deleteTemplate(template.id)
+    try {
+      await deleteTemplate(template.id)
+    } finally {
+      setDeleting(false)
+    }
   }
 
   const format = `${template.players_per_team} vs ${template.players_per_team}`
@@ -114,10 +119,10 @@ export default function FrecuenteCard({ template }: FrecuenteCardProps) {
             type="button"
             onClick={handleDelete}
             disabled={deleting}
-            className="inline-flex items-center gap-1 text-xs text-destructive hover:text-destructive/80 transition-colors"
+            className="inline-flex items-center gap-2 rounded border border-red-500/40 px-3 py-1.5 text-xs font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
           >
             {deleting ? <Loader2 className="size-3 animate-spin" /> : <Trash2 className="size-3" />}
-            Eliminar
+            {deleting ? "Eliminando..." : "Eliminar frecuente"}
           </button>
         </div>
       </div>

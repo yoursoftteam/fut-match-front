@@ -4,6 +4,7 @@ import { useState } from "react";
 import { MatchDetailsProvider, useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { MatchInfoSidebar, MatchEditForm, MatchTabs, RegistrationPanel, PlayersPanel, UnregisterModal, TeamBuilder } from "@/components/match-details";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
+import { useMatchEditing } from "@/hooks/useMatchEditing";
 
 type PanelTab = "register" | "players" | "teams";
 
@@ -14,6 +15,7 @@ interface MatchDetailsInnerProps {
 function MatchDetailsInner(_props: MatchDetailsInnerProps) {
   const { loading, error, matchData, isCreator } = useMatchDetailsContext();
   useMatchPricing();
+  const editing = useMatchEditing();
 
   const [activeTab, setActiveTab] = useState<PanelTab>("register");
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);
@@ -30,13 +32,28 @@ function MatchDetailsInner(_props: MatchDetailsInnerProps) {
     return <div className="text-center py-8">No se encontró información del partido</div>;
   }
 
+  if (!isCreator) {
+    return (
+      <div className="min-h-screen py-10 px-4 text-foreground">
+        <div className="mx-auto w-full max-w-2xl">
+          <div className="card match-card rounded-2xl border border-border/80 bg-card p-5 shadow-lg sm:p-6">
+            <RegistrationPanel />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen py-10 px-4 text-foreground">
       <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_1fr]">
-        <MatchInfoSidebar onOpenTeamBuilder={() => { setShowTeamBuilder(true); setActiveTab("teams"); }} />
+        <MatchInfoSidebar
+          editing={editing}
+          onOpenTeamBuilder={() => { setShowTeamBuilder(true); setActiveTab("teams"); }}
+        />
 
         <section className="space-y-6">
-          <MatchEditForm />
+          <MatchEditForm editing={editing} />
 
           <div className="card match-card rounded-2xl border border-border/80 bg-card p-5 shadow-lg sm:p-6">
             <MatchTabs

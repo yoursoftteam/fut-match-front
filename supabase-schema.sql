@@ -19,8 +19,8 @@ CREATE TABLE matches (
 ALTER TABLE matches ENABLE ROW LEVEL SECURITY;
 
 -- Create policies
-CREATE POLICY "Anyone can view matches" ON matches
-  FOR SELECT USING (true);
+CREATE POLICY "Users can view their own matches" ON matches
+  FOR SELECT USING (auth.uid() = created_by);
 
 CREATE POLICY "Authenticated users can create matches" ON matches
   FOR INSERT WITH CHECK (auth.role() = 'authenticated');
@@ -30,6 +30,47 @@ CREATE POLICY "Users can update their own matches" ON matches
 
 CREATE POLICY "Users can delete their own matches" ON matches
   FOR DELETE USING (auth.uid() = created_by);
+
+-- Public read for shared links without exposing list endpoints.
+-- This function can be called by anon/authenticated users to fetch only one match by id.
+CREATE OR REPLACE FUNCTION get_public_match_by_id(p_match_id UUID)
+RETURNS TABLE (
+  id UUID,
+  title TEXT,
+  location TEXT,
+  date TIMESTAMP WITH TIME ZONE,
+  max_players INTEGER,
+  created_by UUID,
+  created_at TIMESTAMP WITH TIME ZONE,
+  field_cost NUMERIC,
+  rental_cost NUMERIC,
+  has_rented_goalkeepers BOOLEAN,
+  rented_goalkeepers_count INTEGER,
+  players_per_team INTEGER
+)
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
+    m.id,
+    m.title,
+    m.location,
+    m.date,
+    m.max_players,
+    m.created_by,
+    m.created_at,
+    m.field_cost,
+    m.rental_cost,
+    m.has_rented_goalkeepers,
+    m.rented_goalkeepers_count,
+    m.players_per_team
+  FROM matches m
+  WHERE m.id = p_match_id
+  LIMIT 1;
+$$;
+
+GRANT EXECUTE ON FUNCTION get_public_match_by_id(UUID) TO anon, authenticated;
 
 -- Create match_registrations table
 CREATE TABLE match_registrations (

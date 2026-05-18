@@ -5,7 +5,8 @@ import { useAuth } from '@/hooks/useAuth'
 import { useMatches } from '@/hooks/useMatches'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { Trash2 } from 'lucide-react'
 import FrecuentesSection from '@/components/FrecuentesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 
@@ -17,8 +18,13 @@ function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
 
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
-  const { matches, loading: matchesLoading, registrationCounts } = useMatches()
+  const { matches, loading: matchesLoading, registrationCounts, deleteMatch } = useMatches({
+    autoFetch: true,
+    onlyOwnedByCurrentUser: true,
+  })
   const router = useRouter()
+  const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -39,6 +45,22 @@ export default function DashboardPage() {
 
   if (!user) {
     return null
+  }
+
+  const handleDeleteMatch = async (matchId: string) => {
+    if (!confirm('¿Eliminar este partido? Esta acción no se puede deshacer.')) return
+
+    setDeletingMatchId(matchId)
+    setDeleteError(null)
+
+    try {
+      const result = await deleteMatch(matchId)
+      if (result.error) throw result.error
+    } catch {
+      setDeleteError('No se pudo eliminar el partido. Intenta nuevamente.')
+    } finally {
+      setDeletingMatchId(null)
+    }
   }
 
   return (
@@ -174,10 +196,24 @@ export default function DashboardPage() {
                     >
                       {isFull ? 'Ver detalles' : '¡Ver partido!'}
                     </Link>
+
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteMatch(match.id)}
+                      disabled={deletingMatchId === match.id}
+                      className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                    >
+                      <Trash2 className="size-4" />
+                      {deletingMatchId === match.id ? 'Eliminando...' : 'Eliminar partido'}
+                    </button>
                   </div>
                 )
               })}
             </div>
+          )}
+
+          {deleteError && (
+            <p className="mt-4 text-sm text-red-400">{deleteError}</p>
           )}
         </section>
       </main>

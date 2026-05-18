@@ -9,7 +9,10 @@ import { useEffect } from "react";
 
 export default function MatchesPage() {
   const { user, loading: authLoading } = useAuth();
-  const { matches, loading: matchesLoading, registrationCounts } = useMatches();
+  const { matches, loading: matchesLoading, registrationCounts } = useMatches({
+    autoFetch: true,
+    onlyOwnedByCurrentUser: true,
+  });
   const router = useRouter();
 
   useEffect(() => {
@@ -40,7 +43,7 @@ export default function MatchesPage() {
           <div>
             <h1 className="font-heading text-3xl font-bold text-foreground">Mis partidos ⚽</h1>
             <p className="mt-1 text-muted-foreground">
-              Los partidos que armaste o en los que estás anotado.
+              Los partidos que creaste.
             </p>
           </div>
           <Link

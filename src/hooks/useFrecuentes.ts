@@ -39,6 +39,12 @@ export function useFrecuentes() {
     fetchTemplates()
   }, [fetchTemplates])
 
+  useEffect(() => {
+    const handler = () => fetchTemplates()
+    window.addEventListener("frecuentes:changed", handler)
+    return () => window.removeEventListener("frecuentes:changed", handler)
+  }, [fetchTemplates])
+
   const getTemplateById = useCallback(async (
     id: string
   ): Promise<MatchTemplateWithParticipants | null> => {
@@ -164,6 +170,7 @@ export function useFrecuentes() {
         }
 
         setTemplates((prev) => [template, ...prev])
+        window.dispatchEvent(new CustomEvent("frecuentes:changed"))
         return template
       } catch (error) {
         console.error("Error creating template:", error)
@@ -208,6 +215,7 @@ export function useFrecuentes() {
         if (error) throw error
 
         setTemplates((prev) => prev.filter((t) => t.id !== id))
+        window.dispatchEvent(new CustomEvent("frecuentes:changed"))
         return true
       } catch (error) {
         console.error("Error deleting template:", error)

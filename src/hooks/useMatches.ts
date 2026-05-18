@@ -5,6 +5,11 @@ import { supabase } from '@/lib/supabase'
 
 const MAX_SUBSTITUTE_SLOTS = 5
 
+interface UseMatchesOptions {
+  autoFetch?: boolean
+  onlyOwnedByCurrentUser?: boolean
+}
+
 interface Match {
   id: string
   title: string
@@ -19,30 +24,57 @@ interface Match {
   players_per_team: number
 }
 
-export function useMatches() {
+export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }: UseMatchesOptions = {}) {
   const [matches, setMatches] = useState<Match[]>([])
   const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({})
-  const [loading, setLoading] = useState(true)
+  const [loading, setLoading] = useState(autoFetch)
 
   useEffect(() => {
-    fetchMatches()
-  }, [])
+    if (!autoFetch) {
+      setLoading(false)
+      return
+    }
 
-  const fetchMatches = async () => {
+    fetchMatches()
+  }, [autoFetch])
+
+  const fetchMatches = useCallback(async () => {
     try {
-      const { data, error } = await supabase
+      setLoading(true)
+
+      let userId: string | null = null
+      if (onlyOwnedByCurrentUser) {
+        const { data: { user } } = await supabase.auth.getUser()
+        userId = user?.id ?? null
+
+        if (!userId) {
+          setMatches([])
+          setRegistrationCounts({})
+          return
+        }
+      }
+
+      let query = supabase
         .from('matches')
         .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, created_at, updated_at')
         .order('created_at', { ascending: false })
+
+      if (userId) {
+        query = query.eq('created_by', userId)
+      }
+
+      const { data, error } = await query
 
       if (error) throw error
       setMatches(data || [])
 
       // Fetch registration counts for all matches in one query
       if (data && data.length > 0) {
+        const matchIds = data.map(({ id }) => id)
         const { data: countData } = await supabase
           .from('match_registrations')
           .select('match_id')
+          .in('match_id', matchIds)
 
         if (countData) {
           const counts: Record<string, number> = {}
@@ -51,13 +83,15 @@ export function useMatches() {
           })
           setRegistrationCounts(counts)
         }
+      } else {
+        setRegistrationCounts({})
       }
     } catch (error) {
       console.error('Error fetching matches:', error)
     } finally {
       setLoading(false)
     }
-  }
+  }, [onlyOwnedByCurrentUser])
 
   const createMatch = async (matchData: Omit<Match, 'id'>) => {
     try {
@@ -135,6 +169,20 @@ export function useMatches() {
       return { data, error: null }
     } catch (error) {
       console.error('Error fetching match:', error)
+      return { data: null, error }
+    }
+  }, [])
+
+  const getPublicMatchById = useCallback(async (id: string) => {
+    try {
+      const { data, error } = await supabase
+        .rpc('get_public_match_by_id', { p_match_id: id })
+        .single()
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error fetching public match:', error)
       return { data: null, error }
     }
   }, [])
@@ -235,6 +283,41 @@ export function useMatches() {
     }
   }
 
+  const deleteMatch = async (matchId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return { error: new Error('Debes iniciar sesión para eliminar un partido.') }
+      }
+
+      await supabase
+        .from('match_templates')
+        .delete()
+        .eq('match_id', matchId)
+        .eq('user_id', user.id)
+
+      const { error } = await supabase
+        .from('matches')
+        .delete()
+        .eq('id', matchId)
+        .eq('created_by', user.id)
+
+      if (error) throw error
+
+      setMatches(prev => prev.filter((match) => match.id !== matchId))
+      setRegistrationCounts(prev => {
+        const next = { ...prev }
+        delete next[matchId]
+        return next
+      })
+
+      return { error: null }
+    } catch (error) {
+      console.error('Error deleting match:', error)
+      return { error }
+    }
+  }
+
   const registerRentedGoalkeepers = async (matchId: string, count: number) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -307,9 +390,11 @@ export function useMatches() {
     createMatch,
     updateMatch,
     getMatchById,
+    getPublicMatchById,
     getMatchRegistrations,
     registerForMatch,
     unregisterFromMatch,
+    deleteMatch,
     registerRentedGoalkeepers,
     refetch: fetchMatches,
   }

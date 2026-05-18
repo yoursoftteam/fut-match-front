@@ -16,7 +16,7 @@ export interface MatchEditFormData {
   rentalCost: number;
 }
 
-interface UseMatchEditingReturn {
+export interface UseMatchEditingReturn {
   showForm: boolean;
   loading: boolean;
   message: string | null;
