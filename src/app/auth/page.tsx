@@ -168,19 +168,26 @@ function AuthForm() {
       const err = error as { message?: string; status?: number };
       // Map Supabase errors to generic messages to avoid account enumeration
       const raw = err?.message ?? "";
+      const lower = raw.toLowerCase();
       if (
-        raw.toLowerCase().includes("invalid login") ||
-        raw.toLowerCase().includes("invalid credentials") ||
-        raw.toLowerCase().includes("email not confirmed") ||
-        raw.toLowerCase().includes("user not found")
+        lower.includes("invalid login") ||
+        lower.includes("invalid credentials") ||
+        lower.includes("email not confirmed") ||
+        lower.includes("user not found")
       ) {
         setMessage("Email o contraseña incorrectos. Verifica tus datos e intenta de nuevo.");
-      } else if (raw.toLowerCase().includes("already registered") || raw.toLowerCase().includes("user already exists")) {
+      } else if (lower.includes("already registered") || lower.includes("user already exists")) {
         setMessage("Ya existe una cuenta con este email. Intenta iniciar sesión.");
-      } else if (raw.toLowerCase().includes("password")) {
+      } else if (
+        lower.includes("at least 6") ||
+        lower.includes("minimum 6") ||
+        lower.includes("too short")
+      ) {
         setMessage("La contraseña debe tener al menos 6 caracteres.");
-      } else if (raw.toLowerCase().includes("rate limit") || err?.status === 429) {
+      } else if (lower.includes("rate limit") || err?.status === 429) {
         setMessage("Demasiados intentos. Espera unos minutos e intenta de nuevo.");
+      } else if (isResetMode) {
+        setMessage("No se pudo actualizar la contraseña. Abre de nuevo el enlace del correo e inténtalo otra vez.");
       } else {
         setMessage("Ocurrió un error. Intenta de nuevo.");
       }
