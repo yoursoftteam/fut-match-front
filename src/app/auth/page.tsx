@@ -71,7 +71,7 @@ function AuthForm() {
     setConfirmPassword("");
 
     const newUrl = nextMode === "signin" ? "/auth?mode=signin" : `/auth?mode=${nextMode}`;
-    window.history.replaceState({}, "", newUrl);
+    router.replace(newUrl);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

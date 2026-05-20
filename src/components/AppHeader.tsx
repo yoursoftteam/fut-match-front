@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { Inter } from "next/font/google";
@@ -14,7 +14,9 @@ const inter = Inter({
 
 export function AppHeader() {
   const router = useRouter();
+  const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
+  const isAuthPage = pathname === "/auth";
 
   const handleSignOut = async () => {
     await signOut();
@@ -47,7 +49,7 @@ export function AppHeader() {
                   Armar partido
                 </Link>
               </li>
-              {user && (
+              {user && !isAuthPage && (
                 <li>
                   <Link
                     href="/dashboard"
@@ -65,7 +67,7 @@ export function AppHeader() {
           <ThemeToggle />
           {loading ? (
             <span className="text-muted-foreground">Cargando…</span>
-          ) : user ? (
+          ) : user && !isAuthPage ? (
             <>
               <span
                 className="text-muted-foreground max-w-[200px] truncate"
