@@ -117,17 +117,19 @@ export default function ShareLink({ matchId }: { matchId: string }) {
         >
           {actions.map(({ id, icon: Icon, label, successLabel, action, isActive }) => (
             <Tooltip key={id}>
-              <TooltipTrigger>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={action}
-                  disabled={id !== "copy" && activeOption !== null && !isActive}
-                  aria-label={isActive && successLabel ? successLabel : label}
-                  className={cn(isActive && "text-green-600")}
-                >
-                  <Icon className={cn("size-4", isActive && "text-green-600")} />
-                </Button>
+              <TooltipTrigger
+                render={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={action}
+                    disabled={id !== "copy" && activeOption !== null && !isActive}
+                    aria-label={isActive && successLabel ? successLabel : label}
+                    className={cn(isActive && "text-green-600")}
+                  />
+                }
+              >
+                <Icon className={cn("size-4", isActive && "text-green-600")} />
               </TooltipTrigger>
               <TooltipContent side="bottom">
                 {isActive && successLabel ? successLabel : label}
