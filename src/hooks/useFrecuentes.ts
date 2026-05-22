@@ -235,11 +235,17 @@ export function useFrecuentes() {
         if (!full) throw new Error("Plantilla no encontrada")
 
         const matchData = {
-            title: getMatchTitleFromLocation(full.location),
+          title: getMatchTitleFromLocation(full.location),
           location: full.location,
           date: `${date}T${time}:00`,
           max_players: full.players_per_team * 2,
           created_by: user.id,
+          field_cost: full.field_cost,
+          rental_cost: full.rental_cost,
+          has_rented_goalkeepers: full.has_rented_goalkeepers,
+          rented_goalkeepers_count: full.rented_goalkeepers_count,
+          players_per_team: full.players_per_team,
+          source_template_id: templateId,
         }
 
         const { data: newMatch, error: createError } = await supabase

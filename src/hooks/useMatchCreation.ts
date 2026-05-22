@@ -7,11 +7,12 @@ import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { type MatchFormSubmitData } from "@/components/MatchFormSteps";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
+import type { Match } from "@/hooks/useMatches";
 
 interface UseMatchCreationReturn {
   loading: boolean;
   error: string | null;
-  createMatch: (data: MatchFormSubmitData, participantsToRegister?: { name: string; is_goalkeeper: boolean }[]) => Promise<string | null>;
+  createMatch: (data: MatchFormSubmitData, participantsToRegister?: { name: string; is_goalkeeper: boolean }[], templateId?: string | null) => Promise<string | null>;
 }
 
 export function useMatchCreation(): UseMatchCreationReturn {
@@ -24,7 +25,8 @@ export function useMatchCreation(): UseMatchCreationReturn {
 
   const createMatch = useCallback(async (
     data: MatchFormSubmitData,
-    participantsToRegister?: { name: string; is_goalkeeper: boolean }[]
+    participantsToRegister?: { name: string; is_goalkeeper: boolean }[],
+    templateId?: string | null,
   ): Promise<string | null> => {
     if (!user) {
       setError("Debes iniciar sesión para crear un partido");
@@ -35,7 +37,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
     setError(null);
 
     try {
-      const matchData = {
+      const matchData: Omit<Match, "id"> = {
         title: getMatchTitleFromLocation(data.location),
         location: data.location,
         date: `${data.date}T${data.time}:00`,
@@ -46,6 +48,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
         has_rented_goalkeepers: data.hasRentedGoalkeepers,
         rented_goalkeepers_count: data.rentedGoalkeepersCount,
         players_per_team: data.playersPerTeam,
+        source_template_id: templateId || null,
       };
 
       const { data: newMatch, error: createError } = await apiCreateMatch(matchData);

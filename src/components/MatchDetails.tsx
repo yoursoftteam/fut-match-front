@@ -8,12 +8,7 @@ import { useMatchEditing } from "@/hooks/useMatchEditing";
 
 type PanelTab = "register" | "players" | "teams";
 
-interface MatchDetailsInnerProps {
-  matchId: string;
-  openedFromFrecuentes?: boolean;
-}
-
-function MatchDetailsInner({ openedFromFrecuentes = false }: MatchDetailsInnerProps) {
+function MatchDetailsInner() {
   const { loading, error, matchData, isCreator } = useMatchDetailsContext();
   useMatchPricing();
   const editing = useMatchEditing();
@@ -50,7 +45,6 @@ function MatchDetailsInner({ openedFromFrecuentes = false }: MatchDetailsInnerPr
       <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_1fr]">
         <MatchInfoSidebar
           editing={editing}
-          openedFromFrecuentes={openedFromFrecuentes}
           onOpenTeamBuilder={() => { setShowTeamBuilder(true); setActiveTab("teams"); }}
         />
 
@@ -81,10 +75,10 @@ function MatchDetailsInner({ openedFromFrecuentes = false }: MatchDetailsInnerPr
   );
 }
 
-export default function MatchDetails({ matchId, openedFromFrecuentes = false }: { matchId: string; openedFromFrecuentes?: boolean }) {
+export default function MatchDetails({ matchId }: { matchId: string }) {
   return (
     <MatchDetailsProvider matchId={matchId}>
-      <MatchDetailsInner matchId={matchId} openedFromFrecuentes={openedFromFrecuentes} />
+      <MatchDetailsInner />
     </MatchDetailsProvider>
   );
 }

@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
+import MatchGroupedList from "@/components/MatchGroupedList";
 
 export default function MatchesPage() {
   const { user, loading: authLoading } = useAuth();
@@ -69,15 +70,15 @@ export default function MatchesPage() {
             </Link>
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-5 md:grid-cols-2 lg:grid-cols-3 card-grid">
-            {matches.map((match) => {
-              const registeredCount = registrationCounts[match.id] || 0;
-              const isFull = registeredCount >= match.max_players;
+          <MatchGroupedList
+            matches={matches}
+            registrationCounts={registrationCounts}
+            renderCard={(match, registeredCount, isFull) => {
               const maxP = match.max_players;
               const level = maxP <= 6 ? { label: 'Casual', cls: 'level-casual' } : maxP <= 10 ? { label: 'Semi-Pro', cls: 'level-semipro' } : { label: 'Pro', cls: 'level-pro' };
               const spotsLeft = maxP - registeredCount;
               return (
-                <div key={match.id} className="card match-card relative p-5">
+                <div className="card match-card relative p-5">
                   <div className="flex items-start justify-between mb-3">
                     <span className="text-2xl" aria-hidden>⚽</span>
                     <div className="flex items-center gap-1.5">
@@ -104,8 +105,8 @@ export default function MatchesPage() {
                   </Link>
                 </div>
               );
-            })}
-          </div>
+            }}
+          />
         )}
       </main>
     </div>

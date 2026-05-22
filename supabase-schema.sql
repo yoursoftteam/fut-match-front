@@ -12,7 +12,8 @@ CREATE TABLE matches (
   rental_cost NUMERIC NOT NULL DEFAULT 0,
   has_rented_goalkeepers BOOLEAN NOT NULL DEFAULT FALSE,
   rented_goalkeepers_count INTEGER NOT NULL DEFAULT 0,
-  players_per_team INTEGER NOT NULL DEFAULT 5
+  players_per_team INTEGER NOT NULL DEFAULT 5,
+  source_template_id UUID REFERENCES match_templates(id) ON DELETE SET NULL
 );
 
 -- Enable Row Level Security
@@ -46,7 +47,8 @@ RETURNS TABLE (
   rental_cost NUMERIC,
   has_rented_goalkeepers BOOLEAN,
   rented_goalkeepers_count INTEGER,
-  players_per_team INTEGER
+  players_per_team INTEGER,
+  source_template_id UUID
 )
 LANGUAGE sql
 SECURITY DEFINER
@@ -64,13 +66,16 @@ AS $$
     m.rental_cost,
     m.has_rented_goalkeepers,
     m.rented_goalkeepers_count,
-    m.players_per_team
+    m.players_per_team,
+    m.source_template_id
   FROM matches m
   WHERE m.id = p_match_id
   LIMIT 1;
 $$;
 
 GRANT EXECUTE ON FUNCTION get_public_match_by_id(UUID) TO anon, authenticated;
+
+CREATE INDEX IF NOT EXISTS idx_matches_source_template_id ON matches (source_template_id);
 
 -- Create match_registrations table
 CREATE TABLE match_registrations (

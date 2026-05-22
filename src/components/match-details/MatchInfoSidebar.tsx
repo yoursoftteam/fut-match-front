@@ -16,10 +16,9 @@ import ShareLink from "@/components/ShareLink";
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
   editing?: UseMatchEditingReturn;
-  openedFromFrecuentes?: boolean;
 }
 
-export function MatchInfoSidebar({ onOpenTeamBuilder, editing, openedFromFrecuentes = false }: MatchInfoSidebarProps) {
+export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSidebarProps) {
   const { matchData, isCreator, registrations } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();
   const router = useRouter();
@@ -116,7 +115,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing, openedFromFrecuen
               Armar equipos
             </button>
 
-            {existingTemplateId && openedFromFrecuentes ? (
+            {existingTemplateId ? (
               <button
                 type="button"
                 disabled={loadingFrec}
@@ -128,7 +127,15 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing, openedFromFrecuen
               >
                 {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
               </button>
-            ) : !existingTemplateId ? (
+            ) : matchData.source_template_id ? (
+              <button
+                type="button"
+                onClick={() => setShowSaveFrecuente(!showSaveFrecuente)}
+                className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10"
+              >
+                {showSaveFrecuente ? "Cancelar" : "Guardar como nueva plantilla"}
+              </button>
+            ) : (
               <button
                 type="button"
                 onClick={() => setShowSaveFrecuente(!showSaveFrecuente)}
@@ -136,7 +143,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing, openedFromFrecuen
               >
                 {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
               </button>
-            ) : null}
+            )}
 
             <button
               type="button"

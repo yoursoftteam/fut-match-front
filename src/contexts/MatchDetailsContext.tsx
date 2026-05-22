@@ -19,6 +19,7 @@ export interface MatchData {
   has_rented_goalkeepers: boolean;
   rented_goalkeepers_count: number;
   players_per_team: number;
+  source_template_id?: string | null;
 }
 
 export interface PlayerRegistration {
