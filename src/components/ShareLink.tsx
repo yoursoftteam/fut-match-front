@@ -3,6 +3,7 @@
 import { useState, useId, useCallback } from "react";
 import { Copy, Check, LinkIcon, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -58,10 +59,47 @@ export default function ShareLink({ matchId }: { matchId: string }) {
     }
   }, [shareableLink, canShare]);
 
-  const shareOptions = [
-    { id: "whatsapp", icon: MessageCircle, label: "WhatsApp" },
-    { id: "email", icon: Mail, label: "Correo" },
-    ...(canShare ? [{ id: "native", icon: Smartphone, label: "Otra app" }] : []),
+  const actions: {
+    id: string;
+    icon: typeof Copy;
+    label: string;
+    successLabel?: string;
+    action: () => void;
+    isActive: boolean;
+  }[] = [
+    {
+      id: "copy",
+      icon: copied ? Check : Copy,
+      label: "Copiar link",
+      successLabel: "¡Copiado!",
+      action: copyToClipboard,
+      isActive: copied,
+    },
+    {
+      id: "whatsapp",
+      icon: MessageCircle,
+      label: "WhatsApp",
+      action: () => shareVia("whatsapp"),
+      isActive: activeOption === "whatsapp",
+    },
+    {
+      id: "email",
+      icon: Mail,
+      label: "Correo",
+      action: () => shareVia("email"),
+      isActive: activeOption === "email",
+    },
+    ...(canShare
+      ? [
+          {
+            id: "native" as const,
+            icon: Smartphone,
+            label: "Otra app",
+            action: () => shareVia("native"),
+            isActive: activeOption === "native",
+          },
+        ]
+      : []),
   ];
 
   return (
@@ -73,49 +111,28 @@ export default function ShareLink({ matchId }: { matchId: string }) {
         </div>
 
         <div
-          className="flex flex-wrap items-center gap-2"
+          className="inline-flex items-center rounded-lg border border-border bg-muted/30 p-0.5"
           role="group"
           aria-label="Opciones para compartir el partido"
         >
-          <Button
-            variant="default"
-            onClick={copyToClipboard}
-            className={cn(copied && "bg-green-600 hover:bg-green-700")}
-            aria-label={copied ? "Enlace copiado al portapapeles" : "Copiar enlace del partido"}
-            aria-describedby={copied ? statusId : undefined}
-          >
-            {copied ? (
-              <>
-                <Check className="size-4" />
-                ¡Copiado!
-              </>
-            ) : (
-              <>
-                <Copy className="size-4" />
-                Copiar link
-              </>
-            )}
-          </Button>
-
-          {shareOptions.map(({ id, icon: Icon, label }) => (
-            <Button
-              key={id}
-              variant="outline"
-              size="icon"
-              onClick={() => shareVia(id)}
-              disabled={activeOption !== null}
-              className={cn(
-                "rounded-full",
-                activeOption === id && "border-green-500 bg-green-500/10",
-              )}
-              aria-label={`Compartir por ${label}`}
-            >
-              {activeOption === id ? (
-                <Check className="size-4 text-green-600" />
-              ) : (
-                <Icon className="size-4" />
-              )}
-            </Button>
+          {actions.map(({ id, icon: Icon, label, successLabel, action, isActive }) => (
+            <Tooltip key={id}>
+              <TooltipTrigger>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={action}
+                  disabled={id !== "copy" && activeOption !== null && !isActive}
+                  aria-label={isActive && successLabel ? successLabel : label}
+                  className={cn(isActive && "text-green-600")}
+                >
+                  <Icon className={cn("size-4", isActive && "text-green-600")} />
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="bottom">
+                {isActive && successLabel ? successLabel : label}
+              </TooltipContent>
+            </Tooltip>
           ))}
         </div>
 
