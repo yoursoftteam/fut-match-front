@@ -6,6 +6,7 @@ import Link from "next/link";
 import { ArrowLeftIcon, Loader2 } from "lucide-react";
 import ShareLink from "@/components/ShareLink";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
+import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { BrandLogo } from "@/components/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -163,7 +164,7 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
 
           <SaveFrecuenteCard
             location={match.location}
-            defaultName={`Partido en ${match.location}`}
+            defaultName={getMatchTitleFromLocation(match.location)}
             playersPerTeam={match.players_per_team}
             hasRentedGoalkeepers={match.has_rented_goalkeepers}
             rentedGoalkeepersCount={match.rented_goalkeepers_count}

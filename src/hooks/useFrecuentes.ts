@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
+import { getMatchTitleFromLocation } from "@/lib/match-title"
 import { useAuth } from "@/hooks/useAuth"
 import { useMatches } from "@/hooks/useMatches"
 import type {
@@ -234,7 +235,7 @@ export function useFrecuentes() {
         if (!full) throw new Error("Plantilla no encontrada")
 
         const matchData = {
-          title: `Partido en ${full.location}`,
+            title: getMatchTitleFromLocation(full.location),
           location: full.location,
           date: `${date}T${time}:00`,
           max_players: full.players_per_team * 2,

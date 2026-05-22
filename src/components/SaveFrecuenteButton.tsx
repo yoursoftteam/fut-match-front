@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Heart, Loader2 } from "lucide-react"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
+import { getMatchTitleFromLocation } from "@/lib/match-title"
 
 interface SaveFrecuenteButtonProps {
   location: string
@@ -20,7 +21,7 @@ export default function SaveFrecuenteButton({ location, playersPerTeam, matchId 
     setSaving(true)
 
     const result = await createTemplate({
-      name: `Partido en ${location}`,
+      name: getMatchTitleFromLocation(location),
       location,
       time: "",
       players_per_team: playersPerTeam,

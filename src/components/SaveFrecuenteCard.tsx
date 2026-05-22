@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Heart, Loader2, Check } from "lucide-react"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
+import { getMatchTitleFromLocation } from "@/lib/match-title"
 
 interface SaveFrecuenteCardProps {
   location: string
@@ -31,7 +32,7 @@ export default function SaveFrecuenteCard({
   participants,
   onSaved,
 }: SaveFrecuenteCardProps) {
-  const [name, setName] = useState(defaultName || `Partido en ${location}`)
+  const [name, setName] = useState(defaultName || getMatchTitleFromLocation(location))
   const [saveParts, setSaveParts] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)

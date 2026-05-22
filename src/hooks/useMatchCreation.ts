@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { type MatchFormSubmitData } from "@/components/MatchFormSteps";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
@@ -35,7 +36,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
 
     try {
       const matchData = {
-        title: `Partido en ${data.location}`,
+        title: getMatchTitleFromLocation(data.location),
         location: data.location,
         date: `${data.date}T${data.time}:00`,
         max_players: data.totalPlayers,

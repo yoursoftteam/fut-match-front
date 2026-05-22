@@ -35,6 +35,7 @@ export default function MatchFormSteps(props: MatchFormStepsProps) {
     resolver: zodResolver(matchFormSchema),
     defaultValues: {
       location: "",
+      noLocationYet: false,
       date: "",
       time: "",
       fieldCost: 0,
@@ -92,12 +93,13 @@ function MatchFormStepsInner({
 
   const onSubmit = async (data: MatchFormValues) => {
     setIsSubmitting(true)
+    const resolvedLocation = data.noLocationYet ? "Por definir" : data.location.trim()
     const totalPlayers = data.playersPerTeam * 2
     const totalCost = data.hasRentedGoalkeepers ? data.fieldCost + data.rentalCost : data.fieldCost
     const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0
 
     const submitData: MatchFormSubmitData = {
-      location: data.location,
+      location: resolvedLocation,
       date: data.date,
       time: data.time,
       fieldCost: data.fieldCost,
