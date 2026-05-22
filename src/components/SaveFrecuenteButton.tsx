@@ -9,6 +9,7 @@ interface SaveFrecuenteButtonProps {
   location: string
   playersPerTeam: number
   matchId?: string | null
+  matchDate?: string | null
   fieldCost?: number
   rentalCost?: number
   hasRentedGoalkeepers?: boolean
@@ -20,6 +21,7 @@ export default function SaveFrecuenteButton({
   location,
   playersPerTeam,
   matchId,
+  matchDate,
   fieldCost = 0,
   rentalCost = 0,
   hasRentedGoalkeepers = false,
@@ -45,6 +47,7 @@ export default function SaveFrecuenteButton({
       rental_cost: rentalCost,
       save_participants: false,
       match_id: matchId,
+      match_date: matchDate,
     })
 
     if (result) {

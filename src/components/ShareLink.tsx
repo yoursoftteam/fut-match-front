@@ -5,7 +5,7 @@ import { Copy, Check, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-export default function ShareLink({ matchId }: { matchId: string }) {
+export default function ShareLink({ matchId, showTitle = true }: { matchId: string; showTitle?: boolean }) {
   const [copied, setCopied] = useState(false);
   const shareableLink =
     typeof window !== "undefined" ? `${window.location.origin}/match/${matchId}` : "";
@@ -58,10 +58,10 @@ export default function ShareLink({ matchId }: { matchId: string }) {
   ];
 
   return (
-    <div>
-      <h3 className="mb-4 text-sm font-semibold text-foreground">Compartir partido</h3>
+    <div className="w-full min-w-0">
+      {showTitle && <h3 className="mb-4 text-sm font-semibold text-foreground">Compartir partido</h3>}
 
-      <div className="grid grid-cols-4 gap-2">
+      <div className="grid grid-cols-4 gap-2 w-full">
         {actions.map(({ id, icon: Icon, tooltip, action }) => (
           <Tooltip key={id}>
             <TooltipTrigger
@@ -71,7 +71,7 @@ export default function ShareLink({ matchId }: { matchId: string }) {
                   onClick={action}
                   aria-label={tooltip}
                   className={cn(
-                    "flex cursor-pointer items-center justify-center rounded-lg border border-border bg-muted/30 py-2.5 transition-colors hover:bg-muted hover:text-foreground",
+                    "w-full flex cursor-pointer items-center justify-center rounded-lg border border-border bg-muted/30 py-2.5 transition-colors hover:bg-muted hover:text-foreground",
                     copied && id === "copy" && "border-green-600 text-green-600",
                   )}
                 />

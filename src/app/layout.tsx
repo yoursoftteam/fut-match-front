@@ -2,12 +2,9 @@ import type { Metadata } from "next";
 import { MailIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { Providers } from "@/components/Providers";
+import { geist, outfit, spaceGrotesk } from "@/lib/fonts";
 import "./globals.css";
-import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
-
-
-const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
   title: "Parti2 - El ecosistema definitivo para deportistas",
@@ -21,7 +18,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className={cn("h-full antialiased", "font-sans", geist.variable)} suppressHydrationWarning>
+    <html
+      lang="es"
+      className={cn(
+        "h-full antialiased font-sans",
+        spaceGrotesk.variable,
+        outfit.variable,
+        geist.variable,
+      )}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col bg-background text-foreground">
         <Providers>
           <a href="#main-content" className="skip-to-main">

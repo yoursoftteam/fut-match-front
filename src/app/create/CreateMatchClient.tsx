@@ -6,6 +6,7 @@ import MatchFormSteps, { type MatchFormSubmitData } from "@/components/MatchForm
 import { useMatchCreation } from "@/hooks/useMatchCreation"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
 import { BrandLogo } from "@/components/BrandLogo"
+import { getNextDateForDayOfWeek } from "@/lib/date-utils"
 import type { MatchTemplateParticipant, MatchTemplateWithParticipants } from "@/lib/match-schema"
 
 export default function CreateMatchClient() {
@@ -60,6 +61,9 @@ export default function CreateMatchClient() {
         rentedGoalkeepersCount: templateData.rented_goalkeepers_count,
         fieldCost: templateData.field_cost,
         rentalCost: templateData.rental_cost,
+        date: templateData.match_date
+          ? getNextDateForDayOfWeek(new Date(templateData.match_date).getDay())
+          : "",
       }
     : undefined
 
