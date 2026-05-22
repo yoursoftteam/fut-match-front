@@ -2,6 +2,8 @@
 
 import { useState, useId } from "react";
 import { Copy, Check, Share2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 
 export default function ShareLink({ matchId }: { matchId: string }) {
   const [copied, setCopied] = useState(false);
@@ -12,16 +14,17 @@ export default function ShareLink({ matchId }: { matchId: string }) {
   const baseId = useId();
   const statusId = `${baseId}-copy-status`;
 
-  const copyToClipboard = () => {
+  const copyToClipboard = async () => {
     if (!shareableLink) return;
-    void navigator.clipboard.writeText(shareableLink);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    try {
+      await navigator.clipboard.writeText(shareableLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
   };
 
   const shareLink = async () => {
     if (!shareableLink || !canShare) return;
-
     try {
       await navigator.share({
         title: "Partido de fútbol",
@@ -30,51 +33,48 @@ export default function ShareLink({ matchId }: { matchId: string }) {
       });
       setShared(true);
       setTimeout(() => setShared(false), 2000);
-    } catch {
-      // User may cancel the share sheet; keep silent and let copy remain available.
-    }
+    } catch { /* user cancelled */ }
   };
 
   return (
-    <div className="mt-6 p-5 card">
-      <h3 className="font-bold text-card-foreground mb-3">Compartir partido</h3>
-      <p className="text-muted-foreground mb-4">
-        Envía este enlace a tus amigos para que se registren en el partido:
-      </p>
+    <Card>
+      <CardContent className="space-y-4">
+        <div>
+          <h3 className="font-semibold text-foreground">Compartir partido</h3>
+          <p className="text-sm text-muted-foreground mt-1">
+            Envía este enlace para que se registren
+          </p>
+        </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <button
-          type="button"
-          onClick={copyToClipboard}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
-          aria-label="Copiar enlace"
-          aria-describedby={copied ? statusId : undefined}
-        >
-          {copied ? (
-            <Check className="size-4 text-green-600" />
-          ) : (
-            <Copy className="size-4" />
+        <div className="flex flex-col sm:flex-row gap-2">
+          <Button
+            variant="outline"
+            className="flex-1 whitespace-nowrap"
+            onClick={copyToClipboard}
+            aria-label="Copiar enlace"
+            aria-describedby={copied ? statusId : undefined}
+          >
+            {copied ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
+            {copied ? "¡Copiado!" : "Copiar link"}
+          </Button>
+
+          {canShare && (
+            <Button
+              variant="outline"
+              className="flex-1 whitespace-nowrap"
+              onClick={shareLink}
+              aria-label="Compartir enlace"
+            >
+              {shared ? <Check className="size-4 text-green-600" /> : <Share2 className="size-4" />}
+              {shared ? "¡Compartido!" : "Compartir"}
+            </Button>
           )}
-          <span>{copied ? "Copiado" : "Copiar link"}</span>
-        </button>
+        </div>
 
-        <button
-          type="button"
-          onClick={shareLink}
-          disabled={!canShare}
-          className="inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-card px-4 py-2 text-sm font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-50"
-          aria-label="Compartir enlace"
-        >
-          <Share2 className="size-4" />
-          <span>{shared ? "Compartido" : "Compartir"}</span>
-        </button>
-      </div>
-
-      <p id={statusId} role="status" aria-live="polite" className="sr-only">
-        {copied ? "Enlace copiado al portapapeles" : shared ? "Enlace compartido" : ""}
-      </p>
-
-      
-    </div>
+        <p id={statusId} role="status" aria-live="polite" className="sr-only">
+          {copied ? "Enlace copiado al portapapeles" : shared ? "Enlace compartido" : ""}
+        </p>
+      </CardContent>
+    </Card>
   );
 }
