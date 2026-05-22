@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useId } from "react";
-import { Copy, Check, Share2 } from "lucide-react";
+import { Copy, Check, Share2, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 
@@ -39,37 +39,46 @@ export default function ShareLink({ matchId }: { matchId: string }) {
   return (
     <Card>
       <CardContent className="space-y-4">
-        <div>
+        <div className="flex items-center gap-2">
+          <LinkIcon className="size-4 text-muted-foreground" />
           <h3 className="font-semibold text-foreground">Compartir partido</h3>
-          <p className="text-sm text-muted-foreground mt-1">
-            Envía este enlace para que se registren
-          </p>
         </div>
 
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Button
-            variant="outline"
-            className="flex-1 whitespace-nowrap"
+        <div className="flex items-stretch gap-2">
+          <div className="flex-1 flex items-center rounded-lg border border-border bg-muted/50 px-3 py-2.5 min-h-10">
+            <span className="text-sm text-muted-foreground truncate font-mono">
+              {shareableLink}
+            </span>
+          </div>
+          <button
+            type="button"
             onClick={copyToClipboard}
-            aria-label="Copiar enlace"
+            className="shrink-0 inline-flex items-center justify-center size-10 rounded-lg border border-border bg-background hover:bg-muted transition-colors"
+            aria-label={copied ? "Enlace copiado" : "Copiar enlace"}
             aria-describedby={copied ? statusId : undefined}
           >
-            {copied ? <Check className="size-4 text-green-600" /> : <Copy className="size-4" />}
-            {copied ? "¡Copiado!" : "Copiar link"}
-          </Button>
-
-          {canShare && (
-            <Button
-              variant="outline"
-              className="flex-1 whitespace-nowrap"
-              onClick={shareLink}
-              aria-label="Compartir enlace"
-            >
-              {shared ? <Check className="size-4 text-green-600" /> : <Share2 className="size-4" />}
-              {shared ? "¡Compartido!" : "Compartir"}
-            </Button>
-          )}
+            {copied ? (
+              <Check className="size-4 text-green-600" />
+            ) : (
+              <Copy className="size-4 text-muted-foreground" />
+            )}
+          </button>
         </div>
+
+        <p className="text-xs text-muted-foreground">
+          Los jugadores podrán inscribirse como titulares o suplentes
+        </p>
+
+        {canShare && (
+          <Button
+            variant="outline"
+            className="w-full"
+            onClick={shareLink}
+          >
+            <Share2 className="size-4" />
+            {shared ? "¡Compartido!" : "Compartir vía..."}
+          </Button>
+        )}
 
         <p id={statusId} role="status" aria-live="polite" className="sr-only">
           {copied ? "Enlace copiado al portapapeles" : shared ? "Enlace compartido" : ""}
