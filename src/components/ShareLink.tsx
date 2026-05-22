@@ -1,14 +1,12 @@
 "use client";
 
 import { useState, useId, useCallback } from "react";
-import { Copy, Check, Share2, LinkIcon, ChevronDown, MessageCircle, Mail, Smartphone } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import { Copy, Check, LinkIcon, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
 export default function ShareLink({ matchId }: { matchId: string }) {
   const [copied, setCopied] = useState(false);
-  const [showOptions, setShowOptions] = useState(false);
   const [activeOption, setActiveOption] = useState<string | null>(null);
   const shareableLink =
     typeof window !== "undefined" ? `${window.location.origin}/match/${matchId}` : "";
@@ -59,12 +57,18 @@ export default function ShareLink({ matchId }: { matchId: string }) {
     }
   }, [shareableLink, canShare]);
 
+  const shareOptions = [
+    { id: "whatsapp", icon: MessageCircle, label: "WhatsApp" },
+    { id: "email", icon: Mail, label: "Correo" },
+    ...(canShare ? [{ id: "native", icon: Smartphone, label: "Otra app" }] : []),
+  ];
+
   return (
     <Card>
       <CardContent className="space-y-4">
         <div className="flex items-center gap-2">
           <LinkIcon className="size-4 text-muted-foreground" />
-          <h3 className="font-semibold text-foreground">Compartir partido</h3>
+          <h3 className="font-semibold text-foreground">Compartir</h3>
         </div>
 
         <div className="flex items-stretch gap-2">
@@ -87,60 +91,28 @@ export default function ShareLink({ matchId }: { matchId: string }) {
           </button>
         </div>
 
-        <div>
-          <Button
-            variant="outline"
-            className="w-full"
-            onClick={() => setShowOptions((prev) => !prev)}
-          >
-            <Share2 className="size-4" />
-            Compartir vía...
-            <ChevronDown
+        <div className="flex items-center justify-center gap-3">
+          {shareOptions.map(({ id, icon: Icon, label }) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => shareVia(id)}
+              disabled={activeOption !== null}
               className={cn(
-                "size-4 ml-auto transition-transform duration-200",
-                showOptions && "rotate-180",
+                "inline-flex items-center justify-center size-10 rounded-full border border-border bg-background transition-all duration-150 cursor-pointer",
+                "hover:bg-muted hover:border-muted-foreground/30",
+                "disabled:opacity-50 disabled:cursor-not-allowed",
+                activeOption === id && "border-green-500 bg-green-500/10",
               )}
-            />
-          </Button>
-
-          <div
-            className={cn(
-              "grid transition-all duration-200 ease-in-out",
-              showOptions
-                ? "grid-rows-[1fr] opacity-100 mt-2"
-                : "grid-rows-[0fr] opacity-0",
-            )}
-          >
-            <div className="overflow-hidden">
-              <div className="grid grid-cols-3 gap-2 pt-1">
-                {[
-                  { id: "whatsapp", icon: MessageCircle, label: "WhatsApp" },
-                  { id: "email", icon: Mail, label: "Correo" },
-                  { id: "native", icon: Smartphone, label: "Otra app" },
-                ].map(({ id, icon: Icon, label }) => (
-                  <button
-                    key={id}
-                    type="button"
-                    onClick={() => shareVia(id)}
-                    disabled={activeOption !== null}
-                    className={cn(
-                      "flex flex-col items-center gap-1.5 rounded-lg border border-border p-3 transition-all duration-150 cursor-pointer",
-                      "hover:bg-muted hover:border-muted-foreground/30",
-                      "disabled:opacity-50 disabled:cursor-not-allowed",
-                      activeOption === id && "border-green-500 bg-green-500/10",
-                    )}
-                  >
-                    {activeOption === id ? (
-                      <Check className="size-5 text-green-600" />
-                    ) : (
-                      <Icon className="size-5 text-muted-foreground" />
-                    )}
-                    <span className="text-xs text-muted-foreground">{label}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
+              aria-label={`Compartir por ${label}`}
+            >
+              {activeOption === id ? (
+                <Check className="size-4 text-green-600" />
+              ) : (
+                <Icon className="size-4 text-muted-foreground" />
+              )}
+            </button>
+          ))}
         </div>
 
         <p id={statusId} role="status" aria-live="polite" className="sr-only">
