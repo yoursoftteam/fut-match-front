@@ -9,9 +9,23 @@ interface SaveFrecuenteButtonProps {
   location: string
   playersPerTeam: number
   matchId?: string | null
+  fieldCost?: number
+  rentalCost?: number
+  hasRentedGoalkeepers?: boolean
+  rentedGoalkeepersCount?: number
+  time?: string
 }
 
-export default function SaveFrecuenteButton({ location, playersPerTeam, matchId }: SaveFrecuenteButtonProps) {
+export default function SaveFrecuenteButton({
+  location,
+  playersPerTeam,
+  matchId,
+  fieldCost = 0,
+  rentalCost = 0,
+  hasRentedGoalkeepers = false,
+  rentedGoalkeepersCount = 0,
+  time = "",
+}: SaveFrecuenteButtonProps) {
   const { createTemplate } = useFrecuentes()
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
@@ -23,12 +37,12 @@ export default function SaveFrecuenteButton({ location, playersPerTeam, matchId 
     const result = await createTemplate({
       name: getMatchTitleFromLocation(location),
       location,
-      time: "",
+      time,
       players_per_team: playersPerTeam,
-      has_rented_goalkeepers: false,
-      rented_goalkeepers_count: 0,
-      field_cost: 0,
-      rental_cost: 0,
+      has_rented_goalkeepers: hasRentedGoalkeepers,
+      rented_goalkeepers_count: rentedGoalkeepersCount,
+      field_cost: fieldCost,
+      rental_cost: rentalCost,
       save_participants: false,
       match_id: matchId,
     })

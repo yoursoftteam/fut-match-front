@@ -1,0 +1,202 @@
+================================================================================
+                    RESUMEN EJECUTIVO - BUG SaveFrecuenteButton
+                     Plantillas creadas sin datos (en blanco)
+================================================================================
+
+PROBLEMA EN UNA LÍNEA:
+SaveFrecuenteButton recibe solo 3 de 8 props necesarios y hardcodea valores
+por defecto en lugar de usar los datos reales del partido.
+
+================================================================================
+LOCALIZACIÓN DEL BUG
+================================================================================
+
+ARCHIVO 1: src/app/dashboard/page.tsx
+LÍNEA: 183-187
+PROBLEMA: Solo pasa 3 props (location, playersPerTeam, matchId)
+
+  <SaveFrecuenteButton
+    location={match.location}
+    playersPerTeam={Math.round(match.max_players / 2)}
+    matchId={match.id}
+  />
+
+DEBERÍA PASAR TAMBIÉN:
+  - fieldCost={match.field_cost}
+  - rentalCost={match.rental_cost}
+  - hasRentedGoalkeepers={match.has_rented_goalkeepers}
+  - rentedGoalkeepersCount={match.rented_goalkeepers_count}
+  - time={extraer de match.date}
+
+================================================================================
+
+ARCHIVO 2: src/components/SaveFrecuenteButton.tsx
+LÍNEA: 8-12 (Interface)
+PROBLEMA: Props incompleta
+
+interface SaveFrecuenteButtonProps {
+  location: string
+  playersPerTeam: number
+  matchId?: string | null
+}
+
+DEBERÍA INCLUIR:
+  fieldCost?: number
+  rentalCost?: number
+  hasRentedGoalkeepers?: boolean
+  rentedGoalkeepersCount?: number
+  time?: string
+
+================================================================================
+
+ARCHIVO 2: src/components/SaveFrecuenteButton.tsx
+LÍNEA: 23-34 (handleSave)
+PROBLEMA: Hardcodea valores por defecto
+
+await createTemplate({
+  name: getMatchTitleFromLocation(location),
+  location,
+  time: "",                              ? HARDCODEADO
+  players_per_team: playersPerTeam,
+  has_rented_goalkeepers: false,         ? HARDCODEADO
+  rented_goalkeepers_count: 0,           ? HARDCODEADO
+  field_cost: 0,                         ? HARDCODEADO
+  rental_cost: 0,                        ? HARDCODEADO
+  save_participants: false,
+  match_id: matchId,
+})
+
+DEBERÍA USAR:
+  time: time ?? ""                       (propuestos como param)
+  has_rented_goalkeepers: hasRentedGoalkeepers ?? false
+  rented_goalkeepers_count: rentedGoalkeepersCount ?? 0
+  field_cost: fieldCost ?? 0
+  rental_cost: rentalCost ?? 0
+
+================================================================================
+POR QUÉ OCURRE
+================================================================================
+
+1. RAÍZ: SaveFrecuenteButton está diseñado para ser "simple" (solo 3 props)
+   pero debería ser "completo" (todos los datos del match)
+
+2. FALTA INFORMACIÓN: El Dashboard tiene todos los datos en match, pero no
+   los pasa a SaveFrecuenteButton
+
+3. VALORES POR DEFECTO: Como no recibe los datos, SaveFrecuenteButton usa
+   hardcodeados (0, false, "") en lugar de valores reales
+
+4. RESULTADO: Plantilla se crea en Supabase pero vacía
+
+================================================================================
+VERIFICACIÓN
+================================================================================
+
+Match Object EN Dashboard CONTIENE:
+? field_cost: 50000
+? rental_cost: 100000
+? has_rented_goalkeepers: true
+? rented_goalkeepers_count: 2
+? date: "2024-05-25T19:00"
+
+SaveFrecuenteButton RECIBE:
+? location: "Parque Central"
+? playersPerTeam: 5
+? matchId: "abc123"
+? field_cost: NO RECIBE
+? rental_cost: NO RECIBE
+? has_rented_goalkeepers: NO RECIBE
+? rented_goalkeepers_count: NO RECIBE
+? time: NO RECIBE
+
+SaveFrecuenteButton ENVÍA A createTemplate:
+? location: "Parque Central"
+? name: "Parque Central"
+? players_per_team: 5
+? field_cost: 0 (debería ser 50000)
+? rental_cost: 0 (debería ser 100000)
+? has_rented_goalkeepers: false (debería ser true)
+? rented_goalkeepers_count: 0 (debería ser 2)
+? time: "" (debería ser "19:00")
+
+Resultado en Supabase match_templates:
+? name: "Parque Central"
+? location: "Parque Central"
+? players_per_team: 5
+? field_cost: 0 ?
+? rental_cost: 0 ?
+? has_rented_goalkeepers: false ?
+? rented_goalkeepers_count: 0 ?
+? time: "" ?
+
+USUARIO VE: Plantilla "en blanco" sin costos ni horario
+
+================================================================================
+COMPARACIÓN CON SaveFrecuenteCard (FUNCIONA CORRECTAMENTE)
+================================================================================
+
+SaveFrecuenteCard (en /match/[id]):
+? Recibe TODOS los datos como props
+? Envía valores REALES a createTemplate
+? Plantilla se crea COMPLETA
+
+SaveFrecuenteButton (en dashboard):
+? Recibe SOLO 3 props
+? Envía valores HARDCODEADOS a createTemplate
+? Plantilla se crea INCOMPLETA
+
+================================================================================
+ARCHIVOS AFECTADOS
+================================================================================
+
+PRIMARIOS (necesitan cambios):
+  1. src/app/dashboard/page.tsx (línea 183)
+  2. src/components/SaveFrecuenteButton.tsx (líneas 8-12, 23-34)
+
+SECUNDARIOS (para referencia):
+  - src/components/SaveFrecuenteCard.tsx (referencia de cómo se hace bien)
+  - src/hooks/useFrecuentes.ts (función createTemplate)
+  - src/hooks/useMatches.ts (donde viene el objeto match)
+  - src/lib/match-schema.ts (tipos esperados)
+
+================================================================================
+IMPACTO PARA USUARIO
+================================================================================
+
+ACTUALMENTE PASA:
+1. Usuario abre Dashboard
+2. Ve un partido con costos y horario completo
+3. Hace clic en corazón (SaveFrecuenteButton)
+4. Plantilla se crea
+5. Usuario va a Frecuentes
+6. VE PLANTILLA VACÍA (sin costos, sin horario)
+7. Tiene que crear nuevamente la plantilla manualmente desde /create
+
+DESEADO:
+1. Usuario abre Dashboard
+2. Ve un partido con costos y horario completo
+3. Hace clic en corazón (SaveFrecuenteButton)
+4. Plantilla se crea CON TODOS LOS DATOS
+5. Usuario va a Frecuentes
+6. VE PLANTILLA COMPLETA con costos y horario
+7. Puede reutilizarla inmediatamente
+
+================================================================================
+SOLUCIÓN RECOMENDADA (PRIORIDAD ALTA)
+================================================================================
+
+1. AGREGAR PROPS a SaveFrecuenteButton.tsx:
+   - fieldCost?: number
+   - rentalCost?: number
+   - hasRentedGoalkeepers?: boolean
+   - rentedGoalkeepersCount?: number
+   - time?: string
+
+2. ACTUALIZAR Dashboard (línea 183) para pasar todos los props
+
+3. ACTUALIZAR handleSave() en SaveFrecuenteButton para usar props
+   en lugar de hardcodear
+
+IMPACTO: Todas las plantillas creadas desde Dashboard tendrán datos completos
+
+================================================================================

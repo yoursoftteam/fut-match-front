@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import FrecuentesSection from '@/components/FrecuentesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
+import MatchGroupedList from '@/components/MatchGroupedList'
 
 function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
   if (maxPlayers <= 6)  return { label: 'Casual',  cls: 'level-casual'  }
@@ -165,14 +166,14 @@ export default function DashboardPage() {
               </Link>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
-              {recentMatches.slice(0, 6).map((match) => {
-                const registeredCount = registrationCounts[match.id] || 0
-                const isFull = registeredCount >= match.max_players
+            <MatchGroupedList
+              matches={recentMatches.slice(0, 6)}
+              registrationCounts={registrationCounts}
+              renderCard={(match, registeredCount, isFull) => {
                 const level = getLevelInfo(match.max_players)
                 const spotsLeft = match.max_players - registeredCount
                 return (
-                  <div key={match.id} className="card match-card p-5 relative">
+                  <div className="card match-card p-5 relative">
                     <div className="flex items-start justify-between mb-3">
                       <span className="text-2xl shrink-0" aria-hidden>⚽</span>
                       <div className="flex items-center gap-1.5">
@@ -182,8 +183,13 @@ export default function DashboardPage() {
                         )}
                         <SaveFrecuenteButton
                           location={match.location}
-                          playersPerTeam={Math.round(match.max_players / 2)}
+                          playersPerTeam={match.players_per_team}
                           matchId={match.id}
+                          fieldCost={match.field_cost}
+                          rentalCost={match.rental_cost}
+                          hasRentedGoalkeepers={match.has_rented_goalkeepers}
+                          rentedGoalkeepersCount={match.rented_goalkeepers_count}
+                          time={match.date.split("T")[1]?.substring(0, 5) || ""}
                         />
                       </div>
                     </div>
@@ -218,8 +224,8 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 )
-              })}
-            </div>
+              }}
+            />
           )}
 
           {deleteError && (

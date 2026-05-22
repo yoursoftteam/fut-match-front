@@ -29,6 +29,7 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
     rented_goalkeepers_count: number;
     players_per_team: number;
     max_players: number;
+    source_template_id?: string | null;
   } | null>(null);
   const [loading, setLoading] = useState(true);
 
@@ -48,6 +49,7 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
         rented_goalkeepers_count: data.rented_goalkeepers_count,
         players_per_team: data.players_per_team,
         max_players: data.max_players,
+        source_template_id: data.source_template_id,
       });
       setLoading(false);
     })();
@@ -162,17 +164,23 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
 
           <ShareLink matchId={matchId} />
 
-          <SaveFrecuenteCard
-            location={match.location}
-            defaultName={getMatchTitleFromLocation(match.location)}
-            playersPerTeam={match.players_per_team}
-            hasRentedGoalkeepers={match.has_rented_goalkeepers}
-            rentedGoalkeepersCount={match.rented_goalkeepers_count}
-            fieldCost={match.field_cost}
-            rentalCost={match.rental_cost}
-            time={matchTime}
-            matchId={matchId}
-          />
+          {match.source_template_id ? (
+            <p className="text-center text-sm text-muted-foreground">
+              Este partido se creó desde una plantilla. Si quieres guardar una variante, ve a los detalles del partido.
+            </p>
+          ) : (
+            <SaveFrecuenteCard
+              location={match.location}
+              defaultName={getMatchTitleFromLocation(match.location)}
+              playersPerTeam={match.players_per_team}
+              hasRentedGoalkeepers={match.has_rented_goalkeepers}
+              rentedGoalkeepersCount={match.rented_goalkeepers_count}
+              fieldCost={match.field_cost}
+              rentalCost={match.rental_cost}
+              time={matchTime}
+              matchId={matchId}
+            />
+          )}
 
           <div className="text-center">
             <Link

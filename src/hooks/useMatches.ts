@@ -10,7 +10,7 @@ interface UseMatchesOptions {
   onlyOwnedByCurrentUser?: boolean
 }
 
-interface Match {
+export interface Match {
   id: string
   title: string
   location: string
@@ -24,6 +24,8 @@ interface Match {
   has_rented_goalkeepers: boolean
   rented_goalkeepers_count: number
   players_per_team: number
+  source_template_id?: string | null
+  source_template?: { id: string; name: string } | null
 }
 
 export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }: UseMatchesOptions = {}) {
@@ -58,7 +60,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       let query = supabase
         .from('matches')
-        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, created_at, updated_at')
+        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, created_at, updated_at, source_template_id, source_template:source_template_id(id, name)')
         .order('created_at', { ascending: false })
 
       if (userId) {
@@ -68,7 +70,12 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       const { data, error } = await query
 
       if (error) throw error
-      setMatches(data || [])
+      const transformed = (data || []).map((item) => {
+        const raw = item.source_template
+        const sourceTemplate = !raw ? null : Array.isArray(raw) ? (raw[0] ?? null) : raw
+        return { ...item, source_template: sourceTemplate }
+      })
+      setMatches(transformed as Match[])
 
       // Fetch registration counts for all matches in one query
       if (data && data.length > 0) {
@@ -105,7 +112,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       const { data, error } = await supabase
         .from('matches')
         .insert([matchData])
-        .select('id, title, location, date, max_players, created_by, created_at, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team')
+        .select('id, title, location, date, max_players, created_by, created_at, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id')
         .single()
 
       if (error) throw error
@@ -145,7 +152,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         .update(updates)
         .eq('id', matchId)
         .eq('created_by', user.id)
-        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team')
+        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id')
         .single()
 
       if (error) throw error

@@ -47,7 +47,7 @@ export default function CreateMatchClient() {
     data: MatchFormSubmitData,
     participantsToRegister?: { name: string; is_goalkeeper: boolean }[]
   ) => {
-    await createMatch(data, participantsToRegister)
+    await createMatch(data, participantsToRegister, templateId)
   }
 
   const templateDefaultValues = templateData
