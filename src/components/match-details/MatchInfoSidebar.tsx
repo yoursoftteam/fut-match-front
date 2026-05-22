@@ -11,6 +11,7 @@ import { useFrecuentes } from "@/hooks/useFrecuentes";
 import { formatCurrency } from "@/lib/currency";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
+import { Separator } from "@/components/ui/separator";
 import ShareLink from "@/components/ShareLink";
 
 interface MatchInfoSidebarProps {
@@ -185,7 +186,8 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
         )}
 
         {isCreator && matchData && (
-          <div className="mt-4">
+          <div className="mt-6 space-y-4">
+            <Separator />
             <ShareLink matchId={matchData.id} />
           </div>
         )}

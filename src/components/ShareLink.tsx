@@ -1,15 +1,12 @@
 "use client";
 
 import { useState, useId, useCallback } from "react";
-import { Copy, Check, LinkIcon, MessageCircle, Mail, Smartphone } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
-import { Card, CardContent } from "@/components/ui/card";
+import { Copy, Check, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 export default function ShareLink({ matchId }: { matchId: string }) {
   const [copied, setCopied] = useState(false);
-  const [activeOption, setActiveOption] = useState<string | null>(null);
   const shareableLink =
     typeof window !== "undefined" ? `${window.location.origin}/match/${matchId}` : "";
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -25,19 +22,15 @@ export default function ShareLink({ matchId }: { matchId: string }) {
     } catch { /* ignore */ }
   }, [shareableLink]);
 
-  const shareVia = useCallback(async (method: string) => {
+  const shareVia = useCallback((method: string) => {
     switch (method) {
       case "whatsapp":
-        setActiveOption("whatsapp");
-        setTimeout(() => setActiveOption(null), 2000);
         window.open(
           `https://wa.me/?text=${encodeURIComponent(`¡Únete a este partido de fútbol! ${shareableLink}`)}`,
           "_blank",
         );
         break;
       case "email":
-        setActiveOption("email");
-        setTimeout(() => setActiveOption(null), 2000);
         window.open(
           `mailto:?subject=${encodeURIComponent("Partido de fútbol")}&body=${encodeURIComponent(`Únete a este partido: ${shareableLink}`)}`,
           "_blank",
@@ -45,103 +38,55 @@ export default function ShareLink({ matchId }: { matchId: string }) {
         break;
       case "native":
         if (canShare) {
-          try {
-            setActiveOption("native");
-            await navigator.share({
-              title: "Partido de fútbol",
-              text: "Únete a este partido",
-              url: shareableLink,
-            });
-          } catch { /* user cancelled */ }
-          setActiveOption(null);
+          navigator.share({
+            title: "Partido de fútbol",
+            text: "Únete a este partido",
+            url: shareableLink,
+          }).catch(() => {});
         }
         break;
     }
   }, [shareableLink, canShare]);
 
-  const actions: {
-    id: string;
-    icon: typeof Copy;
-    label: string;
-    successLabel?: string;
-    action: () => void;
-    isActive: boolean;
-  }[] = [
-    {
-      id: "copy",
-      icon: copied ? Check : Copy,
-      label: "Copiar link",
-      successLabel: "¡Copiado!",
-      action: copyToClipboard,
-      isActive: copied,
-    },
-    {
-      id: "whatsapp",
-      icon: MessageCircle,
-      label: "WhatsApp",
-      action: () => shareVia("whatsapp"),
-      isActive: activeOption === "whatsapp",
-    },
-    {
-      id: "email",
-      icon: Mail,
-      label: "Correo",
-      action: () => shareVia("email"),
-      isActive: activeOption === "email",
-    },
+  const actions = [
+    { id: "copy" as const, icon: copied ? Check : Copy, label: "Copiar link", tooltip: copied ? "¡Copiado!" : "Copiar enlace", action: copyToClipboard },
+    { id: "whatsapp" as const, icon: MessageCircle, label: "WhatsApp", tooltip: "Compartir por WhatsApp", action: () => shareVia("whatsapp") },
+    { id: "email" as const, icon: Mail, label: "Correo", tooltip: "Compartir por correo", action: () => shareVia("email") },
     ...(canShare
-      ? [
-          {
-            id: "native" as const,
-            icon: Smartphone,
-            label: "Otra app",
-            action: () => shareVia("native"),
-            isActive: activeOption === "native",
-          },
-        ]
+      ? [{ id: "native" as const, icon: Smartphone, label: "Otra app", tooltip: "Compartir en otra app", action: () => shareVia("native") }]
       : []),
   ];
 
   return (
-    <Card>
-      <CardContent className="space-y-4">
-        <div className="flex items-center gap-2">
-          <LinkIcon className="size-4 text-muted-foreground" />
-          <h3 className="font-semibold text-foreground">Compartir</h3>
-        </div>
+    <div>
+      <h3 className="mb-4 text-sm font-semibold text-foreground">Compartir partido</h3>
 
-        <div
-          className="inline-flex items-center rounded-lg border border-border bg-muted/30 p-0.5"
-          role="group"
-          aria-label="Opciones para compartir el partido"
-        >
-          {actions.map(({ id, icon: Icon, label, successLabel, action, isActive }) => (
-            <Tooltip key={id}>
-              <TooltipTrigger
-                render={
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={action}
-                    disabled={id !== "copy" && activeOption !== null && !isActive}
-                    aria-label={isActive && successLabel ? successLabel : label}
-                    className={cn(isActive && "text-green-600")}
-                  />
-                }
-              >
-                <Icon className={cn("size-4", isActive && "text-green-600")} />
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                {isActive && successLabel ? successLabel : label}
-              </TooltipContent>
-            </Tooltip>
-          ))}
-        </div>
+      <div className="grid grid-cols-4 gap-2">
+        {actions.map(({ id, icon: Icon, tooltip, action }) => (
+          <Tooltip key={id}>
+            <TooltipTrigger
+              render={
+                <button
+                  type="button"
+                  onClick={action}
+                  aria-label={tooltip}
+                  className={cn(
+                    "flex cursor-pointer items-center justify-center rounded-lg border border-border bg-muted/30 py-2.5 transition-colors hover:bg-muted hover:text-foreground",
+                    copied && id === "copy" && "border-green-600 text-green-600",
+                  )}
+                />
+              }
+            >
+              <Icon className={cn("size-4", copied && id === "copy" && "text-green-600")} />
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{tooltip}</TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
 
-        <p id={statusId} role="status" aria-live="polite" className="sr-only">
-          {copied ? "Enlace copiado al portapapeles" : ""}
-        </p>
-      </CardContent>
-    </Card>
+      <p id={statusId} role="status" aria-live="polite" className="sr-only">
+        {copied ? "Enlace copiado al portapapeles" : ""}
+      </p>
+    </div>
   );
 }
