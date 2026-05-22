@@ -182,8 +182,12 @@ export default function DashboardPage() {
                         )}
                         <SaveFrecuenteButton
                           location={match.location}
-                          playersPerTeam={Math.round(match.max_players / 2)}
+                          playersPerTeam={match.players_per_team}
                           matchId={match.id}
+                          fieldCost={match.field_cost}
+                          rentalCost={match.rental_cost}
+                          hasRentedGoalkeepers={match.has_rented_goalkeepers}
+                          rentedGoalkeepersCount={match.rented_goalkeepers_count}
                         />
                       </div>
                     </div>
