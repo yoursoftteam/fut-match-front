@@ -195,6 +195,7 @@ CREATE TABLE match_templates (
   save_participants BOOLEAN NOT NULL DEFAULT FALSE,
   usage_count INTEGER NOT NULL DEFAULT 0,
   last_used_at TIMESTAMP WITH TIME ZONE,
+  match_id UUID REFERENCES matches(id),
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -214,6 +215,7 @@ CREATE POLICY "Users can delete own templates" ON match_templates
   FOR DELETE USING (auth.uid() = user_id);
 
 CREATE INDEX idx_match_templates_user_id ON match_templates (user_id);
+CREATE INDEX idx_match_templates_match_id ON match_templates (match_id);
 
 CREATE TABLE match_template_participants (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
