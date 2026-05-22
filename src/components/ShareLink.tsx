@@ -2,6 +2,7 @@
 
 import { useState, useId, useCallback } from "react";
 import { Copy, Check, LinkIcon, MessageCircle, Mail, Smartphone } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
 
@@ -71,37 +72,40 @@ export default function ShareLink({ matchId }: { matchId: string }) {
           <h3 className="font-semibold text-foreground">Compartir</h3>
         </div>
 
-        <div className="flex items-stretch gap-2">
-          <div className="flex-1 flex items-center rounded-lg border border-border bg-muted/50 px-3 py-2.5 min-h-10 min-w-0">
-            <span className="text-sm text-muted-foreground truncate font-mono">
-              {shareableLink}
-            </span>
-          </div>
-          <button
-            type="button"
+        <div
+          className="flex flex-wrap items-center gap-2"
+          role="group"
+          aria-label="Opciones para compartir el partido"
+        >
+          <Button
+            variant="default"
             onClick={copyToClipboard}
-            className="shrink-0 inline-flex items-center justify-center size-10 rounded-lg border border-border bg-background hover:bg-muted transition-colors"
-            aria-label={copied ? "Enlace copiado" : "Copiar enlace"}
+            className={cn(copied && "bg-green-600 hover:bg-green-700")}
+            aria-label={copied ? "Enlace copiado al portapapeles" : "Copiar enlace del partido"}
+            aria-describedby={copied ? statusId : undefined}
           >
             {copied ? (
-              <Check className="size-4 text-green-600" />
+              <>
+                <Check className="size-4" />
+                ¡Copiado!
+              </>
             ) : (
-              <Copy className="size-4 text-muted-foreground" />
+              <>
+                <Copy className="size-4" />
+                Copiar link
+              </>
             )}
-          </button>
-        </div>
+          </Button>
 
-        <div className="flex items-center justify-center gap-3">
           {shareOptions.map(({ id, icon: Icon, label }) => (
-            <button
+            <Button
               key={id}
-              type="button"
+              variant="outline"
+              size="icon"
               onClick={() => shareVia(id)}
               disabled={activeOption !== null}
               className={cn(
-                "inline-flex items-center justify-center size-10 rounded-full border border-border bg-background transition-all duration-150 cursor-pointer",
-                "hover:bg-muted hover:border-muted-foreground/30",
-                "disabled:opacity-50 disabled:cursor-not-allowed",
+                "rounded-full",
                 activeOption === id && "border-green-500 bg-green-500/10",
               )}
               aria-label={`Compartir por ${label}`}
@@ -109,9 +113,9 @@ export default function ShareLink({ matchId }: { matchId: string }) {
               {activeOption === id ? (
                 <Check className="size-4 text-green-600" />
               ) : (
-                <Icon className="size-4 text-muted-foreground" />
+                <Icon className="size-4" />
               )}
-            </button>
+            </Button>
           ))}
         </div>
 
