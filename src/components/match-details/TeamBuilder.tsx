@@ -1,8 +1,9 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useTeamBuilder } from "@/hooks/useTeamBuilder";
+import { TeamFieldImage } from "./TeamFieldImage";
 
 type TeamZone = "A" | "B" | "pool";
 
@@ -54,6 +55,12 @@ function TeamBuilderActive() {
   }, [titulares, teamA.length, teamB.length, unassigned.length, initTeamBuilder]);
 
   const getActiveDraggingId = () => draggingId;
+  const { matchData } = useMatchDetailsContext();
+  const [hasEverSaved, setHasEverSaved] = useState(false);
+
+  useEffect(() => {
+    if (teamSaved) setHasEverSaved(true);
+  }, [teamSaved]);
 
   return (
     <div id="team-builder">
@@ -131,6 +138,14 @@ function TeamBuilderActive() {
           );
         })}
       </div>
+
+      {(hasEverSaved || (teamA.length > 0 && teamB.length > 0)) && (
+        <TeamFieldImage
+          teamA={teamA}
+          teamB={teamB}
+          matchTitle={matchData?.location ?? "Parti2"}
+        />
+      )}
     </div>
   );
 }
