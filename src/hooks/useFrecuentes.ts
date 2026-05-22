@@ -147,13 +147,16 @@ export function useFrecuentes() {
         if (data.match_id) {
           insertData.match_id = data.match_id
         }
+        if (data.match_date) {
+          insertData.match_date = data.match_date
+        }
         const { data: template, error: tmplError } = await supabase
           .from("match_templates")
           .insert(insertData)
           .select()
           .single()
 
-        if (tmplError) throw tmplError
+        if (tmplError) throw new Error(tmplError.message ?? JSON.stringify(tmplError))
 
         if (data.save_participants && data.participants && data.participants.length > 0) {
           const participantRows = data.participants.map((p, i) => ({
@@ -174,7 +177,8 @@ export function useFrecuentes() {
         window.dispatchEvent(new CustomEvent("frecuentes:changed"))
         return template
       } catch (error) {
-        console.error("Error creating template:", error)
+        const msg = error instanceof Error ? error.message : JSON.stringify(error)
+        console.error("Error creating template:", msg, error)
         return null
       }
     },

@@ -4,15 +4,9 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { Inter } from "next/font/google";
+import { outfit } from "@/lib/fonts";
 import { Menu, X } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["700"],
-  style: ["italic"],
-});
 
 export function AppHeader() {
   const router = useRouter();
@@ -34,6 +28,7 @@ export function AppHeader() {
       ].map((item) => (
         <li key={item.href}>
           <SheetClose
+            nativeButton={false}
             render={
               <Link
                 href={item.href}
@@ -54,7 +49,7 @@ export function AppHeader() {
         <div className="flex items-center gap-6">
           <Link
             href="/"
-            className={`text-2xl sm:text-3xl leading-none shrink-0 transition-opacity hover:opacity-80 ${inter.className} font-bold italic`}
+            className={`text-2xl sm:text-3xl leading-none shrink-0 transition-opacity hover:opacity-80 ${outfit.className} font-bold italic`}
           >
             <span className="text-black dark:text-white">Parti</span>
             <span className="text-emerald-500">2</span>
@@ -126,7 +121,7 @@ export function AppHeader() {
             </SheetTrigger>
             <SheetContent side="right" showCloseButton={false}>
               <div className="flex items-center justify-between p-4 pb-2">
-                <span className={`text-lg font-bold italic ${inter.className}`}>
+                <span className={`text-lg font-bold italic ${outfit.className}`}>
                   <span className="text-black dark:text-white">Parti</span>
                   <span className="text-emerald-500">2</span>
                 </span>

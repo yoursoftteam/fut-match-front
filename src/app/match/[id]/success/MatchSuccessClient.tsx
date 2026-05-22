@@ -179,6 +179,7 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
               rentalCost={match.rental_cost}
               time={matchTime}
               matchId={matchId}
+              matchDate={match.date}
             />
           )}
 

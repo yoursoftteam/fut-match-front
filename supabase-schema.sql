@@ -201,6 +201,7 @@ CREATE TABLE match_templates (
   usage_count INTEGER NOT NULL DEFAULT 0,
   last_used_at TIMESTAMP WITH TIME ZONE,
   match_id UUID REFERENCES matches(id),
+  match_date TIMESTAMP WITH TIME ZONE,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );

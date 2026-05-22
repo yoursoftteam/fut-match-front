@@ -15,6 +15,7 @@ interface SaveFrecuenteCardProps {
   rentalCost?: number
   time?: string
   matchId?: string | null
+  matchDate?: string | null
   participants?: { name: string; is_goalkeeper: boolean }[]
   onSaved?: () => void
 }
@@ -29,6 +30,7 @@ export default function SaveFrecuenteCard({
   rentalCost = 0,
   time = "",
   matchId,
+  matchDate,
   participants,
   onSaved,
 }: SaveFrecuenteCardProps) {
@@ -60,6 +62,7 @@ export default function SaveFrecuenteCard({
       rental_cost: rentalCost,
       save_participants: !!partsToSave,
       match_id: matchId,
+      match_date: matchDate,
       participants: partsToSave,
     })
 

@@ -1,6 +1,5 @@
 'use client'
 
-
 import { useAuth } from '@/hooks/useAuth'
 import { useMatches } from '@/hooks/useMatches'
 import Link from 'next/link'
@@ -9,6 +8,7 @@ import { useEffect, useState } from 'react'
 import { Trash2 } from 'lucide-react'
 import FrecuentesSection from '@/components/FrecuentesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
+import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
 
 function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
@@ -98,7 +98,7 @@ export default function DashboardPage() {
         </section>
 
         {/* Quick Actions */}
-        <section className="mb-12">
+        <section className="hidden md:block mb-12">
           <h2 className="text-lg font-heading font-semibold text-muted-foreground uppercase tracking-wider mb-4">
             Acciones rápidas
           </h2>
@@ -185,6 +185,7 @@ export default function DashboardPage() {
                           location={match.location}
                           playersPerTeam={match.players_per_team}
                           matchId={match.id}
+                          matchDate={match.date}
                           fieldCost={match.field_cost}
                           rentalCost={match.rental_cost}
                           hasRentedGoalkeepers={match.has_rented_goalkeepers}
@@ -204,7 +205,10 @@ export default function DashboardPage() {
                       ) : (
                         <span className="text-red-400 font-semibold">Sin cupos</span>
                       )}
-                      <span>📅 {new Date(match.date).toLocaleDateString('es-ES', { day: '2-digit', month: 'short' })}</span>
+                      <span>📅 {new Date(match.date).toLocaleDateString('es-CO', { weekday: 'short', day: '2-digit', month: 'short' })}</span>
+                    </div>
+                    <div className="mb-3 w-full min-w-0">
+                      <ShareLink matchId={match.id} showTitle={false} />
                     </div>
                     <Link
                       href={`/match/${match.id}`}
@@ -212,7 +216,6 @@ export default function DashboardPage() {
                     >
                       {isFull ? 'Ver detalles' : '¡Ver partido!'}
                     </Link>
-
                     <button
                       type="button"
                       onClick={() => handleDeleteMatch(match.id)}

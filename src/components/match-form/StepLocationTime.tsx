@@ -104,6 +104,15 @@ export default function StepLocationTime({ stepNumber }: StepLocationTimeProps) 
                 {...dateField}
               />
             </div>
+            {dateField.value && (
+              <p className="mt-1.5 text-xs font-medium text-primary" aria-live="polite">
+                {new Date(`${dateField.value}T12:00:00`).toLocaleDateString("es-CO", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </p>
+            )}
           </FieldGroup>
 
           <FieldGroup

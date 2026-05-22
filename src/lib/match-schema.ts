@@ -60,6 +60,8 @@ export interface MatchTemplate {
   created_at: string;
   updated_at: string;
   match_id?: string | null;
+  /** ISO datetime of the original match — used to derive day-of-week default on next use */
+  match_date?: string | null;
 }
 
 export interface MatchTemplateParticipant {
@@ -72,6 +74,8 @@ export interface MatchTemplateParticipant {
 
 export interface MatchTemplateWithParticipants extends MatchTemplate {
   participants: MatchTemplateParticipant[];
+  /** ISO date string of the original source match, used to derive day-of-week default */
+  source_match_date?: string | null;
 }
 
 export interface CreateTemplateData {
@@ -85,5 +89,7 @@ export interface CreateTemplateData {
   rental_cost: number;
   save_participants: boolean;
   match_id?: string | null;
+  /** ISO datetime of the original match */
+  match_date?: string | null;
   participants?: { name: string; is_goalkeeper: boolean }[];
 }

@@ -40,8 +40,8 @@ module.exports = {
         ring: 'hsl(var(--ring))',
       },
       fontFamily: {
-        sans: ['Space Grotesk', 'sans-serif'],
-        heading: ['Outfit', 'sans-serif'],
+        sans: ['var(--font-space-grotesk)', 'sans-serif'],
+        heading: ['var(--font-outfit)', 'sans-serif'],
       },
       borderRadius: {
         lg: 'var(--radius)',

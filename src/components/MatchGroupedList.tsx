@@ -71,44 +71,12 @@ export default function MatchGroupedList({
   registrationCounts,
   renderCard,
 }: MatchGroupedListProps) {
-  const { groups, standalone } = groupMatchesByTemplate(matches)
-
   return (
-    <>
-      {groups.map((group) => (
-        <section key={group.templateId} className="mb-8">
-          <div className="flex items-center gap-2 mb-4">
-            <h3 className="text-sm font-heading font-semibold text-muted-foreground uppercase tracking-wider">
-              {group.templateName}
-            </h3>
-            <span className="text-xs text-muted-foreground/60 bg-muted px-2 py-0.5 rounded-full">
-              {group.matches.length} partido{group.matches.length !== 1 ? "s" : ""}
-            </span>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
-            {group.matches.map((match) => {
-              const count = registrationCounts[match.id] || 0
-              return <div key={match.id}>{renderCard(match, count, count >= match.max_players, true)}</div>
-            })}
-          </div>
-        </section>
-      ))}
-
-      {standalone.length > 0 && (
-        <section>
-          {groups.length > 0 && (
-            <h3 className="text-sm font-heading font-semibold text-muted-foreground uppercase tracking-wider mb-4">
-              Otros partidos
-            </h3>
-          )}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
-            {standalone.map((match) => {
-              const count = registrationCounts[match.id] || 0
-              return <div key={match.id}>{renderCard(match, count, count >= match.max_players, false)}</div>
-            })}
-          </div>
-        </section>
-      )}
-    </>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
+      {matches.map((match) => {
+        const count = registrationCounts[match.id] || 0
+        return <div key={match.id}>{renderCard(match, count, count >= match.max_players, false)}</div>
+      })}
+    </div>
   )
 }
