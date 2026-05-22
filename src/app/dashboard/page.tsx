@@ -188,6 +188,7 @@ export default function DashboardPage() {
                           rentalCost={match.rental_cost}
                           hasRentedGoalkeepers={match.has_rented_goalkeepers}
                           rentedGoalkeepersCount={match.rented_goalkeepers_count}
+                          time={match.date.split("T")[1]?.substring(0, 5) || ""}
                         />
                       </div>
                     </div>
