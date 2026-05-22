@@ -59,7 +59,7 @@ export function AppHeader() {
             <span className="text-black dark:text-white">Parti</span>
             <span className="text-emerald-500">2</span>
           </Link>
-          <nav aria-label="Principal" className="hidden md:block">
+          <nav aria-label="Principal" className="max-md:hidden">
             <ul className="flex items-center gap-4 text-sm">
               <li>
                 <Link href="/" className="text-foreground hover:text-primary transition-colors">
@@ -90,7 +90,7 @@ export function AppHeader() {
 
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <div className="hidden md:flex items-center gap-3 text-sm">
+          <div className="max-md:hidden flex items-center gap-3 text-sm">
             {loading ? (
               <span className="text-muted-foreground">Cargando…</span>
             ) : user && !isAuthPage ? (
