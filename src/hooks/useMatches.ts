@@ -15,6 +15,8 @@ interface Match {
   title: string
   location: string
   date: string
+  created_at?: string
+  updated_at?: string
   max_players: number
   created_by: string
   field_cost: number

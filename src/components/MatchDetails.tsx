@@ -10,9 +10,10 @@ type PanelTab = "register" | "players" | "teams";
 
 interface MatchDetailsInnerProps {
   matchId: string;
+  openedFromFrecuentes?: boolean;
 }
 
-function MatchDetailsInner(_props: MatchDetailsInnerProps) {
+function MatchDetailsInner({ openedFromFrecuentes = false }: MatchDetailsInnerProps) {
   const { loading, error, matchData, isCreator } = useMatchDetailsContext();
   useMatchPricing();
   const editing = useMatchEditing();
@@ -49,6 +50,7 @@ function MatchDetailsInner(_props: MatchDetailsInnerProps) {
       <div className="mx-auto grid w-full max-w-7xl gap-6 lg:grid-cols-[320px_1fr]">
         <MatchInfoSidebar
           editing={editing}
+          openedFromFrecuentes={openedFromFrecuentes}
           onOpenTeamBuilder={() => { setShowTeamBuilder(true); setActiveTab("teams"); }}
         />
 
@@ -79,10 +81,10 @@ function MatchDetailsInner(_props: MatchDetailsInnerProps) {
   );
 }
 
-export default function MatchDetails({ matchId }: { matchId: string }) {
+export default function MatchDetails({ matchId, openedFromFrecuentes = false }: { matchId: string; openedFromFrecuentes?: boolean }) {
   return (
     <MatchDetailsProvider matchId={matchId}>
-      <MatchDetailsInner matchId={matchId} />
+      <MatchDetailsInner matchId={matchId} openedFromFrecuentes={openedFromFrecuentes} />
     </MatchDetailsProvider>
   );
 }

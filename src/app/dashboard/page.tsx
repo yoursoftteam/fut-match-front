@@ -63,6 +63,16 @@ export default function DashboardPage() {
     }
   }
 
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  const recentMatches = matches.filter((match) => {
+    if (!match.created_at) return false
+    const createdAt = new Date(match.created_at)
+    if (Number.isNaN(createdAt.getTime())) return false
+    return createdAt >= sevenDaysAgo
+  })
+
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-6xl mx-auto px-4 py-8">
@@ -141,14 +151,14 @@ export default function DashboardPage() {
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Cargando partidos…</p>
             </div>
-          ) : matches.length === 0 ? (
+          ) : recentMatches.length === 0 ? (
             <div className="card p-10 text-center">
               <span className="text-4xl mb-4 block" aria-hidden>📅</span>
               <h3 className="text-lg font-semibold text-card-foreground mb-2">
                 Ningún partido todavía
               </h3>
               <p className="text-muted-foreground mb-5 text-sm">
-                La cancha no se llena sola. ¡Arma el primero!
+                No has creado partidos en los últimos 7 días. ¡Arma uno nuevo!
               </p>
               <Link href="/create" className="btn-primary-fm px-6 py-2.5 inline-block rounded-lg font-semibold text-sm">
                 ¡Armar ahora!
@@ -156,7 +166,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
-              {matches.slice(0, 6).map((match) => {
+              {recentMatches.slice(0, 6).map((match) => {
                 const registeredCount = registrationCounts[match.id] || 0
                 const isFull = registeredCount >= match.max_players
                 const level = getLevelInfo(match.max_players)

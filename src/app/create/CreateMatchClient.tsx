@@ -53,6 +53,7 @@ export default function CreateMatchClient() {
   const templateDefaultValues = templateData
     ? {
         location: templateData.location,
+        noLocationYet: !templateData.location?.trim(),
         time: templateData.time,
         playersPerTeam: templateData.players_per_team,
         hasRentedGoalkeepers: templateData.has_rented_goalkeepers,

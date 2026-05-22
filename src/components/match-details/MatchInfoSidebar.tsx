@@ -10,14 +10,16 @@ import { useMatches } from "@/hooks/useMatches";
 import { useFrecuentes } from "@/hooks/useFrecuentes";
 import { formatCurrency } from "@/lib/currency";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
+import { getMatchTitleFromLocation } from "@/lib/match-title";
 import ShareLink from "@/components/ShareLink";
 
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
   editing?: UseMatchEditingReturn;
+  openedFromFrecuentes?: boolean;
 }
 
-export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSidebarProps) {
+export function MatchInfoSidebar({ onOpenTeamBuilder, editing, openedFromFrecuentes = false }: MatchInfoSidebarProps) {
   const { matchData, isCreator, registrations } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();
   const router = useRouter();
@@ -33,22 +35,9 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
   useEffect(() => {
     if (!matchData?.id) return;
 
-    const matchLocation = matchData.location;
-    const matchPlayersPerTeam = Math.round(matchData.max_players / 2);
-
     const byMatchId = templates.find((t) => t.match_id === matchData.id);
     if (byMatchId) {
       setExistingTemplateId(byMatchId.id);
-      return;
-    }
-
-    const byContent = templates.find(
-      (t) =>
-        t.location === matchLocation &&
-        t.players_per_team === matchPlayersPerTeam,
-    );
-    if (byContent) {
-      setExistingTemplateId(byContent.id);
       return;
     }
 
@@ -127,7 +116,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
               Armar equipos
             </button>
 
-            {existingTemplateId ? (
+            {existingTemplateId && openedFromFrecuentes ? (
               <button
                 type="button"
                 disabled={loadingFrec}
@@ -139,7 +128,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
               >
                 {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
               </button>
-            ) : (
+            ) : !existingTemplateId ? (
               <button
                 type="button"
                 onClick={() => setShowSaveFrecuente(!showSaveFrecuente)}
@@ -147,7 +136,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
               >
                 {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
               </button>
-            )}
+            ) : null}
 
             <button
               type="button"
@@ -168,7 +157,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           <div className="mt-4">
             <SaveFrecuenteCard
               location={matchData.location}
-              defaultName={`Partido en ${matchData.location}`}
+              defaultName={getMatchTitleFromLocation(matchData.location)}
               playersPerTeam={matchData.players_per_team}
               hasRentedGoalkeepers={matchData.has_rented_goalkeepers}
               rentedGoalkeepersCount={matchData.rented_goalkeepers_count}

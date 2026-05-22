@@ -1,18 +1,30 @@
 import { z } from "zod";
 
-export const matchFormSchema = z.object({
-  location: z.string().min(3, { message: "El lugar debe tener al menos 3 caracteres" }),
-  date: z.string().min(1, { message: "Selecciona una fecha" }),
-  time: z.string().min(1, { message: "Selecciona una hora" }),
-  fieldCost: z.number().min(1, { message: "Ingresa el valor de la cancha" }),
-  playersPerTeam: z.number().min(6).max(11),
-  hasRentedGoalkeepers: z.boolean(),
-  rentedGoalkeepersCount: z.number(),
-  rentalCost: z.number(),
-});
+export const matchFormSchema = z
+  .object({
+    location: z.string(),
+    noLocationYet: z.boolean(),
+    date: z.string().min(1, { message: "Selecciona una fecha" }),
+    time: z.string().min(1, { message: "Selecciona una hora" }),
+    fieldCost: z.number().min(1, { message: "Ingresa el valor de la cancha" }),
+    playersPerTeam: z.number().min(6).max(11),
+    hasRentedGoalkeepers: z.boolean(),
+    rentedGoalkeepersCount: z.number(),
+    rentalCost: z.number(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.noLocationYet && data.location.trim().length < 3) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["location"],
+        message: "El lugar debe tener al menos 3 caracteres",
+      });
+    }
+  });
 
 export interface MatchFormValues {
   location: string;
+  noLocationYet: boolean;
   date: string;
   time: string;
   fieldCost: number;
@@ -22,7 +34,7 @@ export interface MatchFormValues {
   rentalCost: number;
 }
 
-export type MatchFormSubmitData = MatchFormValues & {
+export type MatchFormSubmitData = Omit<MatchFormValues, "noLocationYet"> & {
   totalPlayers: number;
   costPerPlayer: number;
 };

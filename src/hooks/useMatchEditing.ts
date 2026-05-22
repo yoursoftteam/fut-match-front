@@ -4,6 +4,7 @@ import { useState, useCallback, useEffect, useRef } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatches } from "@/hooks/useMatches";
 import { formatCurrency } from "@/lib/currency";
+import { getMatchTitleFromLocation } from "@/lib/match-title";
 
 export interface MatchEditFormData {
   location: string;
@@ -168,7 +169,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
       const nextDate = `${form.date}T${form.time}:00`;
 
       const { data, error } = await updateMatch(matchId, {
-        title: `Partido en ${nextLocation}`,
+        title: getMatchTitleFromLocation(nextLocation),
         location: nextLocation,
         date: nextDate,
         max_players: nextMaxPlayers,

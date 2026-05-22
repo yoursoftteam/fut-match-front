@@ -19,10 +19,17 @@ export default function StepLocationTime({ stepNumber }: StepLocationTimeProps) 
   const { handleNext, isNavigating, isStepActive } = useMatchFormNavigation();
 
   const { field: locationField } = useController({ name: "location", control });
+  const { field: noLocationYetField } = useController({ name: "noLocationYet", control });
   const { field: dateField } = useController({ name: "date", control });
   const { field: timeField } = useController({ name: "time", control });
+  const noLocationYet = Boolean(noLocationYetField.value);
+  const hasValidLocation = typeof locationField.value === "string" && locationField.value.trim().length >= 3;
 
-  const isValid = isStepActive(stepNumber) && locationField.value && dateField.value && timeField.value;
+  const isValid =
+    isStepActive(stepNumber) &&
+    (noLocationYet || hasValidLocation) &&
+    Boolean(dateField.value) &&
+    Boolean(timeField.value);
 
   return (
     <Card>
@@ -38,19 +45,49 @@ export default function StepLocationTime({ stepNumber }: StepLocationTimeProps) 
         </div>
       </CardHeader>
       <CardContent className="space-y-5">
-        <FieldGroup
-          id="location"
-          label="Lugar del Partido"
-          error={errors.location?.message}
-        >
-          <Input
-            id={`${formId}-location`}
-            placeholder="Ej: Cancha Central, Cra 15 #82-30"
-            autoComplete="street-address"
-            aria-invalid={!!errors.location}
-            {...locationField}
-          />
-        </FieldGroup>
+        <div className="space-y-3">
+          <div
+            className={`overflow-hidden transition-all duration-300 ease-in-out ${
+              noLocationYet ? "max-h-0 opacity-0 -translate-y-1" : "max-h-36 opacity-100 translate-y-0"
+            }`}
+            aria-hidden={noLocationYet}
+          >
+            <FieldGroup
+              id="location"
+              label="Lugar del Partido"
+              error={errors.location?.message}
+            >
+              <Input
+                id={`${formId}-location`}
+                placeholder="Ej: Cancha Central, Cra 15 #82-30"
+                autoComplete="street-address"
+                aria-invalid={!!errors.location}
+                required={!noLocationYet}
+                disabled={noLocationYet}
+                {...locationField}
+              />
+            </FieldGroup>
+          </div>
+
+          <label
+            htmlFor={`${formId}-no-location-yet`}
+            className="inline-flex cursor-pointer items-center gap-2 text-sm text-muted-foreground"
+          >
+            <input
+              id={`${formId}-no-location-yet`}
+              type="checkbox"
+              checked={noLocationYet}
+              onChange={(event) => {
+                noLocationYetField.onChange(event.target.checked);
+                if (event.target.checked) {
+                  locationField.onChange("");
+                }
+              }}
+              className="h-4 w-4 rounded border-border bg-background accent-primary"
+            />
+            Aún no tenemos lugar
+          </label>
+        </div>
 
         <div className="grid grid-cols-2 gap-4">
           <FieldGroup
