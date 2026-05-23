@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { Download, Share2 } from "lucide-react";
 import type { useTeamBuilder } from "@/hooks/useTeamBuilder";
 
 type Player = ReturnType<typeof useTeamBuilder>["teamA"][number];
@@ -211,16 +212,18 @@ export function TeamFieldImage({ teamA, teamB, matchTitle = "Parti2" }: TeamFiel
           <button
             type="button"
             onClick={handleDownload}
-            className="flex-1 rounded border border-border bg-muted px-4 py-2 text-sm font-semibold text-foreground transition hover:bg-secondary"
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
           >
-            ⬇️ Descargar
+            <Download className="size-4" />
+            Descargar
           </button>
           <button
             type="button"
             onClick={handleShare}
-            className="flex-1 rounded border border-emerald-500/50 bg-emerald-600/15 px-4 py-2 text-sm font-semibold text-emerald-400 transition hover:bg-emerald-600/25"
+            className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg border border-border bg-muted/30 px-4 py-2 text-sm font-semibold text-foreground transition-colors hover:bg-muted"
           >
-            📤 Compartir
+            <Share2 className="size-4" />
+            Compartir
           </button>
           <button
             type="button"

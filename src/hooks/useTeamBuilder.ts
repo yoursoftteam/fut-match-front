@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback, useRef, useMemo } from "react";
 import { useMatchDetailsContext, type PlayerRegistration } from "@/contexts/MatchDetailsContext";
 
 type TeamZone = "A" | "B" | "pool";
@@ -45,6 +45,14 @@ function movePlayer(fromZone: TeamZone, toZone: TeamZone, playerId: string, team
   return [newA, newB, newPool];
 }
 
+function serializeTeams(teamA: PlayerRegistration[], teamB: PlayerRegistration[], unassigned: PlayerRegistration[]) {
+  return JSON.stringify({
+    teamA,
+    teamB,
+    unassigned,
+  });
+}
+
 interface UseTeamBuilderReturn {
   teamA: PlayerRegistration[];
   teamB: PlayerRegistration[];
@@ -52,6 +60,7 @@ interface UseTeamBuilderReturn {
   draggingId: string | null;
   dragOverZone: TeamZone | null;
   teamSaved: boolean;
+  hasUnsavedChanges: boolean;
   message: string | null;
   playersPerTeamLimit: number;
   initTeamBuilder: (players: PlayerRegistration[]) => void;
@@ -79,6 +88,7 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
   const [dragOverZone, setDragOverZone] = useState<TeamZone | null>(null);
   const [teamSaved, setTeamSaved] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+  const [lastSavedSnapshot, setLastSavedSnapshot] = useState<string | null>(null);
 
   const playersPerTeamLimit = matchData ? Math.ceil(matchData.max_players / 2) : 0;
 
@@ -107,6 +117,7 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
       setTeamA(savedTeamA);
       setTeamB(savedTeamB);
       setUnassigned(savedUnassigned);
+      setLastSavedSnapshot(serializeTeams(savedTeamA, savedTeamB, savedUnassigned));
       setDraggingId(null);
       setDragOverZone(null);
       setMessage(null);
@@ -121,9 +132,12 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
 
     const goalkeepers = players.filter((p) => p.is_goalkeeper);
     const fieldPlayers = players.filter((p) => !p.is_goalkeeper);
-    setTeamA(goalkeepers[0] ? [goalkeepers[0]] : []);
-    setTeamB(goalkeepers[1] ? [goalkeepers[1]] : []);
+    const initialTeamA = goalkeepers[0] ? [goalkeepers[0]] : [];
+    const initialTeamB = goalkeepers[1] ? [goalkeepers[1]] : [];
+    setTeamA(initialTeamA);
+    setTeamB(initialTeamB);
     setUnassigned(fieldPlayers);
+    setLastSavedSnapshot(serializeTeams(initialTeamA, initialTeamB, fieldPlayers));
     setDraggingId(null);
     setDragOverZone(null);
     setMessage(null);
@@ -136,9 +150,12 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
     const titulares = registrations.slice(0, matchData?.max_players ?? 0);
     const goalkeepers = titulares.filter((p) => p.is_goalkeeper);
     const fieldPlayers = titulares.filter((p) => !p.is_goalkeeper);
-    setTeamA(goalkeepers[0] ? [goalkeepers[0]] : []);
-    setTeamB(goalkeepers[1] ? [goalkeepers[1]] : []);
+    const initialTeamA = goalkeepers[0] ? [goalkeepers[0]] : [];
+    const initialTeamB = goalkeepers[1] ? [goalkeepers[1]] : [];
+    setTeamA(initialTeamA);
+    setTeamB(initialTeamB);
     setUnassigned(fieldPlayers);
+    setLastSavedSnapshot(serializeTeams(initialTeamA, initialTeamB, fieldPlayers));
     setDraggingId(null);
     setDragOverZone(null);
   }, [matchId, matchData?.max_players, registrations]);
@@ -203,6 +220,7 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
   const saveTeams = useCallback(() => {
     try {
       localStorage.setItem(`teams-${matchId}`, JSON.stringify({ teamA, teamB, unassigned }));
+      setLastSavedSnapshot(serializeTeams(teamA, teamB, unassigned));
       setTeamSaved(true);
       setMessage("Equipos guardados correctamente.");
       setTimeout(() => setTeamSaved(false), 2500);
@@ -321,8 +339,13 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
     setMessage(`Intercambio realizado entre Equipo ${sourceZone} y Equipo ${targetZone}.`);
   }, [getActiveDraggingId, canSwapWithPlayer, getSourceZoneByPlayerId, teamA, teamB]);
 
+  const hasUnsavedChanges = useMemo(() => {
+    if (!lastSavedSnapshot) return false;
+    return serializeTeams(teamA, teamB, unassigned) !== lastSavedSnapshot;
+  }, [teamA, teamB, unassigned, lastSavedSnapshot]);
+
   return {
-    teamA, teamB, unassigned, draggingId, dragOverZone, teamSaved, message, playersPerTeamLimit,
+    teamA, teamB, unassigned, draggingId, dragOverZone, teamSaved, hasUnsavedChanges, message, playersPerTeamLimit,
     initTeamBuilder, resetTeamBuilder, randomizeTeams, saveTeams,
     handlePlayerDragStart, handlePlayerDragEnd, handleDropOnZone,
     assignPlayerToZone, canDropInZone, canSwapWithPlayer, handleDropOnPlayer,

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { MailIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
+import { MobileBackButton } from "@/components/MobileBackButton";
 import { Providers } from "@/components/Providers";
 import { geist, outfit, spaceGrotesk } from "@/lib/fonts";
 import "./globals.css";
@@ -34,6 +35,7 @@ export default function RootLayout({
             Saltar al contenido
           </a>
           <AppHeader />
+          <MobileBackButton />
           <main id="main-content" className="flex-grow scroll-mt-24 tabular-nums">
             {children}
           </main>
