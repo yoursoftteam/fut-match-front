@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Heart, Loader2, Check } from "lucide-react"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
 import { getMatchTitleFromLocation } from "@/lib/match-title"
+import { supabase } from "@/lib/supabase"
 
 interface SaveFrecuenteCardProps {
   location: string
@@ -31,13 +32,13 @@ export default function SaveFrecuenteCard({
   time = "",
   matchId,
   matchDate,
-  participants,
+  participants: participantsProp,
   onSaved,
 }: SaveFrecuenteCardProps) {
   const [name, setName] = useState(defaultName || getMatchTitleFromLocation(location))
-  const [saveParts, setSaveParts] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saved, setSaved] = useState(false)
+  const [savedCount, setSavedCount] = useState(0)
   const [error, setError] = useState<string | null>(null)
 
   const { createTemplate } = useFrecuentes()
@@ -47,9 +48,17 @@ export default function SaveFrecuenteCard({
     setSaving(true)
     setError(null)
 
-    const partsToSave = saveParts && participants && participants.length > 0
-      ? participants
-      : undefined
+    // Fetch fresh registrations from DB to avoid stale prop issues
+    let freshParticipants: { name: string; is_goalkeeper: boolean }[] = participantsProp ?? []
+    if (matchId) {
+      const { data, error: fetchErr } = await supabase
+        .from("match_registrations")
+        .select("name, is_goalkeeper")
+        .eq("match_id", matchId)
+      if (data && data.length > 0) {
+        freshParticipants = data
+      }
+    }
 
     const result = await createTemplate({
       name: name.trim(),
@@ -60,13 +69,14 @@ export default function SaveFrecuenteCard({
       rented_goalkeepers_count: rentedGoalkeepersCount,
       field_cost: fieldCost,
       rental_cost: rentalCost,
-      save_participants: !!partsToSave,
+      save_participants: freshParticipants.length > 0,
       match_id: matchId,
       match_date: matchDate,
-      participants: partsToSave,
+      participants: freshParticipants.length > 0 ? freshParticipants : undefined,
     })
 
     if (result) {
+      setSavedCount(freshParticipants.length)
       setSaved(true)
       onSaved?.()
     } else {
@@ -82,6 +92,11 @@ export default function SaveFrecuenteCard({
         <p className="text-card-foreground font-semibold">¡Guardado como frecuente!</p>
         <p className="text-muted-foreground text-sm mt-1">
           Lo encontrarás en &quot;Tus Frecuentes&quot; del Dashboard.
+          {savedCount > 0 && (
+            <span className="block mt-1 text-xs text-green-400">
+              Se guardaron {savedCount} jugadores.
+            </span>
+          )}
         </p>
       </div>
     )
@@ -95,6 +110,11 @@ export default function SaveFrecuenteCard({
       </div>
       <p className="text-muted-foreground text-sm mb-4">
         ¿Este partido se repite? Guárdalo como plantilla para usarlo después.
+        {matchId && (
+          <span className="block mt-1 text-xs text-green-400">
+            ✓ Se incluirán los jugadores inscritos
+          </span>
+        )}
       </p>
 
       <label htmlFor="template-name" className="sr-only">
@@ -108,18 +128,6 @@ export default function SaveFrecuenteCard({
         placeholder="Ej: Partido sabatino"
         className="w-full h-9 rounded-lg border border-border bg-card px-4 text-foreground mb-3"
       />
-
-      {participants && participants.length > 0 && (
-        <label className="flex items-center gap-2 text-sm text-muted-foreground mb-3 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={saveParts}
-            onChange={(e) => setSaveParts(e.target.checked)}
-            className="rounded border-border"
-          />
-          Incluir {participants.length} participante{participants.length !== 1 ? "s" : ""} actuales
-        </label>
-      )}
 
       {error && <p className="text-destructive text-sm mb-2">{error}</p>}
 

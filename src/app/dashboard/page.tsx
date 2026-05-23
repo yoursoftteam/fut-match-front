@@ -10,6 +10,7 @@ import FrecuentesSection from '@/components/FrecuentesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
+import { ConfirmDialog } from '@/components/ConfirmDialog'
 
 function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
   if (maxPlayers <= 6)  return { label: 'Casual',  cls: 'level-casual'  }
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const router = useRouter()
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -49,11 +51,8 @@ export default function DashboardPage() {
   }
 
   const handleDeleteMatch = async (matchId: string) => {
-    if (!confirm('¿Eliminar este partido? Esta acción no se puede deshacer.')) return
-
     setDeletingMatchId(matchId)
     setDeleteError(null)
-
     try {
       const result = await deleteMatch(matchId)
       if (result.error) throw result.error
@@ -61,6 +60,7 @@ export default function DashboardPage() {
       setDeleteError('No se pudo eliminar el partido. Intenta nuevamente.')
     } finally {
       setDeletingMatchId(null)
+      setConfirmDeleteId(null)
     }
   }
 
@@ -73,6 +73,8 @@ export default function DashboardPage() {
     if (Number.isNaN(createdAt.getTime())) return false
     return createdAt >= sevenDaysAgo
   })
+  const isInitialMatchesLoading = matchesLoading && recentMatches.length === 0
+  const isRefreshingMatches = matchesLoading && recentMatches.length > 0
 
   return (
     <div className="min-h-screen bg-background">
@@ -139,15 +141,23 @@ export default function DashboardPage() {
             <h2 className="text-2xl font-heading font-bold text-foreground">
               Mis Partidos
             </h2>
-            <Link
-              href="/matches"
-              className="text-primary hover:text-primary/80 transition-colors text-sm font-semibold"
-            >
-              Ver todos →
-            </Link>
+            <div className="flex items-center gap-3">
+              {isRefreshingMatches && (
+                <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+                  <span className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
+                  Actualizando...
+                </span>
+              )}
+              <Link
+                href="/matches"
+                className="text-primary hover:text-primary/80 transition-colors text-sm font-semibold"
+              >
+                Ver todos →
+              </Link>
+            </div>
           </div>
 
-          {matchesLoading ? (
+          {isInitialMatchesLoading ? (
             <div className="text-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
               <p className="text-muted-foreground">Cargando partidos…</p>
@@ -218,7 +228,7 @@ export default function DashboardPage() {
                     </Link>
                     <button
                       type="button"
-                      onClick={() => handleDeleteMatch(match.id)}
+                      onClick={() => setConfirmDeleteId(match.id)}
                       disabled={deletingMatchId === match.id}
                       className="mt-2 inline-flex w-full items-center justify-center gap-2 rounded-lg border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
                     >
@@ -236,6 +246,22 @@ export default function DashboardPage() {
           )}
         </section>
       </main>
+
+      <ConfirmDialog
+        open={confirmDeleteId !== null}
+        title="Eliminar partido"
+        description={
+          <>
+            Esta acción <strong className="text-foreground">no se puede deshacer</strong>. Se eliminará el partido y todos los registros asociados.
+          </>
+        }
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        destructive
+        loading={deletingMatchId === confirmDeleteId}
+        onConfirm={() => confirmDeleteId && handleDeleteMatch(confirmDeleteId)}
+        onCancel={() => setConfirmDeleteId(null)}
+      />
     </div>
   )
 }

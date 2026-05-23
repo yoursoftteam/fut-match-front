@@ -18,6 +18,8 @@ interface MatchFormContextValue {
   setNavigating: (value: boolean) => void;
   selectedParticipants: string[];
   toggleParticipant: (id: string) => void;
+  setAllParticipants: (ids: string[]) => void;
+  clearParticipants: () => void;
 }
 
 const MatchFormContext = createContext<MatchFormContextValue | null>(null);
@@ -67,6 +69,9 @@ export function MatchFormProvider({
     );
   };
 
+  const setAllParticipants = (ids: string[]) => setSelectedParticipants(ids);
+  const clearParticipants = () => setSelectedParticipants([]);
+
   return (
     <MatchFormContext value={{
       currentStep,
@@ -84,6 +89,8 @@ export function MatchFormProvider({
       setNavigating: setIsNavigating,
       selectedParticipants,
       toggleParticipant,
+      setAllParticipants,
+      clearParticipants,
     }}>
       {children}
     </MatchFormContext>

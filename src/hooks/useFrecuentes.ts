@@ -132,8 +132,7 @@ export function useFrecuentes() {
     async (data: CreateTemplateData): Promise<MatchTemplate | null> => {
       if (!user) return null
       try {
-        const insertData: Record<string, unknown> = {
-          user_id: user.id,
+        const baseTemplateData: Record<string, unknown> = {
           name: data.name,
           location: data.location,
           time: data.time,
@@ -143,20 +142,66 @@ export function useFrecuentes() {
           field_cost: data.field_cost,
           rental_cost: data.rental_cost,
           save_participants: data.save_participants,
+          updated_at: new Date().toISOString(),
         }
         if (data.match_id) {
-          insertData.match_id = data.match_id
+          baseTemplateData.match_id = data.match_id
         }
         if (data.match_date) {
-          insertData.match_date = data.match_date
+          baseTemplateData.match_date = data.match_date
         }
-        const { data: template, error: tmplError } = await supabase
-          .from("match_templates")
-          .insert(insertData)
-          .select()
-          .single()
 
-        if (tmplError) throw new Error(tmplError.message ?? JSON.stringify(tmplError))
+        let template: MatchTemplate | null = null
+
+        if (data.match_id) {
+          const { data: existingRows, error: existingError } = await supabase
+            .from("match_templates")
+            .select("*")
+            .eq("user_id", user.id)
+            .eq("match_id", data.match_id)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+
+          if (existingError) throw existingError
+
+          const existing = existingRows?.[0]
+
+          if (existing) {
+            const { data: updatedTemplate, error: updateError } = await supabase
+              .from("match_templates")
+              .update(baseTemplateData)
+              .eq("id", existing.id)
+              .eq("user_id", user.id)
+              .select()
+              .single()
+
+            if (updateError) throw new Error(updateError.message ?? JSON.stringify(updateError))
+            template = updatedTemplate
+          }
+        }
+
+        if (!template) {
+          const insertData: Record<string, unknown> = {
+            user_id: user.id,
+            ...baseTemplateData,
+          }
+
+          const { data: createdTemplate, error: tmplError } = await supabase
+            .from("match_templates")
+            .insert(insertData)
+            .select()
+            .single()
+
+          if (tmplError) throw new Error(tmplError.message ?? JSON.stringify(tmplError))
+          template = createdTemplate
+        }
+
+        const { error: deleteParticipantsError } = await supabase
+          .from("match_template_participants")
+          .delete()
+          .eq("template_id", template.id)
+
+        if (deleteParticipantsError) throw deleteParticipantsError
 
         if (data.save_participants && data.participants && data.participants.length > 0) {
           const participantRows = data.participants.map((p, i) => ({
@@ -173,7 +218,17 @@ export function useFrecuentes() {
           if (partError) throw partError
         }
 
-        setTemplates((prev) => [template, ...prev])
+        setTemplates((prev) => {
+          const existingIndex = prev.findIndex((t) => t.id === template.id)
+
+          if (existingIndex === -1) {
+            return [template, ...prev]
+          }
+
+          const next = [...prev]
+          next[existingIndex] = template
+          return next
+        })
         window.dispatchEvent(new CustomEvent("frecuentes:changed"))
         return template
       } catch (error) {
@@ -298,6 +353,8 @@ export function useFrecuentes() {
               : t
           )
         )
+        window.dispatchEvent(new CustomEvent("frecuentes:changed"))
+        window.dispatchEvent(new CustomEvent("matches:changed"))
 
         return newMatch.id
       } catch (error) {

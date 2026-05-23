@@ -4,6 +4,7 @@ import { Trash2 } from "lucide-react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 type PanelTab = "register" | "players" | "teams";
 
@@ -143,10 +144,11 @@ export function RegistrationPanel() {
 
 export function PlayersPanel() {
   const { matchData, registrations } = useMatchDetailsContext();
-  const { openModal } = useMatchUnregister();
+  const { showModal, target, loading, openModal, closeModal, handleUnregister } = useMatchUnregister();
   const { titulares, suplentes } = useMatchPricing();
 
   return (
+    <>
     <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
       <h2 className="mb-3 text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
       <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
@@ -164,8 +166,8 @@ export function PlayersPanel() {
               type="button"
               onClick={() => openModal(registration)}
               className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-              title="Darse de baja"
-              aria-label={`Dar de baja a ${registration.name}`}
+              title="Eliminar jugador"
+              aria-label={`Eliminar a ${registration.name}`}
             >
               <Trash2 size={16} aria-hidden />
             </button>
@@ -186,8 +188,8 @@ export function PlayersPanel() {
                   type="button"
                   onClick={() => openModal(registration)}
                   className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-                  title="Darse de baja"
-                  aria-label={`Dar de baja a ${registration.name}`}
+                  title="Eliminar jugador"
+                  aria-label={`Eliminar a ${registration.name}`}
                 >
                   <Trash2 size={16} aria-hidden />
                 </button>
@@ -201,5 +203,22 @@ export function PlayersPanel() {
         )}
       </div>
     </div>
+
+    <ConfirmDialog
+      open={showModal}
+      title="Eliminar jugador"
+      description={
+        target ? (
+          <>¿Eliminar a <strong className="text-foreground">{target.name}</strong> del partido? Esta acción no se puede deshacer.</>
+        ) : null
+      }
+      confirmLabel="Sí, eliminar"
+      cancelLabel="Cancelar"
+      destructive
+      loading={loading}
+      onConfirm={handleUnregister}
+      onCancel={closeModal}
+    />
+    </>
   );
 }

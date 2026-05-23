@@ -126,7 +126,7 @@ export default function StepCosts({
           </Button>
           {currentStep < totalSteps ? (
             <Button type="button" onClick={handleNext}>
-              Siguiente
+              Continuar
             </Button>
           ) : (
             <Button

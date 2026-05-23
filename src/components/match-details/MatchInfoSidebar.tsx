@@ -11,6 +11,7 @@ import { useFrecuentes } from "@/hooks/useFrecuentes";
 import { formatCurrency } from "@/lib/currency";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Separator } from "@/components/ui/separator";
 import ShareLink from "@/components/ShareLink";
 
@@ -54,17 +55,14 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
     ? Math.ceil((matchData.field_cost + matchData.rental_cost) / totalPlayers)
     : 0;
 
-  const handleDeleteMatch = async () => {
-    if (!confirm("¿Eliminar este partido? Esta acción no se puede deshacer.")) return;
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
+  const handleDeleteMatch = async () => {
     setDeletingMatch(true);
     setDeleteError(null);
     try {
       const result = await deleteMatch(matchData.id);
-      if (result.error) {
-        throw result.error;
-      }
-
+      if (result.error) throw result.error;
       router.push("/dashboard");
     } catch {
       setDeleteError("No se pudo eliminar el partido. Intenta nuevamente.");
@@ -74,7 +72,8 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
   };
 
   return (
-    <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
+    <>
+      <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
       <div className="card match-card rounded-2xl border border-border/80 bg-card shadow-lg overflow-hidden">
 
         {/* ── MOBILE (lg:hidden) ── */}
@@ -127,7 +126,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
                   {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
                 </button>
               )}
-              <button type="button" onClick={handleDeleteMatch} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60">
                 {deletingMatch ? "Eliminando..." : "Eliminar partido"}
               </button>
             </div>
@@ -186,7 +185,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
                   {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
                 </button>
               )}
-              <button type="button" onClick={handleDeleteMatch} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60">
                 {deletingMatch ? "Eliminando..." : "Eliminar partido"}
               </button>
             </div>
@@ -210,5 +209,22 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
 
       </div>
     </aside>
+
+    <ConfirmDialog
+      open={showDeleteConfirm}
+      title="Eliminar partido"
+      description={
+        <>
+          Esta acción <strong className="text-foreground">no se puede deshacer</strong>. Se eliminará el partido y todos los registros asociados.
+        </>
+      }
+      confirmLabel="Sí, eliminar"
+      cancelLabel="Cancelar"
+      destructive
+      loading={deletingMatch}
+      onConfirm={handleDeleteMatch}
+      onCancel={() => setShowDeleteConfirm(false)}
+    />
+    </>
   );
 }

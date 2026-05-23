@@ -173,7 +173,13 @@ export function TeamFieldImage({ teamA, teamB, matchTitle = "Parti2" }: TeamFiel
       if (!blob) return;
       const file = new File([blob], "equipos-parti2.png", { type: "image/png" });
       if (navigator.canShare?.({ files: [file] })) {
-        await navigator.share({ files: [file], title: matchTitle });
+        try {
+          await navigator.share({ files: [file], title: matchTitle });
+        } catch (err) {
+          if (err instanceof Error && err.name !== "AbortError") {
+            handleDownload();
+          }
+        }
       } else {
         handleDownload();
       }
