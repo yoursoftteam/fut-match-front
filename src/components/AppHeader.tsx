@@ -91,7 +91,7 @@ export function AppHeader() {
           <div className="max-md:hidden flex items-center gap-3 text-sm">
             {loading ? (
               <span className="text-muted-foreground">Cargando…</span>
-            ) : isLoggedIn ? (
+            ) : user && !isAuthPage ? (
               <>
                 <span
                   className="text-muted-foreground max-w-[200px] truncate"
