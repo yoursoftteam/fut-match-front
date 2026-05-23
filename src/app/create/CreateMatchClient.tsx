@@ -104,6 +104,7 @@ export default function CreateMatchClient() {
               disabled={loading}
               submitLabel={submitLabel}
               submitButtonType="submit"
+              hasTemplate={!!templateId}
               templateParticipants={templateParticipants}
               defaultValues={templateDefaultValues}
             />

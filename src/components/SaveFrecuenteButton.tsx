@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Heart, Loader2 } from "lucide-react"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
 import { getMatchTitleFromLocation } from "@/lib/match-title"
+import { supabase } from "@/lib/supabase"
 
 interface SaveFrecuenteButtonProps {
   location: string
@@ -36,6 +37,21 @@ export default function SaveFrecuenteButton({
     if (saving || saved) return
     setSaving(true)
 
+    let participants: { name: string; is_goalkeeper: boolean }[] = []
+
+    if (matchId) {
+      const { data, error } = await supabase
+        .from("match_registrations")
+        .select("name, is_goalkeeper")
+        .eq("match_id", matchId)
+
+      if (error) {
+        console.error("Error fetching match registrations for template save:", error)
+      } else if (data) {
+        participants = data
+      }
+    }
+
     const result = await createTemplate({
       name: getMatchTitleFromLocation(location),
       location,
@@ -45,9 +61,10 @@ export default function SaveFrecuenteButton({
       rented_goalkeepers_count: rentedGoalkeepersCount,
       field_cost: fieldCost,
       rental_cost: rentalCost,
-      save_participants: false,
+      save_participants: participants.length > 0,
       match_id: matchId,
       match_date: matchDate,
+      participants: participants.length > 0 ? participants : undefined,
     })
 
     if (result) {

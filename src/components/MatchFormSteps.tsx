@@ -13,7 +13,7 @@ import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation"
 import StepLocationTime from "@/components/match-form/StepLocationTime"
 import StepFormat from "@/components/match-form/StepFormat"
 import StepCosts from "@/components/match-form/StepCosts"
-import StepParticipants from "@/components/match-form/StepParticipants"
+import StepParticipantsChoice from "@/components/match-form/StepParticipantsChoice"
 
 export type { MatchFormSubmitData, MatchFormValues }
 
@@ -23,12 +23,14 @@ interface MatchFormStepsProps {
   submitLabel?: string
   submitButtonType?: "button" | "submit"
   onSubmitButtonClick?: () => void
+  hasTemplate?: boolean
   templateParticipants?: MatchTemplateParticipant[]
   defaultValues?: Partial<MatchFormValues>
 }
 
 export default function MatchFormSteps(props: MatchFormStepsProps) {
-  const hasTemplate = (props.templateParticipants?.length ?? 0) > 0
+  const hasTemplate = props.hasTemplate ?? (props.templateParticipants?.length ?? 0) > 0
+  const templateParticipants = props.templateParticipants ?? []
   const totalSteps = hasTemplate ? 4 : 3
 
   const form = useForm<MatchFormValues>({
@@ -83,15 +85,16 @@ function MatchFormStepsInner({
   hasTemplate,
   templateParticipants = [],
 }: MatchFormStepsInnerProps) {
-  const { currentStep, totalSteps, handleBack } = useMatchFormNavigation()
+  const { currentStep, totalSteps, handleBack, handleNext } = useMatchFormNavigation()
   const { watch, handleSubmit } = form
-  const { formId, selectedParticipants } = useMatchFormContext()
+  const { formId } = useMatchFormContext()
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [overrideParticipantIds, setOverrideParticipantIds] = useState<string[] | null>(null)
 
   const fieldCost = watch("fieldCost")
   const isLastStep = currentStep === totalSteps
 
-  const onSubmit = async (data: MatchFormValues) => {
+  const buildAndSubmit = async (data: MatchFormValues, participantIds: string[]) => {
     setIsSubmitting(true)
     const resolvedLocation = data.noLocationYet ? "Por definir" : data.location.trim()
     const totalPlayers = data.playersPerTeam * 2
@@ -110,13 +113,17 @@ function MatchFormStepsInner({
       totalPlayers,
       costPerPlayer,
     }
-    const selectedParts = hasTemplate
+    const selectedParts = hasTemplate && participantIds.length > 0
       ? templateParticipants
-          .filter((p) => selectedParticipants.includes(p.id))
+          .filter((p) => participantIds.includes(p.id))
           .map((p) => ({ name: p.name, is_goalkeeper: p.is_goalkeeper }))
       : undefined
     await onMatchCreate(submitData, selectedParts)
     setIsSubmitting(false)
+  }
+
+  const onSubmit = async (data: MatchFormValues) => {
+    await buildAndSubmit(data, overrideParticipantIds ?? [])
   }
 
   const handleButtonClick = () => {
@@ -125,6 +132,11 @@ function MatchFormStepsInner({
     } else {
       handleSubmit(onSubmit)()
     }
+  }
+
+  const handleChoiceSubmit = (ids: string[]) => {
+    setOverrideParticipantIds(ids)
+    handleSubmit((data) => buildAndSubmit(data, ids))()
   }
 
   return (
@@ -152,10 +164,9 @@ function MatchFormStepsInner({
                 <StepCosts
                   isValid={fieldCost > 0}
                   disabled={disabled || isSubmitting}
-                  submitLabel={submitLabel}
-                  submitButtonType={submitButtonType}
-                  onSubmitButtonClick={onSubmitButtonClick}
-                  onClick={handleButtonClick}
+                  submitLabel="Continuar"
+                  submitButtonType="button"
+                  onClick={handleNext}
                   fieldCost={fieldCost}
                 />
               ) : (
@@ -173,26 +184,21 @@ function MatchFormStepsInner({
             {hasTemplate && (
               <div className="w-full shrink-0" aria-hidden={currentStep !== 4}>
                 <div className="space-y-6">
-                  <StepParticipants participants={templateParticipants} />
-                  {isLastStep && (
-                    <div className="flex items-center justify-between pt-4">
-                      <button
-                        type="button"
-                        onClick={handleBack}
-                        className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition"
-                      >
-                        Atrás
-                      </button>
-                      <button
-                        type={submitButtonType === "submit" ? "submit" : "button"}
-                        onClick={handleButtonClick}
-                        disabled={disabled || isSubmitting}
-                        className="btn-primary-fm neon-glow px-8 py-3 rounded-lg font-semibold text-sm"
-                      >
-                        {isSubmitting ? "Creando partido..." : submitLabel}
-                      </button>
-                    </div>
-                  )}
+                  <StepParticipantsChoice
+                    participants={templateParticipants}
+                    isSubmitting={isSubmitting}
+                    onChoice={handleChoiceSubmit}
+                  />
+                  <div className="flex items-center justify-start pt-2">
+                    <button
+                      type="button"
+                      onClick={handleBack}
+                      disabled={isSubmitting}
+                      className="rounded-lg border border-border px-4 py-2 text-sm text-muted-foreground hover:bg-muted transition disabled:opacity-50"
+                    >
+                      Atrás
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

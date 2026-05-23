@@ -102,6 +102,17 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     }
   }, [onlyOwnedByCurrentUser])
 
+  useEffect(() => {
+    if (!autoFetch) return
+
+    const handler = () => {
+      fetchMatches()
+    }
+
+    window.addEventListener("matches:changed", handler)
+    return () => window.removeEventListener("matches:changed", handler)
+  }, [autoFetch, fetchMatches])
+
   const createMatch = async (matchData: Omit<Match, 'id'>) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -117,6 +128,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       if (error) throw error
       setMatches(prev => [data, ...prev])
+      window.dispatchEvent(new CustomEvent("matches:changed"))
       return { data, error: null }
     } catch (error) {
       console.error('Error creating match:', error)

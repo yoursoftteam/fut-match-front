@@ -6,6 +6,8 @@ import FrecuenteCard from "@/components/FrecuenteCard"
 
 export default function FrecuentesSection() {
   const { templates, loading } = useFrecuentes()
+  const isInitialLoading = loading && templates.length === 0
+  const isRefreshing = loading && templates.length > 0
 
   return (
     <section className="mb-12">
@@ -13,9 +15,15 @@ export default function FrecuentesSection() {
         <h2 className="text-2xl font-heading font-bold text-foreground">
           Tus Frecuentes
         </h2>
+        {isRefreshing && (
+          <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground">
+            <span className="size-2 rounded-full bg-primary animate-pulse" aria-hidden />
+            Actualizando...
+          </span>
+        )}
       </div>
 
-      {loading ? (
+      {isInitialLoading ? (
         <div className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p className="text-muted-foreground">Cargando plantillas…</p>

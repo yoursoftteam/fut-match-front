@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { MatchDetailsProvider, useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
-import { MatchInfoSidebar, MatchEditForm, MatchTabs, RegistrationPanel, PlayersPanel, UnregisterModal, TeamBuilder } from "@/components/match-details";
+import { MatchInfoSidebar, MatchEditForm, MatchTabs, RegistrationPanel, PlayersPanel, TeamBuilder } from "@/components/match-details";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
 
@@ -68,8 +68,6 @@ function MatchDetailsInner() {
             )}
           </div>
         </section>
-
-        <UnregisterModal />
       </div>
     </div>
   );
