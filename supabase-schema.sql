@@ -83,7 +83,10 @@ CREATE TABLE match_registrations (
   match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   is_goalkeeper BOOLEAN NOT NULL DEFAULT FALSE,
-  registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+  registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  has_paid BOOLEAN NOT NULL DEFAULT FALSE,
+  paid_at TIMESTAMP WITH TIME ZONE NULL,
+  paid_by UUID REFERENCES auth.users(id) ON DELETE SET NULL
 );
 
 -- Enable Row Level Security
@@ -98,6 +101,17 @@ CREATE POLICY "Anyone can register for matches" ON match_registrations
 
 CREATE POLICY "Anyone can unregister from matches" ON match_registrations
   FOR DELETE USING (true);
+
+-- Only match creator can update payment status
+CREATE POLICY "Only match owner can update payments" ON match_registrations
+  FOR UPDATE USING (
+    EXISTS (
+      SELECT 1
+      FROM matches m
+      WHERE m.id = match_registrations.match_id
+        AND m.created_by = auth.uid()
+    )
+  );
 
 -- Enforce registration rules at DB level:
 -- 1) max 2 goalkeepers (for titular slots only)

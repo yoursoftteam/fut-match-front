@@ -59,3 +59,6 @@ Business: `time` is **not a column** — derived from `date` (ISO). Location "Po
 - Currency formatting: `formatCurrency()` in `src/lib/currency.ts` (Intl.NumberFormat("es-CO")).
 - Client-side Supabase proxy in `src/lib/supabase.ts` — always import `supabase` or `getSupabaseClient` from there.
 - Realtime: subscribe to `match_registrations` changes via `supabase.channel()` with `postgres_changes`.
+
+## Brand manual
+- Always use /docs/brand_manual.md as brand manual to UI/UX design
