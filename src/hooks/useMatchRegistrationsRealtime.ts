@@ -8,6 +8,9 @@ interface PlayerRegistration {
   name: string
   is_goalkeeper: boolean
   registered_at: string
+  has_paid: boolean
+  paid_at: string | null
+  paid_by: string | null
 }
 
 export function useMatchRegistrationsRealtime(matchId: string) {

@@ -5,61 +5,97 @@ import { Copy, Check, MessageCircle, Mail, Smartphone } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
-export default function ShareLink({ matchId, showTitle = true }: { matchId: string; showTitle?: boolean }) {
+interface ShareActionsProps {
+  title?: string;
+  copyText: string;
+  copyTooltip?: string;
+  copiedStatusText: string;
+  whatsappText: string;
+  emailSubject: string;
+  emailBody: string;
+  nativeShare?: ShareData;
+}
+
+export function ShareActions({
+  title,
+  copyText,
+  copyTooltip = "Copiar enlace",
+  copiedStatusText,
+  whatsappText,
+  emailSubject,
+  emailBody,
+  nativeShare,
+}: ShareActionsProps) {
   const [copied, setCopied] = useState(false);
-  const shareableLink =
-    typeof window !== "undefined" ? `${window.location.origin}/match/${matchId}` : "";
   const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
   const baseId = useId();
   const statusId = `${baseId}-copy-status`;
 
   const copyToClipboard = useCallback(async () => {
-    if (!shareableLink) return;
+    if (!copyText) return;
     try {
-      await navigator.clipboard.writeText(shareableLink);
+      await navigator.clipboard.writeText(copyText);
       setCopied(true);
       setTimeout(() => setCopied(false), 2000);
-    } catch { /* ignore */ }
-  }, [shareableLink]);
+    } catch {
+      /* ignore */
+    }
+  }, [copyText]);
 
   const shareVia = useCallback((method: string) => {
     switch (method) {
-      case "whatsapp":
-        window.open(
-          `https://wa.me/?text=${encodeURIComponent(`¡Únete a este partido de fútbol! ${shareableLink}`)}`,
-          "_blank",
-        );
+      case "whatsapp": {
+        const whatsappUrl = new URL("https://api.whatsapp.com/send");
+        whatsappUrl.searchParams.set("text", whatsappText);
+        window.open(whatsappUrl.toString(), "_blank", "noopener,noreferrer");
         break;
+      }
       case "email":
         window.open(
-          `mailto:?subject=${encodeURIComponent("Partido de fútbol")}&body=${encodeURIComponent(`Únete a este partido: ${shareableLink}`)}`,
+          `mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`,
           "_blank",
         );
         break;
       case "native":
-        if (canShare) {
-          navigator.share({
-            title: "Partido de fútbol",
-            text: "Únete a este partido",
-            url: shareableLink,
-          }).catch(() => {});
+        if (canShare && nativeShare) {
+          navigator.share(nativeShare).catch(() => {});
         }
         break;
     }
-  }, [shareableLink, canShare]);
+  }, [canShare, emailBody, emailSubject, nativeShare, whatsappText]);
 
   const actions = [
-    { id: "copy" as const, icon: copied ? Check : Copy, label: "Copiar link", tooltip: copied ? "¡Copiado!" : "Copiar enlace", action: copyToClipboard },
-    { id: "whatsapp" as const, icon: MessageCircle, label: "WhatsApp", tooltip: "Compartir por WhatsApp", action: () => shareVia("whatsapp") },
-    { id: "email" as const, icon: Mail, label: "Correo", tooltip: "Compartir por correo", action: () => shareVia("email") },
-    ...(canShare
-      ? [{ id: "native" as const, icon: Smartphone, label: "Otra app", tooltip: "Compartir en otra app", action: () => shareVia("native") }]
+    {
+      id: "copy" as const,
+      icon: copied ? Check : Copy,
+      tooltip: copied ? "¡Copiado!" : copyTooltip,
+      action: copyToClipboard,
+    },
+    {
+      id: "whatsapp" as const,
+      icon: MessageCircle,
+      tooltip: "Compartir por WhatsApp",
+      action: () => shareVia("whatsapp"),
+    },
+    {
+      id: "email" as const,
+      icon: Mail,
+      tooltip: "Compartir por correo",
+      action: () => shareVia("email"),
+    },
+    ...(canShare && nativeShare
+      ? [{
+          id: "native" as const,
+          icon: Smartphone,
+          tooltip: "Compartir en otra app",
+          action: () => shareVia("native"),
+        }]
       : []),
   ];
 
   return (
     <div className="w-full min-w-0">
-      {showTitle && <h3 className="mb-4 text-sm font-semibold text-foreground">Compartir partido</h3>}
+      {title && <h3 className="mb-4 text-sm font-semibold text-foreground">{title}</h3>}
 
       <div className="grid grid-cols-4 gap-2 w-full">
         {actions.map(({ id, icon: Icon, tooltip, action }) => (
@@ -85,8 +121,29 @@ export default function ShareLink({ matchId, showTitle = true }: { matchId: stri
       </div>
 
       <p id={statusId} role="status" aria-live="polite" className="sr-only">
-        {copied ? "Enlace copiado al portapapeles" : ""}
+        {copied ? copiedStatusText : ""}
       </p>
     </div>
+  );
+}
+
+export default function ShareLink({ matchId, showTitle = true }: { matchId: string; showTitle?: boolean }) {
+  const shareableLink =
+    typeof window !== "undefined" ? `${window.location.origin}/match/${matchId}` : "";
+
+  return (
+    <ShareActions
+      title={showTitle ? "Compartir partido" : undefined}
+      copyText={shareableLink}
+      copiedStatusText="Enlace copiado al portapapeles"
+      whatsappText={`¡Únete a este partido de fútbol! ${shareableLink}`}
+      emailSubject="Partido de fútbol"
+      emailBody={`Únete a este partido: ${shareableLink}`}
+      nativeShare={{
+        title: "Partido de fútbol",
+        text: "Únete a este partido",
+        url: shareableLink,
+      }}
+    />
   );
 }
