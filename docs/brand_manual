@@ -1,0 +1,74 @@
+# Brand Guidelines: parti2.app
+
+## 1. Introduction & Core Philosophy
+**parti2.app** is a next-generation multi-sport ecosystem designed to eliminate friction when organizing and joining casual or competitive sports matchups. Our core mission is connecting individuals dynamically via community athletics, strictly optimized for digital-native generations (Millennials and Gen Z).
+
+* **Brand Essence (The Core Hook):** `"Menos chat, más juego" (Less talk, more play).`
+
+---
+
+## 2. Tone of Voice & Communication Matrix
+AI communication must be fast, high-energy, contemporary, and strictly devoid of corporate or archaic formalities. The agent interacts as a knowledgeable peer or teammate, never as a detached institution. Use localized street/sports slang organically when targeting specific regions, but default to current digital urban colloquialisms.
+
+| Brand Pillar | Approved Copy Strategy (Examples) | Strictly Prohibited |
+| :--- | :--- | :--- |
+| **Agile (Zero Friction)** | "Confirmed! You're inside the parti2."<br>"Drop the link and assemble the Squad." | Long descriptive texts, complex registration layouts, over-explaining mechanics. |
+| **Energetic (The Hustle)** | "Level up. Monetize your skills."<br>"Flex your talent on the pitch." | Passive voice, monotone syntax, boring or overly relaxed statements. |
+| **Urban / Digital Native** | Organic usage of context-aware slang (`Pikado`, `Reta`, `Flex`, `Match`, `Squad`). | Outdated idioms, extreme formalities, or addressing users with Spanish formalisms like "Usted". |
+
+---
+
+## 3. Visual Identity & System Elements
+
+### 3.1. The Symbol (P2-Check)
+The primary logo is a single integrated geometric glyph merging three structural elements: the outer letter **"P"** (with an extended dynamic lower-left tail), an inner nested number **"2"** (representing matches, pairs, and duels), and a independent sharp **"Check mark"** anchored on the bottom right (signifying attendance confirmation).
+
+### 3.2. Approved Asset Variations (Based on Real Assets)
+* **Master Imagotype (Logo + Text):** The green/white typography signature. The word **"Parti"** is rendered in clean italicized Off-White with a capitalized **"P"**, the number **"2"** matches the Neon Green of the symbol, and the domain extension **".app"** appears in lower-case Off-White.
+* **Flat Core Isotype:** The flat Neon Green glyph isolated directly on a solid Dark Slate background.
+* **Rendered UI Isotype:** A dynamic version of the symbol utilizing subtle 3D inner embossing and soft drop-shadows to give depth against the dark background. *Primarily used for high-fidelity UI elements, splash screens, or app icons.*
+
+---
+
+## 4. Color Space Architecture (Dark Mode Native)
+Engineered exclusively as a dark-mode first design system tailored to Gen Z preferences, prioritizing striking high-contrast and vibrant functional focal points.
+
+### 4.1. Primary Palette
+* **Dark Slate (Background/Surface):** `#0F172A` (or equivalent deep corporate navy/slate hex).
+  * *Usage:* Interface background, screens, structural containers, and card backgrounds.
+* **Neon Green (Action/Accent):** `#22C55E` (or equivalent dynamic sports green).
+  * *Usage:* Core brand mark, numeric values ("2"), action execution triggers, and success states.
+
+### 4.2. Secondary Typography & Interface Colors
+* **Off-White:** `#F8FAFC`
+  * *Usage:* Text component of the logo ("Parti", ".app"), hero typography, and high-priority UX micro-copy.
+* **Medium Grey:** `#94A3B8`
+  * *Usage:* Supporting content blocks, descriptive text, and disabled interaction states.
+
+---
+
+## 5. Typography Rules
+Enforce extreme readability across small viewport dimensions via modern sans-serif type scaling.
+* **Primary Typeface:** `Inter` (Sans-Serif).
+* **Headings Configuration:** Semi-Bold / Bold weightings to structure information hierarchically.
+* **Logo Graphic Typeface:** A clean, italicized sans-serif font family optimized for tech and speed aesthetics.
+* **Body Copy Configuration:** Regular weighting optimized for smooth, fatigue-free reading layouts.
+
+---
+
+## 6. UX Micro-copy & Prompt Engineering Baselines
+AI interfaces generating dynamic UI copy must use the following structural guidelines:
+
+| User Flow State / Situation | Mandatory UI Copy Output Pattern |
+| :--- | :--- |
+| **Match Creation / Form Init** | "Ready for the pikado? Set the time and place." |
+| **Attendance / RSVP Success** | "¡Ya estás Fichado! ✓" *(with Neon Green Check visualization)* |
+| **Share / Deep Link Generation** | "Bro, send them the HereWeGo link: parti2.app/reta-final" |
+
+---
+
+## 7. Guardrails & Compliance Guidelines (What NOT to do)
+* **DO NOT** capitalize the domain extension in text layouts (it is strictly `.app`, never `.App` or `.APP`).
+* **DO NOT** swap the colors of the imagotype (the "Parti" text must remain white/off-white and the "2" must remain green).
+* **DO NOT** modify the proportions, dimensions, or break the internal structural alignment of the P2-Check glyph.
+* **DO NOT** introduce warm colors (reds, oranges, yellows) into the interface unless it represents a critical system error.

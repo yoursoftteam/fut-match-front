@@ -200,7 +200,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     try {
       const { data, error } = await supabase
         .from('match_registrations')
-        .select('id, name, is_goalkeeper, registered_at')
+        .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
         .eq('match_id', matchId)
         .order('registered_at', { ascending: true })
 
@@ -266,7 +266,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       const { data, error } = await supabase
         .from('match_registrations')
         .insert([{ match_id: matchId, name: trimmedName, is_goalkeeper: isGoalkeeper }])
-        .select('id, name, is_goalkeeper, registered_at')
+        .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
         .single()
 
       if (error) throw error
@@ -392,6 +392,32 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     }
   }
 
+  const togglePaymentStatus = async (registrationId: string, hasPaid: boolean) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return { data: null, error: new Error('Debes iniciar sesión para realizar esta acción.') }
+      }
+
+      const { data, error } = await supabase
+        .from('match_registrations')
+        .update({
+          has_paid: hasPaid,
+          paid_at: hasPaid ? new Date().toISOString() : null,
+          paid_by: hasPaid ? user.id : null,
+        })
+        .eq('id', registrationId)
+        .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
+        .single()
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error updating payment status:', error)
+      return { data: null, error }
+    }
+  }
+
   return {
     matches,
     loading,
@@ -405,6 +431,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     unregisterFromMatch,
     deleteMatch,
     registerRentedGoalkeepers,
+    togglePaymentStatus,
     refetch: fetchMatches,
   }
 }

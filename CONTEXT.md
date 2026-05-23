@@ -66,3 +66,6 @@ Resumen corto para retomar trabajo sin releer todo el repo.
 - Home pública sin exponer feed privado.
 - Flujo crear/editar conserva lógica de costos y arqueros.
 
+## Brand manual
+- Always use /docs/brand_manual.md as brand manual to UI/UX design
+

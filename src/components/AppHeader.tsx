@@ -13,6 +13,7 @@ export function AppHeader() {
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
   const isAuthPage = pathname === "/auth";
+  const isLoggedIn = Boolean(user) && !isAuthPage;
 
   const handleSignOut = async () => {
     await signOut();
@@ -22,9 +23,9 @@ export function AppHeader() {
   const navItems = (
     <ul className="flex flex-col gap-1">
       {[
-        { href: "/", label: "Inicio" },
+        ...(!isLoggedIn ? [{ href: "/", label: "Inicio" }] : []),
         { href: "/create", label: "Armar partido" },
-        ...(user && !isAuthPage ? [{ href: "/dashboard", label: "Mi Dashboard" }] : []),
+        ...(isLoggedIn ? [{ href: "/dashboard", label: "Mi Dashboard" }] : []),
       ].map((item) => (
         <li key={item.href}>
           <SheetClose
@@ -56,11 +57,13 @@ export function AppHeader() {
           </Link>
           <nav aria-label="Principal" className="max-md:hidden">
             <ul className="flex items-center gap-4 text-sm">
-              <li>
-                <Link href="/" className="text-foreground hover:text-primary transition-colors">
-                  Inicio
-                </Link>
-              </li>
+              {!isLoggedIn && (
+                <li>
+                  <Link href="/" className="text-foreground hover:text-primary transition-colors">
+                    Inicio
+                  </Link>
+                </li>
+              )}
               <li>
                 <Link
                   href="/create"
@@ -69,7 +72,7 @@ export function AppHeader() {
                   Armar partido
                 </Link>
               </li>
-              {user && !isAuthPage && (
+              {isLoggedIn && (
                 <li>
                   <Link
                     href="/dashboard"
@@ -88,7 +91,7 @@ export function AppHeader() {
           <div className="max-md:hidden flex items-center gap-3 text-sm">
             {loading ? (
               <span className="text-muted-foreground">Cargando…</span>
-            ) : user && !isAuthPage ? (
+            ) : isLoggedIn ? (
               <>
                 <span
                   className="text-muted-foreground max-w-[200px] truncate"

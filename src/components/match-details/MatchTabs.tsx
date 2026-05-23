@@ -4,6 +4,8 @@ import { Trash2 } from "lucide-react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
+import { PaymentStatus } from "./PaymentStatus";
+import { PaymentSummary } from "./PaymentSummary";
 
 type PanelTab = "register" | "players" | "teams";
 
@@ -160,15 +162,22 @@ export function PlayersPanel() {
               <span className="font-medium text-foreground">{registration.name}</span>
               <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
             </div>
-            <button
-              type="button"
-              onClick={() => openModal(registration)}
-              className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-              title="Darse de baja"
-              aria-label={`Dar de baja a ${registration.name}`}
-            >
-              <Trash2 size={16} aria-hidden />
-            </button>
+            <div className="flex items-center gap-2 ml-3">
+              <PaymentStatus 
+                registrationId={registration.id}
+                hasPaid={registration.has_paid}
+                name={registration.name}
+              />
+              <button
+                type="button"
+                onClick={() => openModal(registration)}
+                className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                title="Darse de baja"
+                aria-label={`Dar de baja a ${registration.name}`}
+              >
+                <Trash2 size={16} aria-hidden />
+              </button>
+            </div>
           </div>
         ))}
 
@@ -182,15 +191,22 @@ export function PlayersPanel() {
                   <span className="font-medium text-foreground">{registration.name}</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => openModal(registration)}
-                  className="ml-3 rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-                  title="Darse de baja"
-                  aria-label={`Dar de baja a ${registration.name}`}
-                >
-                  <Trash2 size={16} aria-hidden />
-                </button>
+                <div className="flex items-center gap-2 ml-3">
+                  <PaymentStatus 
+                    registrationId={registration.id}
+                    hasPaid={registration.has_paid}
+                    name={registration.name}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => openModal(registration)}
+                    className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                    title="Darse de baja"
+                    aria-label={`Dar de baja a ${registration.name}`}
+                  >
+                    <Trash2 size={16} aria-hidden />
+                  </button>
+                </div>
               </div>
             ))}
           </>
@@ -199,6 +215,10 @@ export function PlayersPanel() {
         {registrations.length === 0 && (
           <p className="py-4 text-center text-muted-foreground">Aún no hay jugadores inscritos</p>
         )}
+      </div>
+      
+      <div className="mt-4">
+        <PaymentSummary />
       </div>
     </div>
   );
