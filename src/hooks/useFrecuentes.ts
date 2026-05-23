@@ -196,6 +196,10 @@ export function useFrecuentes() {
           template = createdTemplate
         }
 
+        if (!template) {
+          throw new Error("No se pudo persistir la plantilla")
+        }
+
         const { error: deleteParticipantsError } = await supabase
           .from("match_template_participants")
           .delete()
