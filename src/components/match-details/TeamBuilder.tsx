@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useTeamBuilder } from "@/hooks/useTeamBuilder";
 import { TeamFieldImage } from "./TeamFieldImage";
+import { createPortal } from "react-dom";
 
 type TeamZone = "A" | "B" | "pool";
 
@@ -40,7 +41,7 @@ export function TeamBuilder({ show, onOpen }: TeamBuilderProps) {
 function TeamBuilderActive() {
   const { registrations } = useMatchDetailsContext();
   const {
-    teamA, teamB, unassigned, draggingId, dragOverZone, teamSaved, message,
+    teamA, teamB, unassigned, draggingId, dragOverZone, teamSaved, hasUnsavedChanges, message,
     playersPerTeamLimit, initTeamBuilder, resetTeamBuilder, randomizeTeams, saveTeams,
     handlePlayerDragStart, handlePlayerDragEnd, handleDropOnZone,
     assignPlayerToZone, canDropInZone, canSwapWithPlayer, handleDropOnPlayer,
@@ -57,10 +58,69 @@ function TeamBuilderActive() {
   const getActiveDraggingId = () => draggingId;
   const { matchData } = useMatchDetailsContext();
   const [hasEverSaved, setHasEverSaved] = useState(false);
+  const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
+  const [pendingHref, setPendingHref] = useState<string | null>(null);
 
   useEffect(() => {
     if (teamSaved) setHasEverSaved(true);
   }, [teamSaved]);
+
+  useEffect(() => {
+    if (!hasUnsavedChanges) return;
+
+    const beforeUnload = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+
+    window.addEventListener("beforeunload", beforeUnload);
+    return () => window.removeEventListener("beforeunload", beforeUnload);
+  }, [hasUnsavedChanges]);
+
+  useEffect(() => {
+    const onDocumentClick = (event: MouseEvent) => {
+      if (!hasUnsavedChanges) return;
+
+      const target = event.target;
+      if (!(target instanceof Element)) return;
+
+      const anchor = target.closest("a[href]") as HTMLAnchorElement | null;
+      if (!anchor) return;
+
+      const href = anchor.href;
+      if (!href) return;
+      if (anchor.target === "_blank") return;
+      if (href === window.location.href) return;
+
+      event.preventDefault();
+      setPendingHref(href);
+      setShowUnsavedAlert(true);
+    };
+
+    document.addEventListener("click", onDocumentClick, true);
+    return () => document.removeEventListener("click", onDocumentClick, true);
+  }, [hasUnsavedChanges]);
+
+  const continueNavigation = () => {
+    if (!pendingHref) return;
+    window.location.href = pendingHref;
+  };
+
+  const handleSaveAndLeave = () => {
+    saveTeams();
+    setShowUnsavedAlert(false);
+    continueNavigation();
+  };
+
+  const handleDiscardAndLeave = () => {
+    setShowUnsavedAlert(false);
+    continueNavigation();
+  };
+
+  const handleStay = () => {
+    setShowUnsavedAlert(false);
+    setPendingHref(null);
+  };
 
   return (
     <div id="team-builder">
@@ -145,6 +205,53 @@ function TeamBuilderActive() {
           teamB={teamB}
           matchTitle={matchData?.location ?? "Parti2"}
         />
+      )}
+
+      {showUnsavedAlert && typeof document !== "undefined" && createPortal(
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="presentation"
+          onClick={(event) => { if (event.target === event.currentTarget) handleStay() }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="unsaved-teams-title"
+            className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <h3 id="unsaved-teams-title" className="text-lg font-bold text-foreground">
+              Tienes equipos sin guardar
+            </h3>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Aun no has guardado los cambios del armado de equipos. ¿Quieres guardar antes de salir de esta pagina?
+            </p>
+
+            <div className="mt-5 flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                onClick={handleStay}
+                className="rounded border border-border bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardAndLeave}
+                className="rounded border border-red-500/30 px-3 py-2 text-sm font-medium text-red-400 transition hover:bg-red-500/10"
+              >
+                Omitir
+              </button>
+              <button
+                type="button"
+                onClick={handleSaveAndLeave}
+                className="rounded bg-primary px-3 py-2 text-sm font-semibold text-primary-foreground transition hover:bg-primary/90"
+              >
+                Guardar y salir
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );
