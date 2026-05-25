@@ -3,14 +3,13 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeftIcon, Loader2 } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Loader2, Users, Calendar, MapPin, CreditCard, Zap } from "lucide-react";
 import ShareLink from "@/components/ShareLink";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { BrandLogo } from "@/components/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
 import { useMatches } from "@/hooks/useMatches";
 
 interface MatchSuccessProps {
@@ -65,16 +64,18 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
 
   if (!match) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="max-w-md w-full mx-4">
-          <CardContent className="pt-6 text-center">
-            <h2 className="text-xl font-semibold text-destructive mb-2">Resumen no disponible</h2>
-            <p className="text-muted-foreground mb-4">
-              Los datos del partido no están disponibles. Es posible que la página haya sido recargada.
-            </p>
-            <Button onClick={() => router.push("/create")}>Volver a crear partido</Button>
-          </CardContent>
-        </Card>
+      <div className="min-h-screen bg-background flex items-center justify-center px-4">
+        <div className="card max-w-md w-full p-8 text-center">
+          <h2 className="text-xl font-heading font-semibold text-destructive mb-2">
+            Resumen no disponible
+          </h2>
+          <p className="text-muted-foreground text-sm mb-6">
+            Los datos del partido no están disponibles. Es posible que la página haya sido recargada.
+          </p>
+          <Button onClick={() => router.push("/create")} className="w-full">
+            Volver a crear partido
+          </Button>
+        </div>
       </div>
     );
   }
@@ -88,85 +89,121 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
   });
 
   const totalPlayers = match.max_players;
-  const costPerPlayer = totalPlayers > 0
-    ? Math.ceil((match.field_cost + match.rental_cost) / totalPlayers)
-    : 0;
+  const costPerPlayer =
+    totalPlayers > 0
+      ? Math.ceil((match.field_cost + match.rental_cost) / totalPlayers)
+      : 0;
 
-  const matchTime =
-    match.date.includes("T")
-      ? match.date.split("T")[1].slice(0, 5)
-      : "";
+  const matchTime = match.date.includes("T")
+    ? match.date.split("T")[1].slice(0, 5)
+    : "";
+
+  const infoRows = [
+    { icon: MapPin, label: "Lugar", value: match.location },
+    { icon: Calendar, label: "Fecha", value: formattedDate },
+    { icon: Calendar, label: "Hora", value: matchTime },
+    { icon: Users, label: "Formato", value: `${match.players_per_team} vs ${match.players_per_team}` },
+    ...(match.field_cost > 0
+      ? [{ icon: CreditCard, label: "Valor cancha", value: formatCurrency(match.field_cost) }]
+      : []),
+    ...(match.has_rented_goalkeepers && match.rental_cost > 0
+      ? [
+          {
+            icon: CreditCard,
+            label: `Alquiler arqueros (${match.rented_goalkeepers_count})`,
+            value: formatCurrency(match.rental_cost),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <div className="min-h-screen bg-background py-8 px-4">
-      <div className="max-w-3xl mx-auto">
-        <header className="text-center mb-8 mt-4">
-          <div className="mb-2 flex justify-center">
-            <BrandLogo width={220} height={96} className="h-auto w-[160px] sm:w-[200px]" />
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Ambient glow */}
+      <div
+        className="pointer-events-none absolute inset-0"
+        aria-hidden
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 40% at 50% 0%, color-mix(in oklch, var(--primary) 8%, transparent), transparent)",
+        }}
+      />
+
+      <div className="relative z-10 max-w-3xl mx-auto px-4 py-8 sm:py-10">
+        {/* Header */}
+        <header className="text-center mb-8 mt-2">
+          <div className="mb-4 flex justify-center">
+            <BrandLogo
+              width={220}
+              height={96}
+              className="h-auto w-[130px] sm:w-[160px]"
+            />
           </div>
-          <p className="text-muted-foreground">
-            ¡Tu partido está listo para compartir!
+
+          {/* Success badge */}
+          <div className="inline-flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary text-xs font-semibold uppercase tracking-widest px-3 py-1.5 rounded-full mb-4">
+            <CheckCircle2 className="w-3.5 h-3.5" />
+            Partido creado
+          </div>
+
+          <h1 className="text-2xl sm:text-3xl font-heading font-bold text-foreground mb-2">
+            ¡Ya estás fichado!
+          </h1>
+          <p className="text-muted-foreground text-sm">
+            Tu partido está listo. Comparte el link y llena los cupos.
           </p>
         </header>
 
-        <Card className="mb-6">
-          <CardContent className="pt-6">
-            <div className="space-y-4">
-              <div className="flex justify-between items-center border-b border-border pb-3">
-                <span className="font-medium text-muted-foreground">Lugar:</span>
-                <span className="text-card-foreground font-medium">{match.location}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-border pb-3">
-                <span className="font-medium text-muted-foreground">Fecha:</span>
-                <span className="text-card-foreground font-medium">{formattedDate}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-border pb-3">
-                <span className="font-medium text-muted-foreground">Hora:</span>
-                <span className="text-card-foreground font-medium">{matchTime}</span>
-              </div>
-              <div className="flex justify-between items-center border-b border-border pb-3">
-                <span className="font-medium text-muted-foreground">Formato:</span>
-                <span className="text-card-foreground font-medium tabular-nums">
-                  {match.players_per_team} vs {match.players_per_team}
-                </span>
-              </div>
-              <div className="flex justify-between items-center border-b border-border pb-3">
-                <span className="font-medium text-muted-foreground">Valor de la cancha:</span>
-                <span className="text-card-foreground font-medium tabular-nums">
-                  {formatCurrency(match.field_cost)}
-                </span>
-              </div>
-              {match.has_rented_goalkeepers && match.rental_cost > 0 && (
-                <div className="flex justify-between items-center border-b border-border pb-3">
-                  <span className="font-medium text-muted-foreground">Alquiler arqueros ({match.rented_goalkeepers_count}):</span>
-                  <span className="text-card-foreground font-medium tabular-nums">
-                    {formatCurrency(match.rental_cost)}
-                  </span>
+        {/* Match summary card */}
+        <div className="card p-6 mb-5">
+          <h2 className="text-sm font-semibold uppercase tracking-widest text-muted-foreground mb-4">
+            Resumen del partido
+          </h2>
+          <div className="space-y-3">
+            {infoRows.map(({ icon: Icon, label, value }) => (
+              <div
+                key={label}
+                className="flex items-center justify-between gap-3 py-2 border-b border-border last:border-0"
+              >
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Icon className="w-4 h-4 shrink-0" />
+                  <span className="text-sm">{label}</span>
                 </div>
-              )}
-              <div className="flex justify-between items-center pt-3">
-                <span className="font-medium text-muted-foreground">Aporte por jugador:</span>
-                <span className="font-bold text-primary text-xl tabular-nums">
+                <span className="text-sm font-medium text-foreground text-right">
+                  {value}
+                </span>
+              </div>
+            ))}
+
+            {/* Cost per player highlight */}
+            {costPerPlayer > 0 && (
+              <div className="flex items-center justify-between gap-3 pt-3 mt-1">
+                <span className="text-sm font-semibold text-foreground">
+                  Aporte por jugador
+                </span>
+                <span className="font-bold text-primary text-2xl tabular-nums">
                   {formatCurrency(costPerPlayer)}
                 </span>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            )}
+          </div>
+        </div>
 
-        <div className="space-y-4">
+        {/* Actions */}
+        <div className="space-y-3">
           <Button
             onClick={() => router.push(`/match/${matchId}`)}
-            className="w-full"
+            className="w-full btn-primary-fm neon-glow font-bold gap-2"
           >
+            <Zap className="w-4 h-4" />
             Ver Detalles del Partido
           </Button>
 
           <ShareLink matchId={matchId} />
 
           {match.source_template_id ? (
-            <p className="text-center text-sm text-muted-foreground">
-              Este partido se creó desde una plantilla. Si quieres guardar una variante, ve a los detalles del partido.
+            <p className="text-center text-xs text-muted-foreground px-2">
+              Este partido se creó desde una plantilla. Para guardar una variante, ve a los detalles.
             </p>
           ) : (
             <SaveFrecuenteCard
@@ -183,12 +220,12 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
             />
           )}
 
-          <div className="text-center">
+          <div className="text-center pt-2">
             <Link
               href="/create"
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors text-sm"
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary transition-colors cursor-pointer"
             >
-              <ArrowLeftIcon className="h-4 w-4" />
+              <ArrowLeft className="h-3.5 w-3.5" />
               Crear otro partido
             </Link>
           </div>
