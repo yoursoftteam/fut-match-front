@@ -32,8 +32,12 @@ function MatchDetailsInner() {
     return (
       <div className="min-h-screen py-10 px-4 text-foreground">
         <div className="mx-auto w-full max-w-2xl">
-          <div className="card match-card rounded-2xl border border-border/80 bg-card p-5 shadow-lg sm:p-6">
+          <div className="card match-card space-y-6 rounded-2xl border border-border/80 bg-card p-5 shadow-lg sm:p-6">
             <RegistrationPanel />
+
+            <div className="border-t border-border/80 pt-6">
+              <PlayersPanel />
+            </div>
           </div>
         </div>
       </div>
