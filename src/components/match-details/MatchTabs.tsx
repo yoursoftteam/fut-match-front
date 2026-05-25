@@ -145,7 +145,7 @@ export function RegistrationPanel() {
 }
 
 export function PlayersPanel() {
-  const { matchData, registrations } = useMatchDetailsContext();
+  const { matchData, registrations, registrationsLoading, isCreator } = useMatchDetailsContext();
   const { showModal, target, loading, openModal, closeModal, handleUnregister } = useMatchUnregister();
   const { titulares, suplentes } = useMatchPricing();
 
@@ -154,6 +154,9 @@ export function PlayersPanel() {
     <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
       <h2 className="mb-3 text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
       <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
+        {registrationsLoading && (
+          <p className="py-4 text-center text-muted-foreground">Cargando inscritos…</p>
+        )}
         {titulares.length > 0 && (
           <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-green-400">Titulares ({titulares.length}/{matchData?.max_players})</p>
         )}
@@ -164,22 +167,24 @@ export function PlayersPanel() {
               <span className="font-medium text-foreground">{registration.name}</span>
               <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
             </div>
-            <div className="flex items-center gap-2 ml-3">
-              <PaymentStatus 
-                registrationId={registration.id}
-                hasPaid={registration.has_paid}
-                name={registration.name}
-              />
-              <button
-                type="button"
-                onClick={() => openModal(registration)}
-                className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-                title="Eliminar jugador"
-                aria-label={`Eliminar a ${registration.name}`}
-              >
-                <Trash2 size={16} aria-hidden />
-              </button>
-            </div>
+            {isCreator && (
+              <div className="ml-3 flex items-center gap-2">
+                <PaymentStatus 
+                  registrationId={registration.id}
+                  hasPaid={registration.has_paid}
+                  name={registration.name}
+                />
+                <button
+                  type="button"
+                  onClick={() => openModal(registration)}
+                  className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                  title="Eliminar jugador"
+                  aria-label={`Eliminar a ${registration.name}`}
+                >
+                  <Trash2 size={16} aria-hidden />
+                </button>
+              </div>
+            )}
           </div>
         ))}
 
@@ -193,52 +198,58 @@ export function PlayersPanel() {
                   <span className="font-medium text-foreground">{registration.name}</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                 </div>
-                <div className="flex items-center gap-2 ml-3">
-                  <PaymentStatus 
-                    registrationId={registration.id}
-                    hasPaid={registration.has_paid}
-                    name={registration.name}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => openModal(registration)}
-                    className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-                    title="Eliminar jugador"
-                    aria-label={`Eliminar a ${registration.name}`}
-                  >
-                    <Trash2 size={16} aria-hidden />
-                  </button>
-                </div>
+                {isCreator && (
+                  <div className="ml-3 flex items-center gap-2">
+                    <PaymentStatus 
+                      registrationId={registration.id}
+                      hasPaid={registration.has_paid}
+                      name={registration.name}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => openModal(registration)}
+                      className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                      title="Eliminar jugador"
+                      aria-label={`Eliminar a ${registration.name}`}
+                    >
+                      <Trash2 size={16} aria-hidden />
+                    </button>
+                  </div>
+                )}
               </div>
             ))}
           </>
         )}
 
-        {registrations.length === 0 && (
+        {!registrationsLoading && registrations.length === 0 && (
           <p className="py-4 text-center text-muted-foreground">Aún no hay jugadores inscritos</p>
         )}
       </div>
       
-      <div className="mt-4">
-        <PaymentSummary />
-      </div>
+      {isCreator && (
+        <div className="mt-4">
+          <PaymentSummary />
+        </div>
+      )}
     </div>
 
-    <ConfirmDialog
-      open={showModal}
-      title="Eliminar jugador"
-      description={
-        target ? (
-          <>¿Eliminar a <strong className="text-foreground">{target.name}</strong> del partido? Esta acción no se puede deshacer.</>
-        ) : null
-      }
-      confirmLabel="Sí, eliminar"
-      cancelLabel="Cancelar"
-      destructive
-      loading={loading}
-      onConfirm={handleUnregister}
-      onCancel={closeModal}
-    />
+    {isCreator && (
+      <ConfirmDialog
+        open={showModal}
+        title="Eliminar jugador"
+        description={
+          target ? (
+            <>¿Eliminar a <strong className="text-foreground">{target.name}</strong> del partido? Esta acción no se puede deshacer.</>
+          ) : null
+        }
+        confirmLabel="Sí, eliminar"
+        cancelLabel="Cancelar"
+        destructive
+        loading={loading}
+        onConfirm={handleUnregister}
+        onCancel={closeModal}
+      />
+    )}
     </>
   );
 }
