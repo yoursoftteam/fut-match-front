@@ -33,6 +33,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
   const [deletingMatch, setDeletingMatch] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   useEffect(() => {
     if (!matchData?.id) return;
@@ -55,8 +56,6 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
     ? Math.ceil((matchData.field_cost + matchData.rental_cost) / totalPlayers)
     : 0;
 
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-
   const handleDeleteMatch = async () => {
     setDeletingMatch(true);
     setDeleteError(null);
@@ -78,8 +77,8 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
 
         {/* ── MOBILE (lg:hidden) ── */}
         <div className="lg:hidden px-5 py-4">
-          <p className="text-2xl font-bold leading-tight mb-1" style={{ color: '#ffffff' }}>{matchData.title}</p>
-          <p className="text-xs mt-1" style={{ color: 'oklch(0.65 0.02 260)' }}>📍 {matchData.location} · 📅 {formattedDate} · 🕐 {formattedTime}</p>
+          <p className="text-2xl font-heading font-bold leading-tight mb-1 text-foreground">{matchData.title}</p>
+          <p className="text-xs mt-1 text-muted-foreground">{matchData.location} · {formattedDate} · {formattedTime}</p>
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -92,18 +91,18 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           {/* Collapsible details */}
           {expanded && (
             <div className="mt-3 space-y-2">
-              <p className="text-sm text-muted-foreground">Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo)</p>
-              {suplentes.length > 0 && <p className="text-sm text-muted-foreground">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>}
-              {matchData.field_cost > 0 && (
-                <div className="mt-2 space-y-1 rounded border border-border bg-muted p-3 text-sm text-foreground">
-                  <p><span className="text-muted-foreground">Cancha:</span> {formatCurrency(matchData.field_cost)}</p>
-                  {matchData.has_rented_goalkeepers && matchData.rental_cost > 0 && (
-                    <p><span className="text-muted-foreground">Alquiler arqueros ({matchData.rented_goalkeepers_count}):</span> {formatCurrency(matchData.rental_cost)}</p>
+                  <p className="text-sm text-muted-foreground">Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo)</p>
+                  {suplentes.length > 0 && <p className="text-sm text-muted-foreground">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>}
+                  {matchData.field_cost > 0 && (
+                    <div className="mt-2 space-y-1 rounded-xl border border-border bg-muted/50 p-3 text-sm text-foreground">
+                      <p><span className="text-muted-foreground">Cancha:</span> {formatCurrency(matchData.field_cost)}</p>
+                      {matchData.has_rented_goalkeepers && matchData.rental_cost > 0 && (
+                        <p><span className="text-muted-foreground">Alquiler arqueros ({matchData.rented_goalkeepers_count}):</span> {formatCurrency(matchData.rental_cost)}</p>
+                      )}
+                      <p><span className="text-muted-foreground">Por jugador:</span> {formatCurrency(costPerPlayer)}</p>
+                      <p><span className="text-muted-foreground">Formato:</span> {matchData.players_per_team} vs {matchData.players_per_team}</p>
+                    </div>
                   )}
-                  <p><span className="text-muted-foreground">Por jugador:</span> {formatCurrency(costPerPlayer)}</p>
-                  <p><span className="text-muted-foreground">Formato:</span> {matchData.players_per_team} vs {matchData.players_per_team}</p>
-                </div>
-              )}
             </div>
           )}
 
@@ -158,7 +157,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
             <p className="mt-1 text-sm text-muted-foreground">Suplentes: {suplentes.length}/{MAX_SUBSTITUTE_SLOTS}</p>
           )}
           {matchData.field_cost > 0 && (
-            <div className="mt-4 space-y-2 rounded border border-border bg-muted p-3 text-sm text-foreground">
+            <div className="mt-4 space-y-2 rounded-xl border border-border bg-muted/50 p-3 text-sm text-foreground">
               <p><span className="text-muted-foreground">Cancha:</span> {formatCurrency(matchData.field_cost)}</p>
               {matchData.has_rented_goalkeepers && matchData.rental_cost > 0 && (
                 <p><span className="text-muted-foreground">Alquiler arqueros ({matchData.rented_goalkeepers_count}):</span> {formatCurrency(matchData.rental_cost)}</p>
