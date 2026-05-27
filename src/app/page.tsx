@@ -100,6 +100,13 @@ export default function Home() {
               Armar mi partido
             </Link>
             <Link
+              href="/tournaments/new"
+              className="inline-flex items-center gap-2 border-2 border-primary/40 text-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:border-primary hover:text-primary transition-colors cursor-pointer"
+            >
+              <Trophy className="w-5 h-5" />
+              Crear torneo
+            </Link>
+            <Link
               href="/auth"
               className="inline-flex items-center gap-2 border-2 border-primary/40 text-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:border-primary hover:text-primary transition-colors cursor-pointer"
             >
@@ -246,18 +253,19 @@ export default function Home() {
               </Link>
             </div>
 
-            {/* Torneos — próximamente */}
-            <div className="card p-7 flex flex-col gap-5 opacity-60">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-muted-foreground" />
+            {/* Torneos — disponible */}
+            <div className="card p-7 flex flex-col gap-5 border-primary/30 relative overflow-hidden">
+              <div className="absolute top-0 inset-x-0 h-0.5 bg-primary" />
+              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
+                <Trophy className="w-6 h-6 text-primary" />
               </div>
               <div className="flex-1">
                 <div className="flex items-center gap-2 mb-2">
                   <h4 className="text-lg font-heading font-bold text-foreground">
                     Torneos Profesionales
                   </h4>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                    Próximamente
+                  <span className="text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary px-2 py-0.5 rounded-full">
+                    Disponible
                   </span>
                 </div>
                 <p className="text-muted-foreground text-sm leading-relaxed">
@@ -265,9 +273,13 @@ export default function Home() {
                   de grupos y reglas personalizadas.
                 </p>
               </div>
-              <span className="inline-flex items-center justify-center gap-2 bg-muted text-muted-foreground px-5 py-2.5 rounded-xl font-bold text-sm cursor-not-allowed">
-                Próximamente
-              </span>
+              <Link
+                href="/tournaments/new"
+                className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 btn-primary-fm cursor-pointer"
+              >
+                <Trophy className="w-4 h-4" />
+                Crear torneo
+              </Link>
             </div>
 
             {/* Estadísticas — próximamente */}
