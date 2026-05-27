@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { MailIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
 import { MobileBackButton } from "@/components/MobileBackButton";
@@ -44,6 +45,23 @@ export default function RootLayout({
               <p>
                 © {new Date().getFullYear()} Parti2 — Todos los derechos reservados
               </p>
+              <div className="mt-2 flex flex-wrap items-center justify-center gap-x-4 gap-y-1 text-sm">
+                <Link
+                  href="/privacy"
+                  className="text-foreground/90 hover:text-primary transition-colors"
+                >
+                  Política de Privacidad
+                </Link>
+                <span className="text-muted-foreground/60" aria-hidden="true">
+                  •
+                </span>
+                <Link
+                  href="/terms"
+                  className="text-foreground/90 hover:text-primary transition-colors"
+                >
+                  Términos y Condiciones
+                </Link>
+              </div>
               <a
                 href="mailto:contacto@parti2.co"
                 className="mt-2 inline-flex items-center gap-2 text-foreground/90 hover:text-primary transition-colors"
