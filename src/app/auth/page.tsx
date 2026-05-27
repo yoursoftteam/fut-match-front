@@ -83,6 +83,39 @@ function AuthForm() {
     router.replace(newUrl);
   };
 
+  const handleGoogleAuth = async () => {
+    setMessage("");
+    setLoading(true);
+
+    if (!hasSupabaseEnv) {
+      setMessage(
+        "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
+      );
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const redirectTo = buildRedirectUrl("/dashboard");
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo,
+          queryParams: {
+            prompt: "select_account",
+          },
+        },
+      });
+
+      if (error) throw error;
+    } catch {
+      setMessageType("error");
+      setMessage("No se pudo iniciar con Google. Intenta de nuevo.");
+      setLoading(false);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setMessage("");
@@ -287,6 +320,49 @@ function AuthForm() {
             </div>
           )}
 
+          {!isForgotMode && !isResetMode && (
+            <div className="space-y-4 mb-5">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={loading}
+                onClick={handleGoogleAuth}
+                className="w-full py-3 text-base font-semibold gap-2"
+              >
+                <svg
+                  aria-hidden
+                  viewBox="0 0 24 24"
+                  className="h-5 w-5"
+                  focusable="false"
+                >
+                  <path
+                    fill="#4285F4"
+                    d="M23.49 12.27c0-.8-.07-1.56-.2-2.3H12v4.35h6.45a5.52 5.52 0 0 1-2.4 3.62v3h3.88c2.28-2.1 3.56-5.2 3.56-8.67Z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 24c3.24 0 5.95-1.07 7.93-2.9l-3.88-3A7.2 7.2 0 0 1 12 19.3a7.15 7.15 0 0 1-6.72-4.95h-4v3.1A12 12 0 0 0 12 24Z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.28 14.35A7.2 7.2 0 0 1 4.9 12c0-.81.14-1.6.39-2.35v-3.1h-4A12 12 0 0 0 0 12c0 1.94.46 3.77 1.28 5.45l4-3.1Z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 4.77c1.76 0 3.33.6 4.57 1.77l3.42-3.42A11.9 11.9 0 0 0 12 0 12 12 0 0 0 1.29 6.55l4 3.1A7.15 7.15 0 0 1 12 4.77Z"
+                  />
+                </svg>
+                Continuar con Google
+              </Button>
+
+              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                <span className="h-px flex-1 bg-border" />
+                <span>o continúa con email</span>
+                <span className="h-px flex-1 bg-border" />
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-5">
             {/* Email */}
             {!isResetMode && (
@@ -431,6 +507,24 @@ function AuthForm() {
                 </>
               )}
             </Button>
+
+            <p className="rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-center text-xs leading-relaxed text-muted-foreground">
+              Al continuar, aceptas nuestros{" "}
+              <Link
+                href="/terms"
+                className="font-semibold text-foreground underline decoration-primary/40 underline-offset-2 hover:text-primary"
+              >
+                Terminos y Condiciones
+              </Link>{" "}
+              y la{" "}
+              <Link
+                href="/privacy"
+                className="font-semibold text-foreground underline decoration-primary/40 underline-offset-2 hover:text-primary"
+              >
+                Politica de Privacidad
+              </Link>
+              .
+            </p>
           </form>
 
           {/* Feedback message */}
