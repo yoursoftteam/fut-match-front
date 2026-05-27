@@ -289,7 +289,8 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       if (matchError) throw matchError
 
-      const maxPlayers = match?.max_players ?? null
+      const publicMatch = (match as { max_players?: number } | null) ?? null
+      const maxPlayers = typeof publicMatch?.max_players === 'number' ? publicMatch.max_players : null
       const reservedGoalkeeperSlots = maxPlayers === null ? null : Math.min(2, maxPlayers)
       const maxFieldPlayers =
         maxPlayers === null || reservedGoalkeeperSlots === null
