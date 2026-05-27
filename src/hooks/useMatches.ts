@@ -5,6 +5,49 @@ import { supabase } from '@/lib/supabase'
 
 const MAX_SUBSTITUTE_SLOTS = 5
 
+function generateSelfUnregisterToken(): string {
+  if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+    return crypto.randomUUID().replace(/-/g, '')
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 14)}`
+}
+
+function isRpcNotDeployedError(error: { code?: string; message?: string } | null): boolean {
+  if (!error) return false
+
+  if (error.code === '42883' || error.code === 'PGRST202') {
+    return true
+  }
+
+  const message = (error.message || '').toLowerCase()
+  return message.includes('could not find the function')
+}
+
+function isValidUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+function normalizeError(error: unknown, fallbackMessage: string): Error {
+  if (error instanceof Error) return error
+
+  const candidate = error as {
+    message?: string
+    details?: string
+    hint?: string
+    error_description?: string
+  } | null
+
+  const message =
+    candidate?.message ||
+    candidate?.details ||
+    candidate?.hint ||
+    candidate?.error_description ||
+    fallbackMessage
+
+  return new Error(message)
+}
+
 interface UseMatchesOptions {
   autoFetch?: boolean
   onlyOwnedByCurrentUser?: boolean
@@ -32,15 +75,6 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
   const [matches, setMatches] = useState<Match[]>([])
   const [registrationCounts, setRegistrationCounts] = useState<Record<string, number>>({})
   const [loading, setLoading] = useState(autoFetch)
-
-  useEffect(() => {
-    if (!autoFetch) {
-      setLoading(false)
-      return
-    }
-
-    fetchMatches()
-  }, [autoFetch])
 
   const fetchMatches = useCallback(async () => {
     try {
@@ -101,6 +135,15 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       setLoading(false)
     }
   }, [onlyOwnedByCurrentUser])
+
+  useEffect(() => {
+    if (!autoFetch) {
+      setLoading(false)
+      return
+    }
+
+    fetchMatches()
+  }, [autoFetch, fetchMatches])
 
   useEffect(() => {
     if (!autoFetch) return
@@ -227,6 +270,11 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
   const registerForMatch = async (matchId: string, name: string, isGoalkeeper: boolean) => {
     try {
       // Validate inputs
+      const normalizedMatchId = matchId.trim()
+      if (!isValidUuid(normalizedMatchId)) {
+        throw new Error('El enlace del partido no es válido. Verifica que lo copiaste completo.')
+      }
+
       const trimmedName = name.trim()
       if (!trimmedName || trimmedName.length < 2) {
         throw new Error('El nombre debe tener al menos 2 caracteres.')
@@ -236,56 +284,145 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       }
 
       const { data: match, error: matchError } = await supabase
-        .from('matches')
-        .select('max_players')
-        .eq('id', matchId)
-        .single()
+        .rpc('get_public_match_by_id', { p_match_id: normalizedMatchId })
+        .maybeSingle()
 
       if (matchError) throw matchError
 
-      const maxPlayers = match?.max_players ?? 0
-      const reservedGoalkeeperSlots = Math.min(2, maxPlayers)
-      const maxFieldPlayers = Math.max(0, maxPlayers - reservedGoalkeeperSlots)
+      const maxPlayers = match?.max_players ?? null
+      const reservedGoalkeeperSlots = maxPlayers === null ? null : Math.min(2, maxPlayers)
+      const maxFieldPlayers =
+        maxPlayers === null || reservedGoalkeeperSlots === null
+          ? null
+          : Math.max(0, maxPlayers - reservedGoalkeeperSlots)
 
       const { data: currentRegistrations, error: registrationsError } = await supabase
         .from('match_registrations')
         .select('is_goalkeeper')
-        .eq('match_id', matchId)
+        .eq('match_id', normalizedMatchId)
 
       if (registrationsError) throw registrationsError
 
       const registrations = currentRegistrations || []
       const currentGoalkeepers = registrations.filter((registration) => registration.is_goalkeeper).length
       const currentFieldPlayers = registrations.length - currentGoalkeepers
-      const isSubstituteSlot = registrations.length >= maxPlayers
+      const isSubstituteSlot = maxPlayers === null ? false : registrations.length >= maxPlayers
 
-      if (registrations.length >= maxPlayers + MAX_SUBSTITUTE_SLOTS) {
+      if (maxPlayers !== null && registrations.length >= maxPlayers + MAX_SUBSTITUTE_SLOTS) {
         throw new Error('No hay cupos disponibles, ni siquiera como suplente.')
       }
 
-      if (!isSubstituteSlot) {
+      if (maxPlayers !== null && !isSubstituteSlot) {
         if (isGoalkeeper) {
-          if (currentGoalkeepers >= reservedGoalkeeperSlots) {
+          if (reservedGoalkeeperSlots !== null && currentGoalkeepers >= reservedGoalkeeperSlots) {
             throw new Error('Ya se completaron los cupos de arqueros (máximo 2).')
           }
         } else {
-          if (currentFieldPlayers >= maxFieldPlayers) {
+          if (maxFieldPlayers !== null && currentFieldPlayers >= maxFieldPlayers) {
             throw new Error('Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.')
           }
         }
       }
 
-      const { data, error } = await supabase
-        .from('match_registrations')
-        .insert([{ match_id: matchId, name: trimmedName, is_goalkeeper: isGoalkeeper }])
-        .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
-        .single()
+      const selfUnregisterToken = generateSelfUnregisterToken()
 
-      if (error) throw error
-      return { data, error: null }
+      let data: {
+        id: string
+        name: string
+        is_goalkeeper: boolean
+        registered_at: string
+        has_paid: boolean
+        paid_at: string | null
+        paid_by: string | null
+      } | null = null
+
+      const rpcResult = await supabase
+        .rpc('register_for_match_public', {
+          p_match_id: normalizedMatchId,
+          p_name: trimmedName,
+          p_is_goalkeeper: isGoalkeeper,
+          p_self_token: selfUnregisterToken,
+        })
+
+      if (rpcResult.error) {
+        if (!isRpcNotDeployedError(rpcResult.error)) {
+          throw rpcResult.error
+        }
+
+        // Keep registration working even if secure RPC is unavailable or misconfigured.
+        const legacyResult = await supabase
+          .from('match_registrations')
+          .insert([{ match_id: normalizedMatchId, name: trimmedName, is_goalkeeper: isGoalkeeper }])
+          .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
+          .single()
+
+        if (legacyResult.error) {
+          throw legacyResult.error
+        }
+
+        data = legacyResult.data
+        return {
+          data,
+          error: null,
+          selfUnregisterToken: null,
+          selfUnregisterAvailable: false,
+        }
+      }
+
+      const rpcData = Array.isArray(rpcResult.data)
+        ? (rpcResult.data[0] ?? null)
+        : rpcResult.data
+
+      data = rpcData
+
+      if (!data) {
+        throw new Error('No se pudo crear la inscripción.')
+      }
+
+      return {
+        data,
+        error: null,
+        selfUnregisterToken,
+        selfUnregisterAvailable: true,
+      }
     } catch (error) {
-      console.error('Error registering for match:', error)
-      return { data: null, error }
+      const normalizedError = normalizeError(error, 'No se pudo completar la inscripción.')
+      console.error('Error registering for match:', normalizedError)
+      return {
+        data: null,
+        error: normalizedError,
+        selfUnregisterToken: null,
+        selfUnregisterAvailable: false,
+      }
+    }
+  }
+
+  const unregisterSelfFromMatch = async (
+    registrationId: string,
+    selfUnregisterToken: string,
+  ) => {
+    try {
+      const { data, error } = await supabase.rpc('unregister_self_from_match', {
+        p_registration_id: registrationId,
+        p_self_token: selfUnregisterToken,
+      })
+
+      if (error) {
+        if (isRpcNotDeployedError(error)) {
+          throw new Error('La opción de auto-baja segura no está habilitada aún en la base de datos.')
+        }
+
+        throw error
+      }
+
+      if (data !== true) {
+        throw new Error('No fue posible validar tu auto-baja. Verifica que uses el mismo dispositivo con el que te inscribiste.')
+      }
+
+      return { error: null }
+    } catch (error) {
+      console.error('Error unregistering self from match:', error)
+      return { error }
     }
   }
 
@@ -440,6 +577,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     getPublicMatchById,
     getMatchRegistrations,
     registerForMatch,
+    unregisterSelfFromMatch,
     unregisterFromMatch,
     deleteMatch,
     registerRentedGoalkeepers,

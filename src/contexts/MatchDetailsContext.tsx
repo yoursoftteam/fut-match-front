@@ -65,7 +65,7 @@ export function MatchDetailsProvider({ matchId, children }: MatchDetailsProvider
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { getMatchById, getPublicMatchById } = useMatches();
+  const { getPublicMatchById } = useMatches();
   const { registrations = [], loading: registrationsLoading } = useMatchRegistrationsRealtime(matchId);
   const { user } = useAuth();
 
@@ -75,12 +75,6 @@ export function MatchDetailsProvider({ matchId, children }: MatchDetailsProvider
     try {
       setLoading(true);
       setError(null);
-      const result = await getMatchById(matchId);
-      if (result.data) {
-        setMatchData(result.data);
-        return;
-      }
-
       const publicResult = await getPublicMatchById(matchId);
       if (publicResult.error) {
         setError("Error al cargar el partido");
@@ -94,7 +88,7 @@ export function MatchDetailsProvider({ matchId, children }: MatchDetailsProvider
     } finally {
       setLoading(false);
     }
-  }, [getMatchById, getPublicMatchById, matchId]);
+  }, [getPublicMatchById, matchId]);
 
   useEffect(() => {
     refreshMatchData();
