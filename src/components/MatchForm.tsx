@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react";
 import { formatCurrency } from "@/lib/currency";
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 
 interface MatchFormData {
   location: string;
@@ -83,10 +84,17 @@ export default function MatchForm({
     e.preventDefault();
     // Calculate cost per player (total players = playersPerTeam * 2)
     const totalPlayers = formData.playersPerTeam * 2;
-    const totalCost = formData.hasRentedGoalkeepers 
-      ? formData.fieldCost + formData.rentalCost 
-      : formData.fieldCost;
-    const costPerPlayer = Math.round(totalCost / totalPlayers);
+    const totalCost = getTotalCost(
+      formData.fieldCost,
+      formData.rentalCost,
+      formData.hasRentedGoalkeepers,
+    );
+    const payingPlayers = getPayingPlayersCount(
+      totalPlayers,
+      formData.hasRentedGoalkeepers,
+      formData.rentedGoalkeepersCount,
+    );
+    const costPerPlayer = payingPlayers > 0 ? Math.round(totalCost / payingPlayers) : 0;
     
     onMatchCreate({
       ...formData,
@@ -96,10 +104,17 @@ export default function MatchForm({
   };
 
   const totalPlayers = formData.playersPerTeam * 2;
-  const totalCost = formData.hasRentedGoalkeepers 
-    ? formData.fieldCost + formData.rentalCost 
-    : formData.fieldCost;
-  const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0;
+  const totalCost = getTotalCost(
+    formData.fieldCost,
+    formData.rentalCost,
+    formData.hasRentedGoalkeepers,
+  );
+  const payingPlayers = getPayingPlayersCount(
+    totalPlayers,
+    formData.hasRentedGoalkeepers,
+    formData.rentedGoalkeepersCount,
+  );
+  const costPerPlayer = totalCost > 0 && payingPlayers > 0 ? Math.round(totalCost / payingPlayers) : 0;
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
