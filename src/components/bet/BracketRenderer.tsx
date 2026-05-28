@@ -6,7 +6,7 @@ export interface BracketRendererProps {
   tournament: { id: string; name: string }
   qualified: {
     group_stage: Array<{ group: string; position: number; team: string }>
-    round_of_16: string[]
+    round_of_32: string[]
     quarter_finals: string[]
     semi_finals: string[]
     third_place: [string, string]
@@ -55,8 +55,8 @@ export function BracketRenderer({
         className="mx-auto w-full min-w-max"
         style={{ aspectRatio: `${width} / ${height}` }}
       >
-        {/* Round of 16 */}
-        {qualified.round_of_16.map((team, i) => (
+        {/* Round of 32 */}
+        {qualified.round_of_32.map((team, i) => (
           <g key={`r16-${i}`}>
             <rect
               x="20"
@@ -74,7 +74,7 @@ export function BracketRenderer({
               textAnchor="middle"
               className="cursor-pointer fill-slate-50 text-xs hover:fill-emerald-500"
               onClick={() => setSelectedTeam(team)}
-              aria-label={`Round of 16: ${team}`}
+              aria-label={`Round of 32: ${team}`}
             >
               {team.substring(0, 10)}
             </text>

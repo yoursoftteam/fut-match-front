@@ -1,24 +1,25 @@
 -- Parti2 Bet Module - Knockout Stage Generator (48-team format)
 -- Version: 2.0
 -- Date: 2026-05-27
--- Description: Template + SQL placeholders for Round of 16 (32 teams)
+-- Description: Template + SQL placeholders for Round of 32 (48 teams)
 
 -- =============================================================================
--- KNOCKOUT STAGE STRUCTURE (32 TEAMS - OFFICIAL FIFA 2026 SEEDING)
+-- KNOCKOUT STAGE STRUCTURE (48 TEAMS - OFFICIAL FIFA 2026 SEEDING)
 -- =============================================================================
--- Round of 16: 16 matches (32 teams → 16 winners)
+-- Round of 32: 16 matches (32 teams → 16 winners)
 --   - 12 group winners (1st place teams from groups A-L)
 --   - 12 group runners-up (2nd place teams from groups A-L)
 --   - 8 best third-place finishers (3rd place teams ranked by performance)
 --
--- Quarterfinals: 8 matches (16 winners → 8 winners)
--- Semifinals: 4 matches (8 winners → 4 winners)
+-- Round of 16: 8 matches (16 winners → 8 winners)
+-- Quarterfinals: 4 matches (8 winners → 4 winners)
+-- Semifinals: 2 matches (4 winners → 2 winners)
 -- Third Place: 1 match (for 3rd place position)
 -- Final: 1 match (championship)
--- Total Knockout Matches: 30
+-- Total Knockout Matches: 32
 
 -- =============================================================================
--- ROUND OF 16 SEEDING (16 matches, 32 teams)
+-- ROUND OF 32 SEEDING (16 matches, 32 teams)
 -- =============================================================================
 -- Official FIFA 2026 bracket structure for 12 groups:
 -- Match 1: 1st A vs Best 3rd / 2nd X
@@ -48,8 +49,8 @@
 --    - 12 group winners (1st place from A-L)
 --    - 12 group runners-up (2nd place from A-L)
 --    - Best 8 third-place finishers (top 3rd place teams)
--- 4. Create 16 Round of 16 matches with known team IDs
--- 5. Create 30 total knockout matches with NULL team IDs (filled dynamically)
+-- 4. Create 16 Round of 32 matches with known team IDs
+-- 5. Create 32 total knockout matches with NULL team IDs (filled dynamically)
 
 -- =============================================================================
 -- PLACEHOLDER SQL (to be customized with actual group results)
@@ -61,7 +62,7 @@
 -- INSERT INTO bet_matches (tournament_id, stage, group_name, kickoff_at, home_team_id, away_team_id, status)
 -- SELECT
 --   :tournament_id,
---   'round_of_16'::bet_match_stage,
+--   'round_of_32'::bet_match_stage,
 --   'RO16-' || row_number() OVER (ORDER BY ko.match_seq),
 --   ko.kickoff_at,
 --   ko.home_team_id,
@@ -70,12 +71,12 @@
 -- FROM (
 --   SELECT 1 as match_seq, 
 --     (SELECT id FROM bet_teams WHERE fifa_code = 'MEX') as home_team_id,
---     (SELECT id FROM best_third_place_teams LIMIT 1) as away_team_id,
+--     (SELECT id FROM qualified_third_place_teams LIMIT 1) as away_team_id,
 --     '2026-07-03 14:00:00+00'::TIMESTAMP as kickoff_at
 --   UNION ALL
 --   SELECT 2, 
 --     (SELECT id FROM bet_teams WHERE fifa_code = 'BRA'), 
---     (SELECT id FROM bet_teams WHERE fifa_code = 'URS'),
+--     (SELECT id FROM bet_teams WHERE fifa_code = 'URU'),
 --     '2026-07-03 17:00:00+00'::TIMESTAMP
 --   -- ... 14 more rows
 -- ) ko;

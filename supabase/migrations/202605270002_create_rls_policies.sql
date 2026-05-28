@@ -107,23 +107,12 @@ CREATE POLICY "Only owner can delete pool"
 -- BET_POOL_MEMBERS - Membership Management
 -- =============================================================================
 
--- SELECT: Users can see members of pools they're in or own
+-- SELECT: Users can see only their own membership rows.
+-- This avoids recursive policy evaluation with bet_pools policies.
 CREATE POLICY "Members visible to pool participants"
   ON bet_pool_members
   FOR SELECT
-  USING (
-    EXISTS (
-      SELECT 1 FROM bet_pools
-      WHERE id = pool_id AND (
-        auth.uid() = owner_id OR
-        EXISTS (
-          SELECT 1 FROM bet_pool_members m2
-          WHERE m2.pool_id = bet_pools.id
-          AND m2.user_id = auth.uid()
-        )
-      )
-    )
-  );
+  USING (auth.uid() = user_id);
 
 -- INSERT: Pool owner can add members; members can join via invite code
 CREATE POLICY "Users can join pools"

@@ -34,8 +34,7 @@ export function useBetMatches({
 
   const fetchMatches = useCallback(async () => {
     if (!tournamentId) {
-      setError('Tournament ID is required')
-      setLoading(false)
+      setLoading(true)
       return
     }
 

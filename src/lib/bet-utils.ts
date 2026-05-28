@@ -390,8 +390,8 @@ export function generateKnockoutBracket(
     );
   }
 
-  // In FIFA 2026, 8 third-place teams also qualify (24 teams total for round of 32)
-  // For now, return the top 16 (standard format)
+  // In FIFA 2026, 8 third-place teams also qualify (24 teams total for the round of 32).
+  // This helper still returns a simplified bracket view for the currently qualified teams.
 
   return {
     qualified_teams: qualified.map((t) => ({
@@ -404,10 +404,10 @@ export function generateKnockoutBracket(
 }
 
 function generateBracketTree(qualifiedTeams: any[]): Record<string, any> {
-  // Simplified bracket tree for 16-team Round of 16
+  // Simplified bracket tree for the knockout view.
   // In production, implement full seeding algorithm per FIFA rules
   return {
-    round_of_16: [
+    round_of_32: [
       { home: qualifiedTeams[0], away: qualifiedTeams[15] },
       { home: qualifiedTeams[7], away: qualifiedTeams[8] },
       { home: qualifiedTeams[3], away: qualifiedTeams[12] },

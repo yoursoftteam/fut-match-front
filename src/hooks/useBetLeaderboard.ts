@@ -12,8 +12,6 @@ export interface LeaderboardEntry {
   user_id: string
   user_email?: string
   points_total: number
-  accuracy_percentage: number
-  predictions_count: number
 }
 
 interface UseBetLeaderboardParams {

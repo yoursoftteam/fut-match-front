@@ -14,6 +14,8 @@ import { MatchStage } from '@/types/bet'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 
+const FIFA_TOURNAMENT_SLUG = 'fifa-2026'
+
 export default function BetMatchesPage() {
   const { user, loading: authLoading } = useAuth()
   const [tournamentId, setTournamentId] = useState<string>('')
@@ -32,12 +34,26 @@ export default function BetMatchesPage() {
   const { createOrUpdatePrediction, getPrediction, error: predError } =
     useBetPredictions()
 
-  // In a real app, we'd get tournament ID from database or context
-  // For now, using a hardcoded one for testing
   useEffect(() => {
-    if (!tournamentId) {
-      // This would come from your tournament selector in a real app
-      setTournamentId('fifa-2026-tournament-id')
+    let cancelled = false
+
+    async function loadTournamentId() {
+      if (tournamentId) return
+
+      const response = await fetch(
+        `/api/v1/bet/tournaments?slug=${FIFA_TOURNAMENT_SLUG}`
+      )
+      const data = await response.json().catch(() => null)
+
+      if (!cancelled && response.ok && data?.success && data?.data?.id) {
+        setTournamentId(data.data.id)
+      }
+    }
+
+    loadTournamentId()
+
+    return () => {
+      cancelled = true
     }
   }, [tournamentId])
 

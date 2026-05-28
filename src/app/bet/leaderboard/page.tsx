@@ -13,6 +13,8 @@ import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 
+const FIFA_TOURNAMENT_SLUG = 'fifa-2026'
+
 interface TransformedScoreRow {
   user_id: string
   name: string
@@ -33,10 +35,26 @@ export default function BetLeaderboardPage() {
     limit: 100,
   })
 
-  // In a real app, we'd get tournament ID from database or context
   useEffect(() => {
-    if (!tournamentId) {
-      setTournamentId('fifa-2026-tournament-id')
+    let cancelled = false
+
+    async function loadTournamentId() {
+      if (tournamentId) return
+
+      const response = await fetch(
+        `/api/v1/bet/tournaments?slug=${FIFA_TOURNAMENT_SLUG}`
+      )
+      const data = await response.json().catch(() => null)
+
+      if (!cancelled && response.ok && data?.success && data?.data?.id) {
+        setTournamentId(data.data.id)
+      }
+    }
+
+    loadTournamentId()
+
+    return () => {
+      cancelled = true
     }
   }, [tournamentId])
 
@@ -46,7 +64,7 @@ export default function BetLeaderboardPage() {
     name: entry.user_email?.split('@')[0] || `User ${entry.rank}`,
     points_total: entry.points_total,
     rank: entry.rank,
-    completion_percent: Math.round(entry.accuracy_percentage),
+    completion_percent: 0,
   }))
 
   return (
