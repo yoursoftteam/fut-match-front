@@ -413,6 +413,17 @@ export interface BracketNode {
   predicted_winner_id?: string;
 }
 
+export interface FreezePoolConfigsResult {
+  pools_frozen: number;
+  frozen_at: string;
+}
+
+export interface HealthCheckResult {
+  status: string;
+  database_online: boolean;
+  checked_at: string;
+}
+
 // =============================================================================
 // ZUSTAND STORE TYPES
 // =============================================================================

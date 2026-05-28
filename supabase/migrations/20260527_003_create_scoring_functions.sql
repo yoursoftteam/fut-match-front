@@ -294,7 +294,7 @@ $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION fn_freeze_pool_configs_for_tournament(p_tournament_id UUID)
 RETURNS TABLE(
   pools_frozen INT,
-  timestamp TIMESTAMPTZ
+  frozen_at TIMESTAMPTZ
 ) AS $$
 DECLARE
   v_pools_frozen INT;
@@ -448,7 +448,7 @@ CREATE OR REPLACE FUNCTION fn_health_check()
 RETURNS TABLE(
   status TEXT,
   database_online BOOLEAN,
-  timestamp TIMESTAMPTZ
+  checked_at TIMESTAMPTZ
 ) AS $$
 BEGIN
   RETURN QUERY SELECT
