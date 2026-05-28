@@ -1,6 +1,7 @@
 "use client";
 
-import { Trash2 } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Plus, Trash2 } from "lucide-react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
@@ -65,19 +66,85 @@ export function MatchTabs({ activeTab, onTabChange, onOpenTeams }: MatchTabsProp
 }
 
 export function RegistrationPanel() {
-  useMatchDetailsContext();
-  const { form, loading, message, showForm, setShowForm, handleInputChange, handleCheckboxChange, handleSubmit, resetForm } = useMatchRegistration();
-  const { isTitularFull, isSubstituteFull, goalkeepersRemaining, fieldPlayersRemaining, maxGoalkeepers, maxFieldPlayers, goalkeepersCount, fieldPlayersCount } = useMatchPricing();
+  const { registrations, isCreator } = useMatchDetailsContext();
+  const {
+    entries,
+    loading,
+    message,
+    showForm,
+    setShowForm,
+    addEntry,
+    removeEntry,
+    updateEntryName,
+    updateEntryGoalkeeper,
+    handleSubmit,
+    handleEntryKeyDown,
+    resetForm,
+  } = useMatchRegistration();
+  const { isTitularFull, isSubstituteFull, goalkeepersRemaining, maxGoalkeepers, maxFieldPlayers, goalkeepersCount, fieldPlayersCount } = useMatchPricing();
+  const previousEntryIdsRef = useRef<string[]>([]);
+  const totalGoalkeepersRegistered = registrations.filter((registration) => registration.is_goalkeeper).length;
+  const selectedGoalkeepersInForm = entries.filter((entry) => entry.isGoalkeeper).length;
+  const isGoalkeeperCheckboxDisabled = totalGoalkeepersRegistered >= maxGoalkeepers;
+  const goalkeeperSelectionLimitReached = totalGoalkeepersRegistered + selectedGoalkeepersInForm >= maxGoalkeepers;
+
+  useEffect(() => {
+    if (!isGoalkeeperCheckboxDisabled) return;
+
+    entries.forEach((entry) => {
+      if (entry.isGoalkeeper) {
+        updateEntryGoalkeeper(entry.id, false);
+      }
+    });
+  }, [entries, isGoalkeeperCheckboxDisabled, updateEntryGoalkeeper]);
+
+  useEffect(() => {
+    const currentIds = entries.map((entry) => entry.id);
+    const addedId = currentIds.find((id) => !previousEntryIdsRef.current.includes(id));
+
+    if (addedId) {
+      requestAnimationFrame(() => {
+        const input = document.getElementById(`register-fullname-${addedId}`) as HTMLInputElement | null;
+        input?.focus();
+      });
+    }
+
+    previousEntryIdsRef.current = currentIds;
+  }, [entries]);
 
   return (
     <div id="panel-register" role="tabpanel" aria-labelledby="tab-register">
       <h2 className="mb-2 text-xl font-bold text-foreground">Inscribirme al partido</h2>
-      <p className="mb-4 text-sm text-muted-foreground">Deja tu nombre y elige si vienes como portero.</p>
+      <p className="mb-4 text-sm text-muted-foreground">Puedes inscribir varios jugadores. Presiona Enter para crear otra fila.</p>
+      {isCreator && (
+        <div
+          className={`mb-3 inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${isGoalkeeperCheckboxDisabled ? "bg-amber-500/15 text-amber-300 ring-1 ring-amber-500/40" : "bg-muted text-muted-foreground ring-1 ring-border"}`}
+        >
+          {isGoalkeeperCheckboxDisabled
+            ? "Cupos de portero completos"
+            : `Cupos de portero disponibles: ${Math.max(0, maxGoalkeepers - totalGoalkeepersRegistered)}`}
+        </div>
+      )}
       <div className="mb-4 rounded border border-border bg-muted p-3 text-sm text-muted-foreground">
         <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
         <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
         <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
+        {isGoalkeeperCheckboxDisabled && (
+          <p className="mt-1 text-amber-400">Ya se completaron los cupos de portero. El check está deshabilitado.</p>
+        )}
       </div>
+
+      {isTitularFull && !isSubstituteFull && (
+        <div className="mb-4 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          Los cupos titulares ya están completos. Si te inscribes ahora, entrarás como suplente.
+        </div>
+      )}
+
+      {isTitularFull && isSubstituteFull && (
+        <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
+          Ya no hay cupos disponibles en este partido (ni titulares ni suplentes).
+        </div>
+      )}
 
       {message && (
         <div role="status" aria-live="polite" className={`mb-4 rounded p-3 text-sm ${message.includes("exitosamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}>
@@ -96,39 +163,69 @@ export function RegistrationPanel() {
         </button>
       ) : (
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="register-fullname" className="mb-2 block text-sm font-medium text-foreground">Nombre completo</label>
-            <input
-              id="register-fullname"
-              type="text"
-              name="name"
-              autoComplete="name"
-              value={form.name}
-              onChange={handleInputChange}
-              className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground"
-              placeholder="Ingresa tu nombre…"
-              required
-            />
-          </div>
-          <div className="flex items-center gap-3 rounded border border-border bg-muted p-3">
-            <input
-              id="register-gk"
-              type="checkbox"
-              name="isGoalkeeper"
-              checked={form.isGoalkeeper}
-              onChange={handleCheckboxChange}
-              className="h-5 w-5"
-              disabled={goalkeepersRemaining <= 0}
-            />
-            <label htmlFor="register-gk" className="text-sm text-foreground">Me registro como portero</label>
+          <div className="space-y-3">
+            {entries.map((entry, index) => (
+              <div key={entry.id} className="rounded border border-border bg-muted p-3">
+                <div className="mb-2 flex items-center justify-between">
+                  <label htmlFor={`register-fullname-${entry.id}`} className="text-sm font-medium text-foreground">
+                    Jugador {index + 1}
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => removeEntry(entry.id)}
+                    className="rounded p-1 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                    aria-label={`Quitar jugador ${index + 1}`}
+                    disabled={entries.length === 1}
+                  >
+                    <Trash2 size={14} aria-hidden />
+                  </button>
+                </div>
+
+                <input
+                  id={`register-fullname-${entry.id}`}
+                  type="text"
+                  autoComplete="name"
+                  value={entry.name}
+                  onChange={(e) => updateEntryName(entry.id, e.target.value)}
+                  onKeyDown={(e) => handleEntryKeyDown(e, entry.id)}
+                  className="w-full rounded border border-border bg-background px-4 py-3 text-foreground"
+                  placeholder="Ingresa el nombre..."
+                />
+
+                <div className="mt-3 flex items-center gap-3">
+                  <input
+                    id={`register-gk-${entry.id}`}
+                    type="checkbox"
+                    checked={entry.isGoalkeeper}
+                    onChange={(e) => updateEntryGoalkeeper(entry.id, e.target.checked)}
+                    className="h-5 w-5"
+                    disabled={isGoalkeeperCheckboxDisabled || (!entry.isGoalkeeper && goalkeeperSelectionLimitReached)}
+                  />
+                  <label htmlFor={`register-gk-${entry.id}`} className="text-sm text-foreground">
+                    {isGoalkeeperCheckboxDisabled || (!entry.isGoalkeeper && goalkeeperSelectionLimitReached)
+                      ? "Portero (ya se encuentran inscritos los porteros)"
+                      : "Portero"}
+                  </label>
+                </div>
+              </div>
+            ))}
+
+            <button
+              type="button"
+              onClick={() => addEntry()}
+              className="inline-flex items-center gap-2 rounded border border-dashed border-border bg-muted px-3 py-2 text-sm font-medium text-foreground transition hover:bg-secondary"
+            >
+              <Plus size={14} aria-hidden />
+              Agregar jugador
+            </button>
           </div>
           <div className="flex gap-3">
             <button
               type="submit"
-              className="flex-1 rounded bg-green-500 py-2 px-4 font-semibold text-white transition hover:bg-green-600"
-              disabled={loading || (isTitularFull && isSubstituteFull) || (!isTitularFull && form.isGoalkeeper && goalkeepersRemaining <= 0) || (!isTitularFull && !form.isGoalkeeper && fieldPlayersRemaining <= 0)}
+              className={`flex-1 rounded py-2 px-4 font-semibold text-white transition ${isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 hover:bg-green-600"}`}
+              disabled={loading || (isTitularFull && isSubstituteFull)}
             >
-              {loading ? "Registrando…" : "Confirmar inscripción"}
+              {loading ? "Registrando..." : "Confirmar inscripciones"}
             </button>
             <button
               type="button"
@@ -146,13 +243,22 @@ export function RegistrationPanel() {
 
 export function PlayersPanel() {
   const { matchData, registrations, registrationsLoading, isCreator } = useMatchDetailsContext();
-  const { showModal, target, loading, openModal, closeModal, handleUnregister } = useMatchUnregister();
+  const { showModal, target, loading, openModal, closeModal, handleUnregister, message } = useMatchUnregister();
   const { titulares, suplentes } = useMatchPricing();
 
   return (
     <>
     <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
       <h2 className="mb-3 text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
+      {message && (
+        <div
+          role="status"
+          aria-live="polite"
+          className={`mb-3 rounded p-3 text-sm ${message.includes("correctamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}
+        >
+          {message}
+        </div>
+      )}
       <div className="max-h-[68vh] space-y-2 overflow-y-auto pr-1">
         {registrationsLoading && (
           <p className="py-4 text-center text-muted-foreground">Cargando inscritos…</p>
@@ -167,24 +273,24 @@ export function PlayersPanel() {
               <span className="font-medium text-foreground">{registration.name}</span>
               <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
             </div>
-            {isCreator && (
-              <div className="ml-3 flex items-center gap-2">
+            <div className="ml-3 flex items-center gap-2">
+              {isCreator && (
                 <PaymentStatus 
                   registrationId={registration.id}
                   hasPaid={registration.has_paid}
                   name={registration.name}
                 />
-                <button
-                  type="button"
-                  onClick={() => openModal(registration)}
-                  className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-                  title="Eliminar jugador"
-                  aria-label={`Eliminar a ${registration.name}`}
-                >
-                  <Trash2 size={16} aria-hidden />
-                </button>
-              </div>
-            )}
+              )}
+              <button
+                type="button"
+                onClick={() => openModal(registration)}
+                className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                title="Eliminar jugador"
+                aria-label={`Eliminar a ${registration.name}`}
+              >
+                <Trash2 size={16} aria-hidden />
+              </button>
+            </div>
           </div>
         ))}
 
@@ -198,24 +304,24 @@ export function PlayersPanel() {
                   <span className="font-medium text-foreground">{registration.name}</span>
                   <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
                 </div>
-                {isCreator && (
-                  <div className="ml-3 flex items-center gap-2">
+                <div className="ml-3 flex items-center gap-2">
+                  {isCreator && (
                     <PaymentStatus 
                       registrationId={registration.id}
                       hasPaid={registration.has_paid}
                       name={registration.name}
                     />
-                    <button
-                      type="button"
-                      onClick={() => openModal(registration)}
-                      className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
-                      title="Eliminar jugador"
-                      aria-label={`Eliminar a ${registration.name}`}
-                    >
-                      <Trash2 size={16} aria-hidden />
-                    </button>
-                  </div>
-                )}
+                  )}
+                  <button
+                    type="button"
+                    onClick={() => openModal(registration)}
+                    className="rounded p-1.5 text-red-400 transition hover:bg-red-900/30 hover:text-red-300"
+                    title="Eliminar jugador"
+                    aria-label={`Eliminar a ${registration.name}`}
+                  >
+                    <Trash2 size={16} aria-hidden />
+                  </button>
+                </div>
               </div>
             ))}
           </>
@@ -233,23 +339,21 @@ export function PlayersPanel() {
       )}
     </div>
 
-    {isCreator && (
-      <ConfirmDialog
-        open={showModal}
-        title="Eliminar jugador"
-        description={
-          target ? (
-            <>¿Eliminar a <strong className="text-foreground">{target.name}</strong> del partido? Esta acción no se puede deshacer.</>
-          ) : null
-        }
-        confirmLabel="Sí, eliminar"
-        cancelLabel="Cancelar"
-        destructive
-        loading={loading}
-        onConfirm={handleUnregister}
-        onCancel={closeModal}
-      />
-    )}
+    <ConfirmDialog
+      open={showModal}
+      title="Eliminar jugador"
+      description={
+        target ? (
+          <>¿Eliminar a <strong className="text-foreground">{target.name}</strong> del partido? Esta acción no se puede deshacer.</>
+        ) : null
+      }
+      confirmLabel="Sí, eliminar"
+      cancelLabel="Cancelar"
+      destructive
+      loading={loading}
+      onConfirm={handleUnregister}
+      onCancel={closeModal}
+    />
     </>
   );
 }

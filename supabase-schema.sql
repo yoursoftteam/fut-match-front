@@ -83,6 +83,7 @@ CREATE TABLE match_registrations (
   match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
   name TEXT NOT NULL,
   is_goalkeeper BOOLEAN NOT NULL DEFAULT FALSE,
+  self_unreg_token_hash TEXT,
   registered_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   has_paid BOOLEAN NOT NULL DEFAULT FALSE,
   paid_at TIMESTAMP WITH TIME ZONE NULL,
@@ -113,6 +114,102 @@ CREATE POLICY "Only match owner can update payments" ON match_registrations
     )
   );
 
+CREATE OR REPLACE FUNCTION register_for_match_public(
+  p_match_id UUID,
+  p_name TEXT,
+  p_is_goalkeeper BOOLEAN,
+  p_self_token TEXT
+)
+RETURNS TABLE (
+  id UUID,
+  name TEXT,
+  is_goalkeeper BOOLEAN,
+  registered_at TIMESTAMP WITH TIME ZONE,
+  has_paid BOOLEAN,
+  paid_at TIMESTAMP WITH TIME ZONE,
+  paid_by UUID
+)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_registration_id UUID;
+  v_trimmed_name TEXT;
+BEGIN
+  v_trimmed_name := btrim(p_name);
+
+  IF char_length(v_trimmed_name) < 2 THEN
+    RAISE EXCEPTION 'El nombre debe tener al menos 2 caracteres.';
+  END IF;
+
+  IF char_length(v_trimmed_name) > 100 THEN
+    RAISE EXCEPTION 'El nombre no puede superar los 100 caracteres.';
+  END IF;
+
+  IF p_self_token IS NULL OR char_length(btrim(p_self_token)) < 10 THEN
+    RAISE EXCEPTION 'Token de auto-baja inválido.';
+  END IF;
+
+  INSERT INTO match_registrations (
+    match_id,
+    name,
+    is_goalkeeper,
+    self_unreg_token_hash
+  )
+  VALUES (
+    p_match_id,
+    v_trimmed_name,
+    p_is_goalkeeper,
+    encode(digest(p_self_token, 'sha256'), 'hex')
+  )
+  RETURNING match_registrations.id INTO v_registration_id;
+
+  RETURN QUERY
+  SELECT
+    r.id,
+    r.name,
+    r.is_goalkeeper,
+    r.registered_at,
+    r.has_paid,
+    r.paid_at,
+    r.paid_by
+  FROM match_registrations r
+  WHERE r.id = v_registration_id;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION register_for_match_public(UUID, TEXT, BOOLEAN, TEXT) TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION unregister_self_from_match(
+  p_registration_id UUID,
+  p_self_token TEXT
+)
+RETURNS BOOLEAN
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_deleted_count INTEGER;
+BEGIN
+  IF p_self_token IS NULL OR char_length(btrim(p_self_token)) < 10 THEN
+    RETURN FALSE;
+  END IF;
+
+  DELETE FROM match_registrations r
+  WHERE r.id = p_registration_id
+    AND r.self_unreg_token_hash IS NOT NULL
+    AND r.self_unreg_token_hash = encode(digest(p_self_token, 'sha256'), 'hex');
+
+  GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
+
+  RETURN v_deleted_count > 0;
+END;
+$$;
+
+GRANT EXECUTE ON FUNCTION unregister_self_from_match(UUID, TEXT) TO anon, authenticated;
+
 -- Enforce registration rules at DB level:
 -- 1) max 2 goalkeepers (for titular slots only)
 -- 2) always reserve 2 slots for goalkeepers (for titular slots only)
@@ -130,9 +227,8 @@ DECLARE
   v_max_field_players INTEGER;
   v_max_substitute_slots CONSTANT INTEGER := 5;
 BEGIN
-  SELECT max_players INTO v_max_players
-  FROM matches
-  WHERE id = NEW.match_id;
+  SELECT m.max_players INTO v_max_players
+  FROM get_public_match_by_id(NEW.match_id) AS m;
 
   IF v_max_players IS NULL THEN
     RAISE EXCEPTION 'Partido no encontrado.';
