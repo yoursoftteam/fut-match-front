@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { useSearchParams } from "next/navigation"
+import Link from "next/link"
 import MatchFormSteps, { type MatchFormSubmitData } from "@/components/MatchFormSteps"
 import { useMatchCreation } from "@/hooks/useMatchCreation"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
@@ -141,6 +142,24 @@ export default function CreateMatchClient() {
             defaultValues={templateDefaultValues}
           />
         )}
+
+        <div className="mt-6 rounded-xl border border-primary/20 bg-primary/5 px-4 py-3 text-center text-xs leading-relaxed text-muted-foreground">
+          Al crear el partido aceptas nuestros{" "}
+          <Link
+            href="/terms"
+            className="font-semibold text-foreground underline decoration-primary/40 underline-offset-2 hover:text-primary"
+          >
+            Terminos y Condiciones
+          </Link>{" "}
+          y la{" "}
+          <Link
+            href="/privacy"
+            className="font-semibold text-foreground underline decoration-primary/40 underline-offset-2 hover:text-primary"
+          >
+            Politica de Privacidad
+          </Link>
+          .
+        </div>
       </div>
     </div>
   )

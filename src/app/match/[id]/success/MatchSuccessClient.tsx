@@ -7,6 +7,7 @@ import { ArrowLeft, CheckCircle2, Loader2, Users, Calendar, MapPin, CreditCard, 
 import ShareLink from "@/components/ShareLink";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 import { BrandLogo } from "@/components/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
@@ -89,9 +90,19 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
   });
 
   const totalPlayers = match.max_players;
+  const totalCost = getTotalCost(
+    match.field_cost,
+    match.rental_cost,
+    match.has_rented_goalkeepers,
+  );
+  const payingPlayers = getPayingPlayersCount(
+    totalPlayers,
+    match.has_rented_goalkeepers,
+    match.rented_goalkeepers_count,
+  );
   const costPerPlayer =
-    totalPlayers > 0
-      ? Math.ceil((match.field_cost + match.rental_cost) / totalPlayers)
+    payingPlayers > 0
+      ? Math.ceil(totalCost / payingPlayers)
       : 0;
 
   const matchTime = match.date.includes("T")

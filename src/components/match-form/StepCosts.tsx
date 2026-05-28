@@ -4,6 +4,7 @@ import { useWatch } from "react-hook-form";
 import { DollarSignIcon, ChevronLeftIcon, Loader2Icon } from "lucide-react";
 
 import { formatCurrency } from "@/lib/currency";
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 import { useMatchFormContext } from "@/contexts/MatchFormContext";
 import { useMatchFormNavigation } from "@/hooks/useMatchFormNavigation";
 import { Card, CardHeader, CardContent } from "@/components/ui/card";
@@ -40,8 +41,16 @@ export default function StepCosts({
   const playersPerTeam = useWatch({ control, name: "playersPerTeam" });
 
   const totalPlayers = playersPerTeam * 2;
-  const totalCost = hasRentedGoalkeepers ? fieldCost + rentalCost : fieldCost;
-  const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0;
+  const totalCost = getTotalCost(fieldCost, rentalCost, hasRentedGoalkeepers);
+  const payingPlayers = getPayingPlayersCount(
+    totalPlayers,
+    hasRentedGoalkeepers,
+    rentedGoalkeepersCount,
+  );
+  const costPerPlayer =
+    totalCost > 0 && payingPlayers > 0
+      ? Math.round(totalCost / payingPlayers)
+      : 0;
 
   return (
     <Card>
@@ -99,6 +108,12 @@ export default function StepCosts({
                 <span className="text-muted-foreground">Total jugadores:</span>
                 <span className="font-medium tabular-nums">{totalPlayers}</span>
               </div>
+              {hasRentedGoalkeepers && rentedGoalkeepersCount > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Jugadores que aportan:</span>
+                  <span className="font-medium tabular-nums">{payingPlayers}</span>
+                </div>
+              )}
               <Separator />
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Valor cancha:</span>

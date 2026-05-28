@@ -9,6 +9,7 @@ import type { UseMatchEditingReturn } from "@/hooks/useMatchEditing";
 import { useMatches } from "@/hooks/useMatches";
 import { useFrecuentes } from "@/hooks/useFrecuentes";
 import { formatCurrency } from "@/lib/currency";
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
@@ -52,8 +53,18 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
   if (!matchData) return null;
 
   const totalPlayers = matchData.max_players;
-  const costPerPlayer = totalPlayers > 0
-    ? Math.ceil((matchData.field_cost + matchData.rental_cost) / totalPlayers)
+  const totalCost = getTotalCost(
+    matchData.field_cost,
+    matchData.rental_cost,
+    matchData.has_rented_goalkeepers,
+  );
+  const payingPlayers = getPayingPlayersCount(
+    totalPlayers,
+    matchData.has_rented_goalkeepers,
+    matchData.rented_goalkeepers_count,
+  );
+  const costPerPlayer = payingPlayers > 0
+    ? Math.ceil(totalCost / payingPlayers)
     : 0;
 
   const handleDeleteMatch = async () => {
