@@ -5,6 +5,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 
 import { matchFormSchema, type MatchFormValues, type MatchFormSubmitData, type MatchTemplateParticipant } from "@/lib/match-schema"
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing"
 
 import { MatchFormProvider, useMatchFormContext } from "@/contexts/MatchFormContext"
 import { ProgressBar } from "@/components/ProgressBar"
@@ -30,7 +31,6 @@ interface MatchFormStepsProps {
 
 export default function MatchFormSteps(props: MatchFormStepsProps) {
   const hasTemplate = props.hasTemplate ?? (props.templateParticipants?.length ?? 0) > 0
-  const templateParticipants = props.templateParticipants ?? []
   const totalSteps = hasTemplate ? 4 : 3
 
   const form = useForm<MatchFormValues>({
@@ -85,21 +85,27 @@ function MatchFormStepsInner({
   hasTemplate,
   templateParticipants = [],
 }: MatchFormStepsInnerProps) {
-  const { currentStep, totalSteps, handleBack, handleNext } = useMatchFormNavigation()
+  const { currentStep, handleBack, handleNext } = useMatchFormNavigation()
   const { watch, handleSubmit } = form
   const { formId } = useMatchFormContext()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [overrideParticipantIds, setOverrideParticipantIds] = useState<string[] | null>(null)
 
   const fieldCost = watch("fieldCost")
-  const isLastStep = currentStep === totalSteps
 
   const buildAndSubmit = async (data: MatchFormValues, participantIds: string[]) => {
     setIsSubmitting(true)
     const resolvedLocation = data.noLocationYet ? "Por definir" : data.location.trim()
     const totalPlayers = data.playersPerTeam * 2
-    const totalCost = data.hasRentedGoalkeepers ? data.fieldCost + data.rentalCost : data.fieldCost
-    const costPerPlayer = totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0
+    const totalCost = getTotalCost(data.fieldCost, data.rentalCost, data.hasRentedGoalkeepers)
+    const payingPlayers = getPayingPlayersCount(
+      totalPlayers,
+      data.hasRentedGoalkeepers,
+      data.rentedGoalkeepersCount,
+    )
+    const costPerPlayer = totalCost > 0 && payingPlayers > 0
+      ? Math.round(totalCost / payingPlayers)
+      : 0
 
     const submitData: MatchFormSubmitData = {
       location: resolvedLocation,

@@ -1,8 +1,10 @@
 import { useMemo } from "react";
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 
 interface UseMatchFormCalculationsProps {
   playersPerTeam: number;
   hasRentedGoalkeepers: boolean;
+  rentedGoalkeepersCount: number;
   fieldCost: number;
   rentalCost: number;
 }
@@ -10,20 +12,31 @@ interface UseMatchFormCalculationsProps {
 export function useMatchFormCalculations({
   playersPerTeam,
   hasRentedGoalkeepers,
+  rentedGoalkeepersCount,
   fieldCost,
   rentalCost,
 }: UseMatchFormCalculationsProps) {
   const totalPlayers = useMemo(() => playersPerTeam * 2, [playersPerTeam]);
 
   const totalCost = useMemo(
-    () => (hasRentedGoalkeepers ? fieldCost + rentalCost : fieldCost),
+    () => getTotalCost(fieldCost, rentalCost, hasRentedGoalkeepers),
     [hasRentedGoalkeepers, fieldCost, rentalCost],
   );
 
-  const costPerPlayer = useMemo(
-    () => (totalCost > 0 ? Math.round(totalCost / totalPlayers) : 0),
-    [totalCost, totalPlayers],
+  const payingPlayers = useMemo(
+    () =>
+      getPayingPlayersCount(
+        totalPlayers,
+        hasRentedGoalkeepers,
+        rentedGoalkeepersCount,
+      ),
+    [totalPlayers, hasRentedGoalkeepers, rentedGoalkeepersCount],
   );
 
-  return { totalPlayers, totalCost, costPerPlayer };
+  const costPerPlayer = useMemo(
+    () => (totalCost > 0 && payingPlayers > 0 ? Math.round(totalCost / payingPlayers) : 0),
+    [totalCost, payingPlayers],
+  );
+
+  return { totalPlayers, payingPlayers, totalCost, costPerPlayer };
 }
