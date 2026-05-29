@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, startTransition } from 'react'
 import { cn } from '@/lib/utils'
 
 export interface ScoreInputProps {
@@ -49,12 +49,33 @@ export function ScoreInput({
     [onChangeAway]
   )
 
+  const prevHomeScoreRef = useRef(homeScore)
+  const prevAwayScoreRef = useRef(awayScore)
+
   useEffect(() => {
     return () => {
       if (homeTimeoutRef.current) clearTimeout(homeTimeoutRef.current)
       if (awayTimeoutRef.current) clearTimeout(awayTimeoutRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    if (prevHomeScoreRef.current !== homeScore) {
+      startTransition(() => {
+        setHomeInput(String(homeScore))
+      })
+      prevHomeScoreRef.current = homeScore
+    }
+  }, [homeScore])
+
+  useEffect(() => {
+    if (prevAwayScoreRef.current !== awayScore) {
+      startTransition(() => {
+        setAwayInput(String(awayScore))
+      })
+      prevAwayScoreRef.current = awayScore
+    }
+  }, [awayScore])
 
   const handleHomeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value
