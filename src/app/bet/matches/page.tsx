@@ -5,7 +5,7 @@
 
 'use client'
 
-import { Suspense, useEffect, useMemo, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter, useSearchParams } from 'next/navigation'
 import {
@@ -430,18 +430,20 @@ function BetMatchesContent() {
     router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false })
   }
 
+  const saveTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined)
+
   const handleUpdatePrediction = async (
     matchId: string,
     homeScore: number,
     awayScore: number
   ) => {
     setSaving(true)
-    setSaveSuccess(null)
 
     try {
       await createOrUpdatePrediction(matchId, homeScore, awayScore, poolId ?? undefined)
       setSaveSuccess('Predicción guardada')
-      setTimeout(() => setSaveSuccess(null), 2000)
+      if (saveTimerRef.current) clearTimeout(saveTimerRef.current)
+      saveTimerRef.current = setTimeout(() => setSaveSuccess(null), 2000)
     } catch (err) {
       console.error('Error updating prediction:', err)
     } finally {
@@ -513,16 +515,17 @@ function BetMatchesContent() {
           </div>
         </header>
 
-        {saveSuccess && (
-          <div
-            role="status"
-            aria-live="polite"
-            className="mb-3 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300"
-          >
-            <CheckCircle2 className="size-4" aria-hidden="true" />
-            {saveSuccess}
-          </div>
-        )}
+        <div
+          role="status"
+          aria-live="polite"
+          className={cn(
+            'mb-3 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300 transition-opacity duration-200',
+            saveSuccess ? 'opacity-100' : 'opacity-0 pointer-events-none'
+          )}
+        >
+          <CheckCircle2 className="size-4 shrink-0" aria-hidden="true" />
+          <span>Predicción guardada</span>
+        </div>
 
         {(matchesError || predError) && (
           <div
