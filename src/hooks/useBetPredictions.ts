@@ -5,7 +5,7 @@
 
 'use client'
 
-import { useState, useCallback } from 'react'
+import { useState, useCallback, useRef } from 'react'
 import { useAuth } from './useAuth'
 import { MatchPrediction } from '@/types/bet'
 
@@ -13,6 +13,8 @@ interface UseBetPredictionsReturn {
   loading: boolean
   error: string | null
   predictions: Map<string, MatchPrediction>
+  poolId: string | null
+  fetchPredictions: (poolId?: string) => Promise<void>
   createOrUpdatePrediction: (
     matchId: string,
     homeScore: number,
@@ -26,8 +28,73 @@ export function useBetPredictions(): UseBetPredictionsReturn {
   const { user } = useAuth()
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [poolId, setPoolId] = useState<string | null>(null)
   const [predictions, setPredictions] = useState<Map<string, MatchPrediction>>(
     new Map()
+  )
+  const activeRequestRef = useRef(0)
+
+  const fetchPredictions = useCallback(
+    async (targetPoolId?: string) => {
+      const activePoolId = targetPoolId ?? poolId
+      if (!user) return
+
+      const requestId = ++activeRequestRef.current
+      setLoading(true)
+      setError(null)
+
+      try {
+        const { supabase } = await import('@/lib/supabase')
+        const { data: authData } = await supabase.auth.getSession()
+        const token = authData?.session?.access_token
+        if (!token) {
+          setError('No se encontró sesión activa')
+          setLoading(false)
+          return
+        }
+
+        const url = activePoolId
+          ? `/api/v1/bet/predictions?pool_id=${activePoolId}`
+          : '/api/v1/bet/predictions'
+
+        const response = await fetch(url, {
+          headers: { Authorization: `Bearer ${token}` },
+        })
+
+        if (requestId !== activeRequestRef.current) return
+
+        if (!response.ok) {
+          const errBody = await response.text().catch(() => '')
+          setError(`Error al cargar predicciones: ${response.status} ${errBody.slice(0, 200)}`)
+          console.error('GET predictions failed:', response.status, errBody)
+          return
+        }
+
+        const result = await response.json()
+        if (requestId !== activeRequestRef.current) return
+
+        if (result.success && Array.isArray(result.data)) {
+          const map = new Map<string, MatchPrediction>()
+          for (const pred of result.data) {
+            map.set(pred.match_id, pred)
+          }
+          setPredictions(map)
+          if (targetPoolId) setPoolId(targetPoolId)
+        } else {
+          setError(result.error?.message ?? 'Error al cargar predicciones')
+        }
+      } catch (err) {
+        if (requestId !== activeRequestRef.current) return
+        const msg = err instanceof Error ? err.message : 'Error desconocido'
+        setError(msg)
+        console.error('Error fetching predictions:', err)
+      } finally {
+        if (requestId === activeRequestRef.current) {
+          setLoading(false)
+        }
+      }
+    },
+    [user, poolId]
   )
 
   const createOrUpdatePrediction = useCallback(
@@ -35,8 +102,9 @@ export function useBetPredictions(): UseBetPredictionsReturn {
       matchId: string,
       homeScore: number,
       awayScore: number,
-      poolId?: string
+      targetPoolId?: string
     ) => {
+      const activePoolId = targetPoolId ?? poolId
       if (!user) {
         setError('User not authenticated')
         return
@@ -46,10 +114,8 @@ export function useBetPredictions(): UseBetPredictionsReturn {
       setError(null)
 
       try {
-        // Get current user's session token
-        const { data: authData } = await (
-          await import('@/lib/supabase')
-        ).supabase.auth.getSession()
+        const { supabase } = await import('@/lib/supabase')
+        const { data: authData } = await supabase.auth.getSession()
         const token = authData?.session?.access_token
 
         if (!token) {
@@ -66,7 +132,7 @@ export function useBetPredictions(): UseBetPredictionsReturn {
             match_id: matchId,
             home_score_predicted: homeScore,
             away_score_predicted: awayScore,
-            ...(poolId && { pool_id: poolId }),
+            ...(activePoolId && { pool_id: activePoolId }),
           }),
         })
 
@@ -79,7 +145,6 @@ export function useBetPredictions(): UseBetPredictionsReturn {
 
         const data = await response.json()
         if (data.success) {
-          // Update local state
           setPredictions((prev) => {
             const updated = new Map(prev)
             updated.set(matchId, data.data)
@@ -97,7 +162,7 @@ export function useBetPredictions(): UseBetPredictionsReturn {
         setLoading(false)
       }
     },
-    [user]
+    [user, poolId]
   )
 
   const getPrediction = useCallback(
@@ -109,6 +174,8 @@ export function useBetPredictions(): UseBetPredictionsReturn {
     loading,
     error,
     predictions,
+    poolId,
+    fetchPredictions,
     createOrUpdatePrediction,
     getPrediction,
   }

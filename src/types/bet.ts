@@ -107,6 +107,7 @@ export interface Pool {
   tournament_id: string;
   owner_id: string;
   name: string;
+  description?: string | null;
   visibility: PoolVisibility;
   invite_code: string;
   created_at: string;
@@ -175,6 +176,7 @@ export interface MatchPrediction {
   locked?: boolean;
   time_until_lock_seconds?: number;
   match_kickoff_at?: string;
+  points_earned?: number | null;
 }
 
 export interface MatchPredictionWithDetails extends MatchPrediction {

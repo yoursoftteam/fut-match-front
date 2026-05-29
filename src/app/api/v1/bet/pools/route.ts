@@ -47,6 +47,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { Pool, PoolConfigVersion } from '@/types/bet'
+import { sanitizeText } from '@/lib/sanitize'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -78,6 +79,7 @@ const DEFAULT_CONFIG = {
 interface CreatePoolRequestBody {
   tournament_id: string
   name: string
+  description?: string
   visibility: 'public' | 'private'
   config?: Partial<typeof DEFAULT_CONFIG>
   client_request_id?: string
@@ -288,6 +290,9 @@ export async function POST(
       )
     }
 
+    // Sanitize pool name
+    body.name = sanitizeText(body.name, 60)
+
     // Validate pool name
     const nameValidation = validatePoolName(body.name)
     if (!nameValidation.valid) {
@@ -301,6 +306,23 @@ export async function POST(
         } as ErrorResponse,
         { status: 400 }
       )
+    }
+
+    // Sanitize description if provided
+    if (body.description) {
+      body.description = sanitizeText(body.description, 1000)
+      if (body.description.length > 1000) {
+        return NextResponse.json(
+          {
+            success: false,
+            error: {
+              code: 'INVALID_DESCRIPTION',
+              message: 'Description must be at most 1000 characters',
+            },
+          } as ErrorResponse,
+          { status: 400 }
+        )
+      }
     }
 
     // Get user from Authorization header
@@ -403,6 +425,7 @@ export async function POST(
           tournament_id: body.tournament_id,
           owner_id: user.id,
           name: body.name,
+          description: body.description || null,
           visibility: body.visibility,
           invite_code: inviteCode,
         })

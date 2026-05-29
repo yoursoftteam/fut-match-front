@@ -135,7 +135,7 @@ export default function PoolDetailPage({
             <div className="flex gap-2 shrink-0">
               <button
                 type="button"
-                onClick={() => router.push(`/bet/matches`)}
+                onClick={() => router.push(`/bet/matches?pool=${poolId}`)}
                 className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-xs font-medium text-slate-300 hover:border-[#22C55E]/50 hover:text-slate-50 transition-colors"
               >
                 <Target className="size-3.5" />
@@ -162,7 +162,7 @@ export default function PoolDetailPage({
           <div className="grid grid-cols-2 gap-3">
             <button
               type="button"
-              onClick={() => router.push(`/bet/matches`)}
+              onClick={() => router.push(`/bet/matches?pool=${poolId}`)}
               className="rounded-lg border border-slate-800 bg-slate-950/70 p-4 text-left transition-colors hover:border-[#22C55E]/50"
             >
               <div className="text-2xl mb-2">🎯</div>

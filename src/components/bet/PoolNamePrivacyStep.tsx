@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 interface PoolNamePrivacyStepProps {
   name: string;
   onNameChange: (name: string) => void;
+  description: string;
+  onDescriptionChange: (description: string) => void;
   visibility: "public" | "private";
   onVisibilityChange: (v: "public" | "private") => void;
   errors: Record<string, string>;
@@ -13,6 +15,8 @@ interface PoolNamePrivacyStepProps {
 export function PoolNamePrivacyStep({
   name,
   onNameChange,
+  description,
+  onDescriptionChange,
   visibility,
   onVisibilityChange,
   errors,
@@ -52,6 +56,39 @@ export function PoolNamePrivacyStep({
             {errors.name}
           </p>
         )}
+      </div>
+
+      <div className="space-y-2">
+        <label htmlFor="pool-description" className="text-sm font-medium text-slate-300">
+          Descripción <span className="text-slate-500">(opcional)</span>
+        </label>
+        <textarea
+          id="pool-description"
+          value={description}
+          onChange={(e) => onDescriptionChange(e.target.value)}
+          placeholder="Reglas de la casa, premio, bragging rights..."
+          maxLength={1000}
+          rows={3}
+          className={cn(
+            "w-full rounded-lg border bg-slate-950/70 px-4 py-2.5 text-slate-50 placeholder:text-slate-500 resize-none",
+            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E]/70",
+            errors.description
+              ? "border-red-500/40 focus-visible:ring-red-500/70"
+              : "border-slate-700"
+          )}
+          aria-invalid={!!errors.description}
+          aria-describedby={errors.description ? "pool-description-error" : undefined}
+        />
+        <div className="flex items-center justify-between">
+          {errors.description ? (
+            <p id="pool-description-error" className="text-sm text-red-300" role="alert">
+              {errors.description}
+            </p>
+          ) : (
+            <span />
+          )}
+          <span className="text-xs text-slate-500">{description.length}/1000</span>
+        </div>
       </div>
 
       <div className="space-y-2">

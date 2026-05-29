@@ -3,6 +3,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
+import { sanitizeText } from "@/lib/sanitize";
 import { PoolNamePrivacyStep } from "./PoolNamePrivacyStep";
 import { ScoringMatrixEditor } from "./ScoringMatrixEditor";
 import { CreatePoolReview } from "./CreatePoolReview";
@@ -36,6 +37,7 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
   const { user } = useAuth();
   const [step, setStep] = useState<Step>(1);
   const [name, setName] = useState("");
+  const [description, setDescription] = useState("");
   const [visibility, setVisibility] = useState<"public" | "private">("private");
   const [config, setConfig] = useState<Record<string, number>>({ ...DEFAULT_CONFIG });
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -54,6 +56,10 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
       });
     }
   }, [errors.name]);
+
+  const handleDescriptionChange = useCallback((desc: string) => {
+    setDescription(desc);
+  }, []);
 
   const handleVisibilityChange = useCallback((v: "public" | "private") => {
     setVisibility(v);
@@ -77,6 +83,9 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
     } else if (trimmed.length > 60) {
       newErrors.name = "El nombre es muy largo, máximo 60 caracteres.";
     }
+    if (description.length > 1000) {
+      newErrors.description = "La descripción es muy larga, máximo 1000 caracteres.";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -91,7 +100,7 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
   }, [step, name]);
 
   const handleCreatePool = useCallback(async () => {
-    if (!user || creationStatus === "submitting") return;
+    if (!user || creationStatus === "submitting" || creationStatus === "confirmed") return;
 
     setCreationStatus("submitting");
     setErrorMessage("");
@@ -112,7 +121,8 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
         },
         body: JSON.stringify({
           tournament_id: tournamentId,
-          name: name.trim(),
+          name: sanitizeText(name, 60),
+          description: description ? sanitizeText(description, 1000) : undefined,
           visibility,
           config,
         }),
@@ -173,6 +183,8 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
           <PoolNamePrivacyStep
             name={name}
             onNameChange={handleNameChange}
+            description={description}
+            onDescriptionChange={handleDescriptionChange}
             visibility={visibility}
             onVisibilityChange={handleVisibilityChange}
             errors={errors}
@@ -191,6 +203,7 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
         {step === 3 && (
           <CreatePoolReview
             name={name}
+            description={description}
             visibility={visibility}
             config={config}
             status={creationStatus}
@@ -224,7 +237,9 @@ export function PoolCreationWizard({ tournamentId }: PoolCreationWizardProps) {
 
       <ShareInviteModal
         open={showShareModal}
-        onClose={() => setShowShareModal(false)}
+        onClose={() => {
+          window.location.href = "/bet/pools";
+        }}
         poolName={name}
         inviteUrl={inviteUrl}
       />

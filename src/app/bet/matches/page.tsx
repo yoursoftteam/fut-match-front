@@ -18,6 +18,7 @@ import {
   Loader2,
   Lock,
   Trophy,
+  Users,
 } from 'lucide-react'
 import { LockCountdown } from '@/components/bet/LockCountdown'
 import { ScoreInput } from '@/components/bet/ScoreInput'
@@ -295,6 +296,22 @@ function MatchRow({
           onUpdatePrediction={onUpdatePrediction}
         />
       </td>
+      <td className="whitespace-nowrap px-3 py-2 text-center">
+        {match.status === 'finished' && prediction?.points_earned != null ? (
+          <span
+            className={cn(
+              'inline-flex items-center justify-center font-mono text-xs font-bold tabular-nums',
+              prediction.points_earned > 0
+                ? 'text-emerald-400'
+                : 'text-slate-600'
+            )}
+          >
+            {prediction.points_earned}
+          </span>
+        ) : (
+          <span className="text-[0.6875rem] text-slate-600">–</span>
+        )}
+      </td>
     </tr>
   )
 }
@@ -319,14 +336,21 @@ function BetMatchesContent() {
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
 
+  const poolParam = searchParams.get('pool')
+  const poolId = poolParam ?? null
+
   const { matches, loading: matchesLoading, error: matchesError } = useBetMatches({
     tournamentId,
     stage: undefined,
     groupName: undefined,
   })
 
-  const { createOrUpdatePrediction, getPrediction, error: predError } =
-    useBetPredictions()
+  const {
+    createOrUpdatePrediction,
+    getPrediction,
+    fetchPredictions,
+    error: predError,
+  } = useBetPredictions()
 
   const sortedMatches = useMemo(() => {
     return [...matches].sort((a, b) => {
@@ -387,6 +411,11 @@ function BetMatchesContent() {
     }
   }, [tournamentId])
 
+  useEffect(() => {
+    if (!user) return
+    fetchPredictions(poolId ?? undefined)
+  }, [poolId, user, fetchPredictions])
+
   const goToPage = (nextPage: number) => {
     const page = Math.min(Math.max(1, nextPage), totalPages)
     const params = new URLSearchParams(searchParams.toString())
@@ -410,7 +439,7 @@ function BetMatchesContent() {
     setSaveSuccess(null)
 
     try {
-      await createOrUpdatePrediction(matchId, homeScore, awayScore)
+      await createOrUpdatePrediction(matchId, homeScore, awayScore, poolId ?? undefined)
       setSaveSuccess('Predicción guardada')
       setTimeout(() => setSaveSuccess(null), 2000)
     } catch (err) {
@@ -451,11 +480,20 @@ function BetMatchesContent() {
               <Trophy className="size-3.5" aria-hidden="true" />
               FIFA 2026
             </div>
-            <h1 className="text-2xl font-bold text-balance text-slate-50 md:text-3xl">
-              Predicciones
-            </h1>
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl font-bold text-balance text-slate-50 md:text-3xl">
+                Predicciones
+              </h1>
+              {poolId && (
+                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                  <Users className="size-3.5" aria-hidden="true" />
+                  Polla activa
+                </span>
+              )}
+            </div>
             <p className="mt-1 text-sm text-slate-400">
               {sortedMatches.length} partidos · cierre 10 min antes del kickoff.
+              {poolId && ' · picks guardados en la polla'}
             </p>
           </div>
 
@@ -537,6 +575,7 @@ function BetMatchesContent() {
                   <col className="w-36" />
                   <col className="w-28" />
                   <col className="w-28" />
+                  <col className="w-14" />
                 </colgroup>
                 <thead className="bg-slate-900 text-left text-[0.6875rem] uppercase text-slate-500">
                   <tr>
@@ -566,6 +605,9 @@ function BetMatchesContent() {
                     </th>
                     <th scope="col" className="px-3 py-2 text-right font-semibold">
                       Pick
+                    </th>
+                    <th scope="col" className="px-3 py-2 text-center font-semibold">
+                      Pts
                     </th>
                   </tr>
                 </thead>

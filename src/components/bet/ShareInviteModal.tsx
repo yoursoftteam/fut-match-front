@@ -72,7 +72,6 @@ export function ShareInviteModal({
     >
       <div
         className="fixed inset-0 bg-black/60 backdrop-blur-sm"
-        onClick={onClose}
         aria-hidden="true"
       />
       <div

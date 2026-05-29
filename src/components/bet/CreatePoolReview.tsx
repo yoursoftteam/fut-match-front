@@ -1,9 +1,11 @@
 "use client";
 
 import { Globe, Lock } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface CreatePoolReviewProps {
   name: string;
+  description?: string;
   visibility: "public" | "private";
   config: Record<string, number>;
   status: "idle" | "submitting" | "optimistic_success" | "confirmed" | "failed";
@@ -30,6 +32,7 @@ const RULE_LABELS: Record<string, string> = {
 
 export function CreatePoolReview({
   name,
+  description,
   visibility,
   config,
   status,
@@ -69,6 +72,13 @@ export function CreatePoolReview({
           </div>
         </div>
 
+        {description && (
+          <div className="border-t border-slate-800 pt-4">
+            <p className="mb-1 text-xs text-slate-500">Descripción</p>
+            <p className="text-sm text-slate-400 whitespace-pre-wrap">{description}</p>
+          </div>
+        )}
+
         <div className="border-t border-slate-800 pt-4">
           <p className="mb-2 text-xs font-medium text-slate-500">Reglas de juego</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
@@ -96,7 +106,7 @@ export function CreatePoolReview({
         type="button"
         onClick={onCreatePool}
         disabled={isLoading}
-        className={(
+        className={cn(
           "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-all",
           "bg-[#22C55E] text-slate-950 hover:bg-emerald-400",
           "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E]/70",

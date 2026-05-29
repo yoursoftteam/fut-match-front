@@ -47,6 +47,166 @@ interface PredictionRequestBody {
   pool_id?: string
 }
 
+export async function GET(request: NextRequest) {
+  try {
+    const authHeader = request.headers.get('authorization')
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      return NextResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Missing or invalid Authorization header',
+          },
+        },
+        { status: 401 }
+      )
+    }
+
+    const token = authHeader.substring(7)
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser(token)
+
+    if (authError || !user) {
+      return NextResponse.json(
+        {
+          success: false,
+          data: null,
+          error: {
+            code: 'UNAUTHORIZED',
+            message: 'Invalid or expired token',
+          },
+        },
+        { status: 401 }
+      )
+    }
+
+    const { searchParams } = new URL(request.url)
+    const poolId = searchParams.get('pool_id')
+
+    let query = supabase
+      .from('bet_match_predictions')
+      .select('id, mode, user_id, pool_id, match_id, home_score_predicted, away_score_predicted, created_at, updated_at')
+      .eq('user_id', user.id)
+
+    if (poolId) {
+      query = query.eq('pool_id', poolId).eq('mode', PredictionMode.POOL)
+    } else {
+      query = query.is('pool_id', null).eq('mode', PredictionMode.GLOBAL)
+    }
+
+    const { data: predictions, error } = await query
+
+    if (error) {
+      throw new Error(`Failed to fetch predictions: ${error.message}`)
+    }
+
+    const predictionsList = predictions ?? []
+
+    if (predictionsList.length === 0) {
+      return NextResponse.json(
+        {
+          success: true,
+          data: [],
+          message: 'Predictions fetched successfully',
+          error: null,
+        },
+        { status: 200 }
+      )
+    }
+
+    const matchIds = predictionsList.map((p) => (p as { match_id: string }).match_id)
+
+    const { data: matches, error: matchError } = await supabase
+      .from('bet_matches')
+      .select('id, home_score_official, away_score_official, stage, status')
+      .in('id', matchIds)
+
+    if (matchError) {
+      console.error('Failed to fetch match scores:', matchError)
+    }
+
+    const matchScoresMap = new Map<string, { home: number | null; away: number | null; stage: string; status: string }>()
+    if (matches) {
+      for (const m of matches) {
+        matchScoresMap.set(m.id, {
+          home: m.home_score_official,
+          away: m.away_score_official,
+          stage: m.stage,
+          status: m.status,
+        })
+      }
+    }
+
+    const enriched = predictionsList.map((p) => {
+      const pred = p as {
+        id: string; mode: string; user_id: string; pool_id: string | null
+        match_id: string; home_score_predicted: number; away_score_predicted: number
+        created_at: string; updated_at: string
+      }
+      const ms = matchScoresMap.get(pred.match_id)
+      let pointsEarned: number | null = null
+
+      if (ms && ms.home !== null && ms.away !== null && ms.status === 'finished') {
+        const isKo = ms.stage !== 'group_stage'
+        const isExact = ms.home === pred.home_score_predicted && ms.away === pred.away_score_predicted
+        const actualWinner = ms.home > ms.away ? 'home' : ms.home < ms.away ? 'away' : 'draw'
+        const predictedWinner = pred.home_score_predicted > pred.away_score_predicted ? 'home' : pred.home_score_predicted < pred.away_score_predicted ? 'away' : 'draw'
+
+        if (isExact) {
+          pointsEarned = isKo ? 20 : 10
+        } else {
+          let pts = 0
+          if (actualWinner === predictedWinner) pts += 5
+          if (ms.home === p.home_score_predicted) pts += 2
+          if (ms.away === p.away_score_predicted) pts += 2
+          pointsEarned = isKo ? pts * 2 : pts
+        }
+      }
+
+      return {
+        id: pred.id,
+        mode: pred.mode,
+        user_id: pred.user_id,
+        pool_id: pred.pool_id,
+        match_id: pred.match_id,
+        home_score_predicted: pred.home_score_predicted,
+        away_score_predicted: pred.away_score_predicted,
+        created_at: pred.created_at,
+        updated_at: pred.updated_at,
+        points_earned: pointsEarned,
+      }
+    })
+
+    return NextResponse.json(
+      {
+        success: true,
+        data: enriched,
+        message: 'Predictions fetched successfully',
+        error: null,
+      },
+      { status: 200 }
+    )
+  } catch (err) {
+    console.error('Unexpected error in GET /api/v1/bet/predictions:', err)
+
+    return NextResponse.json(
+      {
+        success: false,
+        data: null,
+        error: {
+          code: 'INTERNAL_SERVER_ERROR',
+          message: 'An unexpected error occurred',
+        },
+      },
+      { status: 500 }
+    )
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     // Parse request body
