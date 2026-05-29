@@ -11,6 +11,7 @@ export interface ScoreInputProps {
   locked: boolean
   disabled?: boolean
   matchId: string
+  compact?: boolean
 }
 
 export function ScoreInput({
@@ -21,6 +22,7 @@ export function ScoreInput({
   locked,
   disabled = false,
   matchId,
+  compact = false,
 }: ScoreInputProps) {
   const [homeInput, setHomeInput] = useState(String(homeScore))
   const [awayInput, setAwayInput] = useState(String(awayScore))
@@ -140,6 +142,46 @@ export function ScoreInput({
     ? 'border-red-500/50 focus-within:border-red-500'
     : 'border-emerald-500/50 focus-within:border-emerald-500'
 
+  // Compact version: inline score inputs without buttons
+  if (compact) {
+    return (
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min="0"
+          max="99"
+          value={homeInput}
+          onChange={handleHomeChange}
+          onKeyDown={handleHomeKeyDown}
+          disabled={locked || disabled}
+          aria-label={`Home team score for match ${matchId}`}
+          className={cn(
+            'w-7 h-7 border rounded text-center text-sm font-bold text-slate-50 outline-none bg-slate-800 border-slate-700',
+            borderColor,
+            locked && 'cursor-not-allowed opacity-50'
+          )}
+        />
+        <span className="text-slate-500 text-xs font-semibold">-</span>
+        <input
+          type="number"
+          min="0"
+          max="99"
+          value={awayInput}
+          onChange={handleAwayChange}
+          onKeyDown={handleAwayKeyDown}
+          disabled={locked || disabled}
+          aria-label={`Away team score for match ${matchId}`}
+          className={cn(
+            'w-7 h-7 border rounded text-center text-sm font-bold text-slate-50 outline-none bg-slate-800 border-slate-700',
+            borderColor,
+            locked && 'cursor-not-allowed opacity-50'
+          )}
+        />
+      </div>
+    )
+  }
+
+  // Original full-size version
   return (
     <div className="flex items-center gap-3 md:gap-4">
       <div className="flex flex-col items-center gap-2">

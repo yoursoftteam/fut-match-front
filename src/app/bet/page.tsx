@@ -41,12 +41,12 @@ export default function BetPage() {
         {!user && (
           <div className="text-center mb-12">
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button size="lg" asChild>
-                <Link href="/auth?mode=signin">Iniciar Sesión</Link>
-              </Button>
-              <Button size="lg" variant="outline" asChild>
-                <Link href="/auth?mode=signup">Crear Cuenta</Link>
-              </Button>
+              <Link href="/auth?mode=signin">
+                <Button size="lg">Iniciar Sesión</Button>
+              </Link>
+              <Link href="/auth?mode=signup">
+                <Button size="lg" variant="outline">Crear Cuenta</Button>
+              </Link>
             </div>
           </div>
         )}

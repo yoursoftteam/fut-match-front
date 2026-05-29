@@ -7,10 +7,16 @@ export interface CountryBadgeProps extends HTMLAttributes<HTMLDivElement> {
   name: string
   fifa_code: string
   flag_svg_url: string
-  size?: 'sm' | 'md' | 'lg'
+  size?: 'xs' | 'sm' | 'md' | 'lg'
 }
 
 const sizeVariants = {
+  xs: {
+    container: 'gap-1',
+    flag: 'w-4 h-4',
+    name: 'text-[0.6875rem]',
+    code: 'hidden',
+  },
   sm: {
     container: 'gap-1.5',
     flag: 'w-5 h-5',

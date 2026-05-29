@@ -81,8 +81,12 @@ export interface Match {
   stage: MatchStage;
   group_name?: string; // 'A', 'B', etc.
   kickoff_at: string;
-  home_team_id: string;
-  away_team_id: string;
+  home_team_id?: string | null;
+  away_team_id?: string | null;
+  home_placeholder?: string | null;
+  away_placeholder?: string | null;
+  venue?: string | null;
+  fifa_match_number?: number | null;
   home_score_official?: number;
   away_score_official?: number;
   status: MatchStatus;
@@ -90,8 +94,8 @@ export interface Match {
   updated_at: string;
   
   // Denormalized for convenience
-  home_team?: Team;
-  away_team?: Team;
+  home_team?: Team | null;
+  away_team?: Team | null;
 }
 
 // =============================================================================

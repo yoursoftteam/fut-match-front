@@ -139,17 +139,17 @@ export default function BetLeaderboardPage() {
             )}
           </TabsContent>
 
-          {/* Pool Leaderboard */}
-          <TabsContent value="pool" className="space-y-6">
-            <Card className="p-6 text-center">
-              <p className="text-slate-400">
-                Selecciona una polla para ver su clasificación
-              </p>
-              <Button className="mt-4" asChild>
-                <a href="/bet/pools">Ver Pollas</a>
-              </Button>
-            </Card>
-          </TabsContent>
+           {/* Pool Leaderboard */}
+           <TabsContent value="pool" className="space-y-6">
+             <Card className="p-6 text-center">
+               <p className="text-slate-400">
+                 Selecciona una polla para ver su clasificación
+               </p>
+               <a href="/bet/pools" className="block mt-4">
+                 <Button className="mt-4">Ver Pollas</Button>
+               </a>
+             </Card>
+           </TabsContent>
         </Tabs>
 
         {/* Top 3 Podium */}
