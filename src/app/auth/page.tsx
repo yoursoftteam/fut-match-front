@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthInviteBridge } from "@/components/bet/AuthInviteBridge";
 import { ArrowLeft, Zap, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 type AuthMode = "signin" | "signup" | "forgot" | "reset";
@@ -59,6 +60,9 @@ function AuthForm() {
     getModeFromSearchParams(searchParams.get("mode"))
   );
 
+  const pendingInvite = searchParams.get("invite") ??
+    (typeof window !== "undefined" ? window.localStorage.getItem("p2:pendingInvite") : null);
+
   const isSignUp = mode === "signup";
   const isForgotMode = mode === "forgot";
   const isResetMode = mode === "reset";
@@ -69,9 +73,48 @@ function AuthForm() {
 
   useEffect(() => {
     if (!authLoading && user) {
+      const inviteCode =
+        searchParams.get("invite") ??
+        (typeof window !== "undefined"
+          ? window.localStorage.getItem("p2:pendingInvite")
+          : null);
+
+      if (inviteCode) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            router.replace("/dashboard");
+            return;
+          }
+
+          fetch("/api/v1/bet/pools/join", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ invite_code: inviteCode }),
+          })
+            .then((r) => r.json())
+            .then((payload) => {
+              if (payload.success) {
+                try {
+                  window.localStorage.removeItem("p2:pendingInvite");
+                } catch {
+                  /* ignore */
+                }
+                router.replace(payload.data.next);
+              } else {
+                router.replace("/dashboard");
+              }
+            })
+            .catch(() => router.replace("/dashboard"));
+        });
+        return;
+      }
+
       router.replace("/dashboard");
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, searchParams]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -97,7 +140,9 @@ function AuthForm() {
     }
 
     try {
-      const redirectTo = buildRedirectUrl("/dashboard");
+      const redirectTo = pendingInvite
+        ? buildRedirectUrl(`/join/${pendingInvite}`)
+        : buildRedirectUrl("/dashboard");
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
@@ -163,7 +208,9 @@ function AuthForm() {
 
     try {
       if (isSignUp) {
-        const redirectTo = buildRedirectUrl("/dashboard");
+        const redirectTo = pendingInvite
+          ? buildRedirectUrl(`/auth?mode=signin&invite=${pendingInvite}`)
+          : buildRedirectUrl("/dashboard");
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -201,6 +248,18 @@ function AuthForm() {
         });
         if (error) throw error;
         router.refresh();
+
+        // Check for pending invite before redirecting
+        const inviteCode =
+          searchParams.get("invite") ??
+          (typeof window !== "undefined"
+            ? window.localStorage.getItem("p2:pendingInvite")
+            : null);
+
+        if (inviteCode) {
+          // Let AuthInviteBridge handle the redirect
+          return;
+        }
         router.push("/dashboard");
       }
     } catch (error: unknown) {
@@ -268,8 +327,10 @@ function AuthForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* Ambient glow — same as home */}
+    <>
+      <AuthInviteBridge />
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12 relative overflow-hidden">
+        {/* Ambient glow — same as home */}
       <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
@@ -291,6 +352,13 @@ function AuthForm() {
               {subtitleMap[mode]}
             </p>
           </div>
+
+          {/* Pending invite banner */}
+          {pendingInvite && (
+            <div className="mb-6 rounded-lg border border-[#22C55E]/40 bg-[#22C55E]/10 px-4 py-3 text-center text-sm text-[#22C55E]">
+              Estás a un paso de entrar a una polla.
+            </div>
+          )}
 
           {/* Signin / Signup tab switcher */}
           {!isForgotMode && !isResetMode && (
@@ -569,6 +637,7 @@ function AuthForm() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 
