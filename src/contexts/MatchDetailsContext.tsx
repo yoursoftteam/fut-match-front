@@ -30,6 +30,7 @@ export interface PlayerRegistration {
   has_paid: boolean;
   paid_at: string | null;
   paid_by: string | null;
+  user_id: string | null;
 }
 
 interface MatchDetailsContextValue {
@@ -43,6 +44,7 @@ interface MatchDetailsContextValue {
   isCreator: boolean;
   setMatchData: React.Dispatch<React.SetStateAction<MatchData | null>>;
   refreshMatchData: () => Promise<void>;
+  refreshRegistrations: () => Promise<void>;
 }
 
 const MatchDetailsContext = createContext<MatchDetailsContextValue | null>(null);
@@ -66,7 +68,11 @@ export function MatchDetailsProvider({ matchId, children }: MatchDetailsProvider
   const [error, setError] = useState<string | null>(null);
 
   const { getPublicMatchById } = useMatches();
-  const { registrations = [], loading: registrationsLoading } = useMatchRegistrationsRealtime(matchId);
+  const {
+    registrations = [],
+    loading: registrationsLoading,
+    refreshRegistrations,
+  } = useMatchRegistrationsRealtime(matchId);
   const { user } = useAuth();
 
   const isCreator = Boolean(user && matchData && user.id === matchData.created_by);
@@ -106,6 +112,7 @@ export function MatchDetailsProvider({ matchId, children }: MatchDetailsProvider
       isCreator,
       setMatchData,
       refreshMatchData,
+      refreshRegistrations,
     }}>
       {children}
     </MatchDetailsContext>

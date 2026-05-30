@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
 interface PlayerRegistration {
@@ -11,6 +11,17 @@ interface PlayerRegistration {
   has_paid: boolean
   paid_at: string | null
   paid_by: string | null
+  user_id: string | null
+}
+
+function dedupeRegistrationsById(items: PlayerRegistration[]): PlayerRegistration[] {
+  const byId = new Map<string, PlayerRegistration>()
+  for (const item of items) {
+    byId.set(item.id, item)
+  }
+  return Array.from(byId.values()).sort((a, b) =>
+    new Date(a.registered_at).getTime() - new Date(b.registered_at).getTime()
+  )
 }
 
 export function useMatchRegistrationsRealtime(matchId: string) {
@@ -18,32 +29,27 @@ export function useMatchRegistrationsRealtime(matchId: string) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    console.log('[Realtime] Inicializando hook para matchId:', matchId)
+  const loadInitialData = useCallback(async () => {
+    try {
+      setLoading(true)
+      setError(null)
+      const { data, error: fetchError } = await supabase
+        .from('match_registrations')
+        .select('*')
+        .eq('match_id', matchId)
+        .order('registered_at', { ascending: true })
 
-    // Cargar datos iniciales
-    const loadInitialData = async () => {
-      try {
-        setLoading(true)
-        setError(null)
-        console.log('[Realtime] Cargando datos iniciales...')
-        const { data, error: fetchError } = await supabase
-          .from('match_registrations')
-          .select('*')
-          .eq('match_id', matchId)
-          .order('registered_at', { ascending: true })
-
-        if (fetchError) throw fetchError
-        console.log('[Realtime] Datos iniciales cargados:', data?.length || 0, 'registros')
-        setRegistrations(data || [])
-      } catch (err) {
-        console.error('[Realtime] Error loading registrations:', err)
-        setError(err instanceof Error ? err.message : 'Error desconocido')
-      } finally {
-        setLoading(false)
-      }
+      if (fetchError) throw fetchError
+      setRegistrations(dedupeRegistrationsById(data || []))
+    } catch (err) {
+      console.error('[Realtime] Error loading registrations:', err)
+      setError(err instanceof Error ? err.message : 'Error desconocido')
+    } finally {
+      setLoading(false)
     }
+  }, [matchId])
 
+  useEffect(() => {
     loadInitialData()
 
     const channelName = `match_registrations:${matchId}`
@@ -58,8 +64,6 @@ export function useMatchRegistrationsRealtime(matchId: string) {
       supabase.removeChannel(ch)
     })
 
-    // Suscripción realtime
-    console.log('[Realtime] Creando canal:', channelName)
     const channel = supabase
       .channel(channelName)
       .on(
@@ -74,40 +78,45 @@ export function useMatchRegistrationsRealtime(matchId: string) {
           const newData = payload.new as unknown
           const oldData = payload.old as unknown
 
-          console.log('[Realtime] 🎉 EVENTO RECIBIDO!', payload.eventType)
-          console.log('[Realtime] Payload completo:', payload)
-
           if (payload.eventType === 'INSERT') {
             const newReg = newData as PlayerRegistration
-            console.log('[Realtime] ➕ Agregando nuevo jugador:', newReg.name)
-            setRegistrations((prev) => [...prev, newReg])
+            setRegistrations((prev) => {
+              if (prev.some((reg) => reg.id === newReg.id)) {
+                return prev
+              }
+              return dedupeRegistrationsById([...prev, newReg])
+            })
           } else if (payload.eventType === 'DELETE') {
             const oldReg = oldData as PlayerRegistration
-            console.log('[Realtime] ➖ Eliminando jugador ID:', oldReg.id)
-            setRegistrations((prev) => prev.filter((reg) => reg.id !== oldReg.id))
+            if (oldReg?.id) {
+              setRegistrations((prev) => prev.filter((reg) => reg.id !== oldReg.id))
+            } else {
+              void loadInitialData()
+            }
           } else if (payload.eventType === 'UPDATE') {
             const updatedReg = newData as PlayerRegistration
-            console.log('[Realtime] ✏️ Actualizando jugador:', updatedReg.name)
             setRegistrations((prev) =>
-              prev.map((reg) => (reg.id === updatedReg.id ? updatedReg : reg))
+              dedupeRegistrationsById(
+                prev.some((reg) => reg.id === updatedReg.id)
+                  ? prev.map((reg) => (reg.id === updatedReg.id ? updatedReg : reg))
+                  : [...prev, updatedReg]
+              )
             )
           }
         }
       )
-      .subscribe((status) => {
-        console.log('[Realtime] Estado de suscripción:', status)
-      })
+      .subscribe()
 
     // Limpiar suscripción
     return () => {
-      console.log('[Realtime] Limpiando suscripción para:', matchId)
       supabase.removeChannel(channel)
     }
-  }, [matchId])
+  }, [matchId, loadInitialData])
 
   return {
     registrations,
     loading,
-    error
+    error,
+    refreshRegistrations: loadInitialData,
   }
 }

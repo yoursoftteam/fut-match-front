@@ -4,6 +4,7 @@ import { useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
+import { combineLocalDateAndTime } from "@/lib/date-utils";
 import { type MatchFormSubmitData } from "@/components/MatchFormSteps";
 import { useAuth } from "@/hooks/useAuth";
 import { useMatches } from "@/hooks/useMatches";
@@ -40,7 +41,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
       const matchData: Omit<Match, "id"> = {
         title: getMatchTitleFromLocation(data.location),
         location: data.location,
-        date: `${data.date}T${data.time}:00`,
+        date: combineLocalDateAndTime(data.date, data.time),
         max_players: data.totalPlayers,
         created_by: user.id,
         field_cost: data.fieldCost,

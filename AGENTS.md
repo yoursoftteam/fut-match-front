@@ -40,7 +40,7 @@ npm run deploy        # Deploy to Cloudflare Pages
 
 Key tables in `supabase-schema.sql`:
 - **matches** — fields: `field_cost`, `rental_cost`, `players_per_team`, `has_rented_goalkeepers`, `rented_goalkeepers_count`. Cost formula: `(field_cost + rental_cost) / max_players`.
-- **match_registrations** — public registration (anyone can CRUD). DB trigger enforces: max 2 GK titular slots, reserve 2 GK slots, hard cap of `max_players + 5` for substitutes. Table is in `supabase_realtime` publication.
+- **match_registrations** — public registration (anyone can CRUD). DB trigger enforces: max 2 GK titular slots, reserve 2 GK slots, hard cap of `max_players + 10` for substitutes. Table is in `supabase_realtime` publication.
 - **match_templates** / **match_template_participants** — "Partidos Frecuentes" (templates with optional saved participants).
 
 RLS: matches & templates scoped to owner; registrations open to all (public signup).

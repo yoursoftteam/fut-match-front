@@ -1,12 +1,20 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useTeamBuilder } from "@/hooks/useTeamBuilder";
+import { useMatches } from "@/hooks/useMatches";
 import { TeamFieldImage } from "./TeamFieldImage";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { createPortal } from "react-dom";
 
 type TeamZone = "A" | "B" | "pool";
+
+interface TouchDropTarget {
+  zone: TeamZone | null;
+  playerId: string | null;
+  playerZone: "A" | "B" | null;
+}
 
 interface TeamBuilderProps {
   show: boolean;
@@ -39,10 +47,12 @@ export function TeamBuilder({ show, onOpen }: TeamBuilderProps) {
 }
 
 function TeamBuilderActive() {
-  const { registrations } = useMatchDetailsContext();
+  const { registrations, matchId, refreshRegistrations } = useMatchDetailsContext();
+  const { clearMatchRegistrations } = useMatches();
   const {
     teamA, teamB, unassigned, draggingId, dragOverZone, teamSaved, hasUnsavedChanges, message,
     playersPerTeamLimit, initTeamBuilder, resetTeamBuilder, randomizeTeams, saveTeams,
+    startDraggingPlayer, setDragOverZoneState,
     handlePlayerDragStart, handlePlayerDragEnd, handleDropOnZone,
     assignPlayerToZone, canDropInZone, canSwapWithPlayer, handleDropOnPlayer,
   } = useTeamBuilder();
@@ -60,6 +70,10 @@ function TeamBuilderActive() {
   const [hasEverSaved, setHasEverSaved] = useState(false);
   const [showUnsavedAlert, setShowUnsavedAlert] = useState(false);
   const [pendingHref, setPendingHref] = useState<string | null>(null);
+  const [showClearRegistrationsConfirm, setShowClearRegistrationsConfirm] = useState(false);
+  const [clearRegistrationsLoading, setClearRegistrationsLoading] = useState(false);
+  const [clearRegistrationsMessage, setClearRegistrationsMessage] = useState<string | null>(null);
+  const touchDropTargetRef = useRef<TouchDropTarget>({ zone: null, playerId: null, playerZone: null });
 
   useEffect(() => {
     if (teamSaved) setHasEverSaved(true);
@@ -122,8 +136,85 @@ function TeamBuilderActive() {
     setPendingHref(null);
   };
 
+  const handleClearRegistrations = async () => {
+    setClearRegistrationsLoading(true);
+
+    try {
+      const { error } = await clearMatchRegistrations(matchId);
+
+      if (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : "No se pudieron eliminar los inscritos. Intentalo nuevamente.";
+        setClearRegistrationsMessage(errorMessage);
+        return;
+      }
+
+      await refreshRegistrations();
+      resetTeamBuilder();
+      setShowClearRegistrationsConfirm(false);
+      setClearRegistrationsMessage("Se eliminaron todos los jugadores inscritos correctamente.");
+    } finally {
+      setClearRegistrationsLoading(false);
+    }
+  };
+
+  const updateTouchDropTarget = (clientX: number, clientY: number) => {
+    const element = document.elementFromPoint(clientX, clientY);
+    const playerDropElement = element?.closest("[data-drop-player-id]") as HTMLElement | null;
+    const zoneElement = element?.closest("[data-drop-zone]") as HTMLElement | null;
+
+    const zoneFromPlayer = playerDropElement?.dataset.dropPlayerZone;
+    const playerZone = zoneFromPlayer === "A" || zoneFromPlayer === "B" ? zoneFromPlayer : null;
+
+    const zoneFromContainer = zoneElement?.dataset.dropZone;
+    const zone: TeamZone | null =
+      zoneFromContainer === "A" || zoneFromContainer === "B" || zoneFromContainer === "pool"
+        ? zoneFromContainer
+        : playerZone;
+
+    const playerId = playerDropElement?.dataset.dropPlayerId ?? null;
+
+    touchDropTargetRef.current = { zone, playerId, playerZone };
+    setDragOverZoneState(zone);
+  };
+
+  const handleTouchStartPlayer = (playerId: string) => {
+    startDraggingPlayer(playerId);
+    touchDropTargetRef.current = { zone: null, playerId: null, playerZone: null };
+  };
+
+  const handleTouchMoveBoard = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!draggingId) return;
+    const touch = event.touches[0];
+    if (!touch) return;
+    updateTouchDropTarget(touch.clientX, touch.clientY);
+    event.preventDefault();
+  };
+
+  const handleTouchEndBoard = (event: React.TouchEvent<HTMLDivElement>) => {
+    if (!draggingId) return;
+
+    const touch = event.changedTouches[0];
+    if (touch) {
+      updateTouchDropTarget(touch.clientX, touch.clientY);
+    }
+
+    const { zone, playerId, playerZone } = touchDropTargetRef.current;
+
+    if (playerId && playerZone) {
+      handleDropOnPlayer(playerZone, playerId);
+    } else if (zone) {
+      handleDropOnZone(zone);
+    }
+
+    touchDropTargetRef.current = { zone: null, playerId: null, playerZone: null };
+    setDragOverZoneState(null);
+    handlePlayerDragEnd();
+  };
+
   return (
-    <div id="team-builder">
+    <div id="team-builder" onTouchMove={handleTouchMoveBoard} onTouchEnd={handleTouchEndBoard}>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
         <h2 className="text-xl font-bold text-foreground">Armar equipos</h2>
         <div className="flex gap-2">
@@ -143,9 +234,26 @@ function TeamBuilderActive() {
         </div>
       </div>
 
+      <div className="mb-4">
+        <button
+          type="button"
+          onClick={() => setShowClearRegistrationsConfirm(true)}
+          disabled={clearRegistrationsLoading || registrations.length === 0}
+          className="rounded border border-red-500/40 bg-red-500/10 px-3 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/20 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Eliminar todos los inscritos
+        </button>
+      </div>
+
       {message && (
         <p role="status" aria-live="polite" className={`mb-3 text-sm ${message.includes("correctamente") ? "text-green-400" : "text-amber-400"}`}>
           {message}
+        </p>
+      )}
+
+      {clearRegistrationsMessage && (
+        <p role="status" aria-live="polite" className={`mb-3 text-sm ${clearRegistrationsMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>
+          {clearRegistrationsMessage}
         </p>
       )}
 
@@ -158,6 +266,7 @@ function TeamBuilderActive() {
           onDrop={() => handleDropOnZone("pool")}
           onDragStart={handlePlayerDragStart}
           onDragEnd={handlePlayerDragEnd}
+          onTouchStartPlayer={handleTouchStartPlayer}
           onAssign={assignPlayerToZone}
         />
 
@@ -194,6 +303,7 @@ function TeamBuilderActive() {
               }}
               onDrop={() => handleDropOnZone(team)}
               onDropOnPlayer={(targetPlayerId) => handleDropOnPlayer(team, targetPlayerId)}
+              onTouchStartPlayer={handleTouchStartPlayer}
             />
           );
         })}
@@ -253,6 +363,18 @@ function TeamBuilderActive() {
         </div>,
         document.body
       )}
+
+      <ConfirmDialog
+        open={showClearRegistrationsConfirm}
+        title="Eliminar inscritos"
+        description="Se eliminaran todos los jugadores inscritos en este partido. Esta accion no se puede deshacer."
+        confirmLabel="Si, eliminar todos"
+        cancelLabel="Cancelar"
+        destructive
+        loading={clearRegistrationsLoading}
+        onConfirm={handleClearRegistrations}
+        onCancel={() => setShowClearRegistrationsConfirm(false)}
+      />
     </div>
   );
 }
@@ -265,12 +387,14 @@ interface PoolZoneProps {
   onDrop: () => void;
   onDragStart: (e: React.DragEvent<HTMLDivElement>, playerId: string) => void;
   onDragEnd: () => void;
+  onTouchStartPlayer: (playerId: string) => void;
   onAssign: (playerId: string, zone: TeamZone) => void;
 }
 
-function PoolZone({ unassigned, draggingId, dragOverZone, onDragOver, onDrop, onDragStart, onDragEnd, onAssign }: PoolZoneProps) {
+function PoolZone({ unassigned, draggingId, dragOverZone, onDragOver, onDrop, onDragStart, onDragEnd, onTouchStartPlayer, onAssign }: PoolZoneProps) {
   return (
     <div
+      data-drop-zone="pool"
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={`card match-card rounded-xl border-2 border-dashed p-4 ${dragOverZone === "pool" ? "border-primary/70 bg-card shadow-lg" : "border-border/70 bg-card"}`}
@@ -283,6 +407,7 @@ function PoolZone({ unassigned, draggingId, dragOverZone, onDragOver, onDrop, on
               draggable
               onDragStart={(e) => onDragStart(e, player.id)}
               onDragEnd={onDragEnd}
+              onTouchStart={() => onTouchStartPlayer(player.id)}
               className={`flex cursor-grab select-none items-center gap-1.5 rounded-lg border border-border/70 bg-background/70 px-3 py-2 text-sm text-foreground transition active:cursor-grabbing ${draggingId === player.id ? "opacity-40" : "hover:border-primary/40"}`}
             >
               <span aria-hidden>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
@@ -319,13 +444,15 @@ interface TeamZoneColumnProps {
   onDragOver: (e: React.DragEvent) => void;
   onDrop: () => void;
   onDropOnPlayer: (targetPlayerId: string) => void;
+  onTouchStartPlayer: (playerId: string) => void;
 }
 
-function TeamZoneColumn({ team, list, isOver, accentColor, isTeamFull, playersPerTeamLimit, draggingId, canDropInZone, canSwapWithPlayer, onDragStart, onDragEnd, onDragOver, onDrop, onDropOnPlayer }: TeamZoneColumnProps) {
+function TeamZoneColumn({ team, list, isOver, accentColor, isTeamFull, playersPerTeamLimit, draggingId, canDropInZone, canSwapWithPlayer, onDragStart, onDragEnd, onDragOver, onDrop, onDropOnPlayer, onTouchStartPlayer }: TeamZoneColumnProps) {
   const canDropHere = canDropInZone(team);
 
   return (
     <div
+      data-drop-zone={team}
       onDragOver={onDragOver}
       onDrop={onDrop}
       className={`card match-card rounded-xl border-2 border-dashed p-4 ${isOver && !isTeamFull ? "border-primary/70 bg-card shadow-lg" : isTeamFull ? "border-red-500/80 bg-red-500/10 shadow-lg" : "border-border/70 bg-card"} ${draggingId && !canDropHere ? "cursor-not-allowed" : ""}`}
@@ -347,6 +474,7 @@ function TeamZoneColumn({ team, list, isOver, accentColor, isTeamFull, playersPe
             draggable
             onDragStart={(e) => onDragStart(e, player.id)}
             onDragEnd={onDragEnd}
+            onTouchStart={() => onTouchStartPlayer(player.id)}
             onDragOver={(e) => {
               if (canSwapWithPlayer(team, player.id)) {
                 e.preventDefault();
@@ -360,6 +488,8 @@ function TeamZoneColumn({ team, list, isOver, accentColor, isTeamFull, playersPe
                 onDropOnPlayer(player.id);
               }
             }}
+            data-drop-player-id={player.id}
+            data-drop-player-zone={team}
             className={`flex cursor-grab items-center gap-2 rounded-lg border px-3 py-2 text-sm text-foreground transition active:cursor-grabbing ${player.is_goalkeeper ? "border-yellow-600/50 bg-yellow-600/10 hover:border-yellow-500/60" : "border-border/70 bg-background/70 hover:border-primary/40"} ${draggingId === player.id ? "opacity-40" : ""}`}
           >
             <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>

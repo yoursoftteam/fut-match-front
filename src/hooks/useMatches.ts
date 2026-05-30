@@ -3,8 +3,6 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
-const MAX_SUBSTITUTE_SLOTS = 5
-
 function generateSelfUnregisterToken(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID().replace(/-/g, '')
@@ -46,6 +44,20 @@ function normalizeError(error: unknown, fallbackMessage: string): Error {
     fallbackMessage
 
   return new Error(message)
+}
+
+function isExpectedRegistrationError(message: string): boolean {
+  const normalized = message.toLowerCase()
+  return (
+    normalized.includes('cupos') ||
+    normalized.includes('suplente') ||
+    normalized.includes('arquero') ||
+    normalized.includes('nombre debe tener') ||
+    normalized.includes('no puede superar') ||
+    normalized.includes('enlace del partido no es válido') ||
+    normalized.includes('ya estás inscrito') ||
+    normalized.includes('ya estas inscrito')
+  )
 }
 
 interface UseMatchesOptions {
@@ -255,7 +267,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     try {
       const { data, error } = await supabase
         .from('match_registrations')
-        .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
+        .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by, user_id')
         .eq('match_id', matchId)
         .order('registered_at', { ascending: true })
 
@@ -267,7 +279,12 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     }
   }, [])
 
-  const registerForMatch = async (matchId: string, name: string, isGoalkeeper: boolean) => {
+  const registerForMatch = async (
+    matchId: string,
+    name: string,
+    isGoalkeeper: boolean,
+    options?: { trackCurrentUser?: boolean },
+  ) => {
     try {
       // Validate inputs
       const normalizedMatchId = matchId.trim()
@@ -288,42 +305,39 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         .maybeSingle()
 
       if (matchError) throw matchError
-
-      const publicMatch = (match as { max_players?: number } | null) ?? null
-      const maxPlayers = typeof publicMatch?.max_players === 'number' ? publicMatch.max_players : null
-      const reservedGoalkeeperSlots = maxPlayers === null ? null : Math.min(2, maxPlayers)
-      const maxFieldPlayers =
-        maxPlayers === null || reservedGoalkeeperSlots === null
-          ? null
-          : Math.max(0, maxPlayers - reservedGoalkeeperSlots)
-
-      const { data: currentRegistrations, error: registrationsError } = await supabase
-        .from('match_registrations')
-        .select('is_goalkeeper')
-        .eq('match_id', normalizedMatchId)
-
-      if (registrationsError) throw registrationsError
-
-      const registrations = currentRegistrations || []
-      const currentGoalkeepers = registrations.filter((registration) => registration.is_goalkeeper).length
-      const currentFieldPlayers = registrations.length - currentGoalkeepers
-      const isSubstituteSlot = maxPlayers === null ? false : registrations.length >= maxPlayers
-
-      if (maxPlayers !== null && registrations.length >= maxPlayers + MAX_SUBSTITUTE_SLOTS) {
-        throw new Error('No hay cupos disponibles, ni siquiera como suplente.')
+      if (!match) {
+        throw new Error('Partido no encontrado.')
       }
 
-      if (maxPlayers !== null && !isSubstituteSlot) {
-        if (isGoalkeeper) {
-          if (reservedGoalkeeperSlots !== null && currentGoalkeepers >= reservedGoalkeeperSlots) {
-            throw new Error('Ya se completaron los cupos de arqueros (máximo 2).')
-          }
-        } else {
-          if (maxFieldPlayers !== null && currentFieldPlayers >= maxFieldPlayers) {
-            throw new Error('Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.')
-          }
+      const trackCurrentUser = options?.trackCurrentUser ?? false
+      const { data: { user } } = await supabase.auth.getUser()
+
+      if (user && !trackCurrentUser) {
+        const directInsertResult = await supabase
+          .from('match_registrations')
+          .insert([{
+            match_id: normalizedMatchId,
+            name: trimmedName,
+            is_goalkeeper: isGoalkeeper,
+            user_id: null,
+          }])
+          .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by, user_id')
+          .single()
+
+        if (directInsertResult.error) {
+          throw directInsertResult.error
+        }
+
+        return {
+          data: directInsertResult.data,
+          error: null,
+          selfUnregisterToken: null,
+          selfUnregisterAvailable: false,
         }
       }
+
+      // Capacity and role limits are enforced at DB level by trigger/rpc.
+      // Avoid duplicating pre-checks in client to prevent stale-count mismatches.
 
       const selfUnregisterToken = generateSelfUnregisterToken()
 
@@ -335,6 +349,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         has_paid: boolean
         paid_at: string | null
         paid_by: string | null
+        user_id: string | null
       } | null = null
 
       const rpcResult = await supabase
@@ -353,8 +368,13 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         // Keep registration working even if secure RPC is unavailable or misconfigured.
         const legacyResult = await supabase
           .from('match_registrations')
-          .insert([{ match_id: normalizedMatchId, name: trimmedName, is_goalkeeper: isGoalkeeper }])
-          .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by')
+          .insert([{
+            match_id: normalizedMatchId,
+            name: trimmedName,
+            is_goalkeeper: isGoalkeeper,
+            user_id: trackCurrentUser ? (user?.id ?? null) : null,
+          }])
+          .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by, user_id')
           .single()
 
         if (legacyResult.error) {
@@ -388,7 +408,11 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       }
     } catch (error) {
       const normalizedError = normalizeError(error, 'No se pudo completar la inscripción.')
-      console.error('Error registering for match:', normalizedError)
+      if (isExpectedRegistrationError(normalizedError.message)) {
+        console.info('Registration rejected by business rules:', normalizedError.message)
+      } else {
+        console.error('Error registering for match:', normalizedError)
+      }
       return {
         data: null,
         error: normalizedError,
@@ -429,15 +453,62 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
   const unregisterFromMatch = async (registrationId: string) => {
     try {
+      if (typeof registrationId !== 'string') {
+        throw new Error('La inscripción no es válida para realizar la baja.')
+      }
+
+      const normalizedRegistrationId = registrationId.trim()
+      if (!isValidUuid(normalizedRegistrationId)) {
+        throw new Error('La inscripción no es válida para realizar la baja.')
+      }
+
+      const { data, error } = await supabase
+        .from('match_registrations')
+        .delete()
+        .eq('id', normalizedRegistrationId)
+        .select('id')
+        .maybeSingle()
+
+      if (error) throw error
+      if (!data) {
+        throw new Error('No se encontró la inscripción o ya fue eliminada.')
+      }
+      return { error: null }
+    } catch (error) {
+      const normalizedError = normalizeError(error, 'No se pudo completar la baja del partido.')
+      console.warn('Unregister rejected:', normalizedError.message)
+      return { error: normalizedError }
+    }
+  }
+
+  const clearMatchRegistrations = async (matchId: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (!user) {
+        return { error: new Error('Debes iniciar sesión para realizar esta acción.') }
+      }
+
+      const { data: ownedMatch, error: ownedMatchError } = await supabase
+        .from('matches')
+        .select('id')
+        .eq('id', matchId)
+        .eq('created_by', user.id)
+        .maybeSingle()
+
+      if (ownedMatchError) throw ownedMatchError
+      if (!ownedMatch) {
+        return { error: new Error('No tienes permiso para eliminar los inscritos de este partido.') }
+      }
+
       const { error } = await supabase
         .from('match_registrations')
         .delete()
-        .eq('id', registrationId)
+        .eq('match_id', matchId)
 
       if (error) throw error
       return { error: null }
     } catch (error) {
-      console.error('Error unregistering from match:', error)
+      console.error('Error clearing match registrations:', error)
       return { error }
     }
   }
@@ -580,6 +651,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     registerForMatch,
     unregisterSelfFromMatch,
     unregisterFromMatch,
+    clearMatchRegistrations,
     deleteMatch,
     registerRentedGoalkeepers,
     togglePaymentStatus,

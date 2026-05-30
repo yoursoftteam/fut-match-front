@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { MatchDetailsProvider, useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { MatchInfoSidebar, MatchEditForm, MatchTabs, RegistrationPanel, PlayersPanel, TeamBuilder } from "@/components/match-details";
+import { MatchShareSection } from "@/components/match-details/MatchShareSection";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
 
@@ -34,6 +35,10 @@ function MatchDetailsInner() {
         <div className="mx-auto w-full max-w-2xl">
           <div className="card match-card space-y-6 rounded-2xl border border-border/80 bg-card p-5 shadow-lg sm:p-6">
             <RegistrationPanel />
+
+            <div className="border-t border-border/80 pt-6">
+              <MatchShareSection matchData={matchData} />
+            </div>
 
             <div className="border-t border-border/80 pt-6">
               <PlayersPanel />

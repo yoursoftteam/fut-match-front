@@ -101,7 +101,7 @@ interface UseMatchRegistrationReturn {
   removeEntry: (entryId: string) => void;
   updateEntryName: (entryId: string, value: string) => void;
   updateEntryGoalkeeper: (entryId: string, isGoalkeeper: boolean) => void;
-  handleSubmit: (e: React.FormEvent) => Promise<void>;
+  handleSubmit: (e: React.FormEvent) => Promise<boolean>;
   handleEntryKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, entryId: string) => void;
   resetForm: () => void;
 }
@@ -115,13 +115,25 @@ function createRegistrationEntry(): RegistrationEntry {
 }
 
 export function useMatchRegistration(): UseMatchRegistrationReturn {
-  const { matchId } = useMatchDetailsContext();
+  const { matchId, refreshRegistrations } = useMatchDetailsContext();
   const { registerForMatch } = useMatches();
 
   const [entries, setEntries] = useState<RegistrationEntry[]>([createRegistrationEntry()]);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
+
+  useEffect(() => {
+    if (!message) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setMessage(null);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [message]);
 
   const addEntry = useCallback((afterEntryId?: string) => {
     setEntries((prev) => {
@@ -199,11 +211,15 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
 
   const handleSubmit = useCallback(async (e: React.FormEvent) => {
     e.preventDefault();
+
+    // Sync first to avoid using stale capacity state in the UI.
+    await refreshRegistrations();
+
     const normalizedEntries = normalizeEntries();
     const validationError = validateEntries(normalizedEntries);
     if (validationError) {
       setMessage(validationError);
-      return;
+      return false;
     }
 
     setLoading(true);
@@ -248,7 +264,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
         setMessage(successCount === 1 ? "¡Jugador inscrito exitosamente!" : `¡${successCount} jugadores inscritos exitosamente!`);
         resetForm();
         setShowForm(false);
-        return;
+        return true;
       }
 
       const failedNames = failed.map((item) => item.name).join(", ");
@@ -274,12 +290,15 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
         name: item.name,
         isGoalkeeper: item.isGoalkeeper,
       })));
+      return successCount > 0;
     } catch {
       setMessage("Error al registrarte. Inténtalo de nuevo.");
+      return false;
     } finally {
+      await refreshRegistrations();
       setLoading(false);
     }
-  }, [matchId, normalizeEntries, registerForMatch, resetForm, validateEntries]);
+  }, [matchId, normalizeEntries, refreshRegistrations, registerForMatch, resetForm, validateEntries]);
 
   return {
     entries,
@@ -308,12 +327,25 @@ interface UseMatchUnregisterReturn {
 }
 
 export function useMatchUnregister(): UseMatchUnregisterReturn {
+  const { refreshRegistrations } = useMatchDetailsContext();
   const { unregisterFromMatch } = useMatches();
 
   const [showModal, setShowModal] = useState(false);
   const [target, setTarget] = useState<PlayerRegistration | null>(null);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!message) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setMessage(null);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [message]);
 
   const openModal = useCallback((registration: PlayerRegistration) => {
     setTarget(registration);
@@ -333,6 +365,7 @@ export function useMatchUnregister(): UseMatchUnregisterReturn {
     try {
       const { error } = await unregisterFromMatch(target.id);
       if (!error) {
+        await refreshRegistrations();
         closeModal();
         setMessage("Jugador eliminado correctamente.");
       } else {
@@ -345,7 +378,7 @@ export function useMatchUnregister(): UseMatchUnregisterReturn {
     } finally {
       setLoading(false);
     }
-  }, [target, unregisterFromMatch, closeModal]);
+  }, [target, unregisterFromMatch, refreshRegistrations, closeModal]);
 
   return {
     showModal,
