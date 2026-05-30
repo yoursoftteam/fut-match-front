@@ -254,7 +254,18 @@ export default function DashboardPage() {
   const isInitialMatchesLoading = matchesLoading && recentMatches.length === 0
   const isRefreshingMatches = matchesLoading && recentMatches.length > 0
 
-  const userName = user.email?.split('@')[0] ?? 'crack'
+  const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+  const userNameFull = (
+    metadata?.full_name ||
+    metadata?.name ||
+    user.email?.split('@')[0] ||
+    'crack'
+  ).trim()
+  // Solo el primer nombre y primera letra mayúscula
+  let userName = userNameFull.split(' ')[0]
+  if (userName.length > 0) {
+    userName = userName.charAt(0).toUpperCase() + userName.slice(1)
+  }
 
   return (
     <div className="min-h-screen bg-background">
