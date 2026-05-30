@@ -22,13 +22,14 @@ import {
 } from 'lucide-react'
 import { LockCountdown } from '@/components/bet/LockCountdown'
 import { ScoreInput } from '@/components/bet/ScoreInput'
+import { TournamentPredictions } from '@/components/bet/TournamentPredictions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { useBetMatches } from '@/hooks/useBetMatches'
 import { useBetPredictions } from '@/hooks/useBetPredictions'
 import { cn } from '@/lib/utils'
-import { Match, MatchPrediction, MatchStage, Team } from '@/types/bet'
+import { DEFAULT_POOL_CONFIG, Match, MatchPrediction, MatchStage, Team } from '@/types/bet'
 
 const FIFA_TOURNAMENT_SLUG = 'fifa-2026'
 const ITEMS_PER_PAGE = 15
@@ -222,7 +223,7 @@ function MatchRow({
   saving: boolean
   onUpdatePrediction: (homeScore: number, awayScore: number) => void
 }) {
-  const [locked, setLocked] = useState(() => isMatchLocked(match.kickoff_at))
+  const [locked, setLocked] = useState(() => match.status === 'finished' || isMatchLocked(match.kickoff_at))
   const kickoffDate = new Date(match.kickoff_at)
   const stageLabel = {
     [MatchStage.GROUP_STAGE]: match.group_name ? `Grupo ${match.group_name}` : 'Grupos',
@@ -335,6 +336,13 @@ function BetMatchesContent() {
   const [tournamentId, setTournamentId] = useState<string>('')
   const [saving, setSaving] = useState(false)
   const [saveSuccess, setSaveSuccess] = useState<string | null>(null)
+  const [membershipStatus, setMembershipStatus] = useState<'loading' | 'member' | 'not-member'>('loading')
+  const [poolConfig, setPoolConfig] = useState<{
+    pts_exact_score: number
+    pts_winner_selection: number
+    pts_team_goals: number
+    pts_goal_difference: number
+  } | null>(null)
 
   const poolParam = searchParams.get('pool')
   const poolId = poolParam ?? null
@@ -416,6 +424,51 @@ function BetMatchesContent() {
     fetchPredictions(poolId ?? undefined)
   }, [poolId, user, fetchPredictions])
 
+  useEffect(() => {
+    if (!poolId || !user) {
+      setMembershipStatus('member')
+      return
+    }
+
+    const currentUserId = user.id
+    let cancelled = false
+
+    async function checkMembership() {
+      setMembershipStatus('loading')
+      const { supabase } = await import('@/lib/supabase')
+      const { data } = await supabase
+        .from('bet_pool_members')
+        .select('id')
+        .eq('pool_id', poolId)
+        .eq('user_id', currentUserId)
+        .maybeSingle()
+
+      if (!cancelled) {
+        setMembershipStatus(data ? 'member' : 'not-member')
+      }
+    }
+
+    async function loadPoolConfig() {
+      const { supabase } = await import('@/lib/supabase')
+      const { data } = await supabase
+        .from('bet_pool_config_versions')
+        .select('pts_exact_score, pts_winner_selection, pts_team_goals, pts_goal_difference')
+        .eq('pool_id', poolId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (!cancelled && data) {
+        setPoolConfig(data)
+      }
+    }
+
+    checkMembership()
+    loadPoolConfig()
+
+    return () => { cancelled = true }
+  }, [poolId, user])
+
   const goToPage = (nextPage: number) => {
     const page = Math.min(Math.max(1, nextPage), totalPages)
     const params = new URLSearchParams(searchParams.toString())
@@ -473,6 +526,28 @@ function BetMatchesContent() {
     )
   }
 
+  if (poolId && membershipStatus === 'not-member') {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
+        <Card className="w-full max-w-md border-slate-800 bg-slate-900 p-6 text-center">
+          <div className="mb-4 inline-flex size-12 items-center justify-center rounded-full bg-red-500/10">
+            <AlertCircle className="size-6 text-red-400" aria-hidden="true" />
+          </div>
+          <h2 className="mb-2 text-lg font-semibold text-slate-100">
+            No estás convocado
+          </h2>
+          <p className="text-sm text-slate-400">
+            No estás convocado para este torneo, valida con el profe y únete por el link de inscripción
+          </p>
+        </Card>
+      </div>
+    )
+  }
+
+  if (poolId && membershipStatus === 'loading') {
+    return <LoadingState />
+  }
+
   return (
     <main className="min-h-screen bg-slate-950 px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-6xl">
@@ -495,22 +570,36 @@ function BetMatchesContent() {
             </div>
             <p className="mt-1 text-sm text-slate-400">
               {sortedMatches.length} partidos · cierre 10 min antes del kickoff.
-              {poolId && ' · picks guardados en la polla'}
+              {poolId
+                ? ' · picks guardados en la polla · puntuación configurada'
+                : ` · puntuación por defecto (${DEFAULT_POOL_CONFIG.pts_winner_selection}/${DEFAULT_POOL_CONFIG.pts_exact_score}/${DEFAULT_POOL_CONFIG.pts_team_goals}/${DEFAULT_POOL_CONFIG.pts_goal_difference})`}
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-64">
             <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
               <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
-                10 pts
+                {poolConfig ? `${poolConfig.pts_exact_score} pts` : `${DEFAULT_POOL_CONFIG.pts_exact_score} pts`}
               </div>
               <div className="text-slate-500">Marcador exacto</div>
             </div>
             <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
               <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
-                5 pts
+                {poolConfig ? `${poolConfig.pts_winner_selection} pts` : `${DEFAULT_POOL_CONFIG.pts_winner_selection} pts`}
               </div>
               <div className="text-slate-500">Ganador o empate</div>
+            </div>
+            <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
+              <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
+                {poolConfig ? `${poolConfig.pts_team_goals} pts` : `${DEFAULT_POOL_CONFIG.pts_team_goals} pts`}
+              </div>
+              <div className="text-slate-500">Gol correcto</div>
+            </div>
+            <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
+              <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
+                {poolConfig ? `${poolConfig.pts_goal_difference} pts` : `${DEFAULT_POOL_CONFIG.pts_goal_difference} pts`}
+              </div>
+              <div className="text-slate-500">Diferencia de goles</div>
             </div>
           </div>
         </header>
@@ -536,6 +625,8 @@ function BetMatchesContent() {
             {matchesError || predError}
           </div>
         )}
+
+        <TournamentPredictions poolId={poolId} />
 
         <section
           aria-labelledby="matches-table-heading"

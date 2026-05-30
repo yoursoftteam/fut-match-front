@@ -23,7 +23,11 @@ export function AppHeader() {
   const navLinks = [
     ...(!isLoggedIn ? [{ href: "/", label: "Inicio" }] : []),
     { href: "/create", label: "Armar partido" },
-    ...(isLoggedIn ? [{ href: "/dashboard", label: "Mi Dashboard" }, { href: "/matches", label: "Mis Partidos" }] : []),
+    ...(isLoggedIn ? [
+      { href: "/dashboard", label: "Mi Dashboard" },
+      { href: "/matches", label: "Mis Partidos" },
+      { href: "/bet", label: "Picks" },
+    ] : []),
   ];
 
   const isActive = (href: string) => pathname === href;
@@ -144,6 +148,11 @@ export function AppHeader() {
               {/* Nav */}
               <nav aria-label="Navegación móvil" className="flex-1 overflow-y-auto px-4 py-3">
                 {navItems}
+                {!isLoggedIn && !loading && (
+                  <p className="mt-4 px-3 text-xs leading-relaxed text-muted-foreground">
+                    No estás convocado aún, crea tu cuenta y juega con nosotros
+                  </p>
+                )}
               </nav>
 
               {/* User section */}

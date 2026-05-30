@@ -161,6 +161,20 @@ export interface PoolWithStats extends Pool {
 // PREDICTION ENTITIES
 // =============================================================================
 
+export type TournamentCategory = 'champion' | 'subchampion' | 'third_place'
+
+export interface TournamentPrediction {
+  id: string
+  mode: PredictionMode
+  user_id: string
+  pool_id: string
+  category: TournamentCategory
+  team_id: string
+  created_at: string
+  updated_at: string
+  team?: Team | null
+}
+
 export interface MatchPrediction {
   id: string;
   mode: PredictionMode;

@@ -245,7 +245,7 @@ BEGIN
       CASE
         WHEN bmp.home_score_predicted = v_home_score_official AND
              bmp.away_score_predicted = v_away_score_official
-        THEN v_pts_exact
+        THEN v_pts_winner + v_pts_exact + v_pts_goals + v_pts_diff
         ELSE (
           CASE
             WHEN SIGN(bmp.home_score_predicted - bmp.away_score_predicted) =

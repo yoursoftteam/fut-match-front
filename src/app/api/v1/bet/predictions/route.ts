@@ -29,7 +29,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { validatePredictionScores, isPredictionLocked } from '@/lib/bet-utils'
-import { MatchPrediction, ErrorCode, PredictionMode } from '@/types/bet'
+import { MatchPrediction, ErrorCode, PredictionMode, DEFAULT_POOL_CONFIG } from '@/types/bet'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -86,6 +86,22 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url)
     const poolId = searchParams.get('pool_id')
+
+    let poolConfig: { pts_winner_selection: number; pts_exact_score: number; pts_team_goals: number; pts_goal_difference: number } | null = null
+
+    if (poolId) {
+      const { data: config } = await supabase
+        .from('bet_pool_config_versions')
+        .select('pts_winner_selection, pts_exact_score, pts_team_goals, pts_goal_difference')
+        .eq('pool_id', poolId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .single()
+
+      if (config) {
+        poolConfig = config
+      }
+    }
 
     let query = supabase
       .from('bet_match_predictions')
@@ -151,19 +167,55 @@ export async function GET(request: NextRequest) {
       let pointsEarned: number | null = null
 
       if (ms && ms.home !== null && ms.away !== null && ms.status === 'finished') {
-        const isKo = ms.stage !== 'group_stage'
-        const isExact = ms.home === pred.home_score_predicted && ms.away === pred.away_score_predicted
-        const actualWinner = ms.home > ms.away ? 'home' : ms.home < ms.away ? 'away' : 'draw'
-        const predictedWinner = pred.home_score_predicted > pred.away_score_predicted ? 'home' : pred.home_score_predicted < pred.away_score_predicted ? 'away' : 'draw'
+        const home = ms.home
+        const away = ms.away
+        const predHome = pred.home_score_predicted
+        const predAway = pred.away_score_predicted
 
-        if (isExact) {
-          pointsEarned = isKo ? 20 : 10
+        if (poolConfig) {
+          const isExact = home === predHome && away === predAway
+          if (isExact) {
+            pointsEarned =
+              poolConfig.pts_winner_selection +
+              poolConfig.pts_exact_score +
+              poolConfig.pts_team_goals +
+              poolConfig.pts_goal_difference
+          } else {
+            let pts = 0
+            const actualDiff = Math.sign(home - away)
+            const predDiff = Math.sign(predHome - predAway)
+            if (actualDiff === predDiff && actualDiff !== 0) {
+              pts += poolConfig.pts_winner_selection
+            } else if (actualDiff === 0 && predDiff === 0) {
+              pts += poolConfig.pts_winner_selection
+            }
+            if (home === predHome) pts += poolConfig.pts_team_goals
+            if (away === predAway) pts += poolConfig.pts_team_goals
+            if ((home - away) === (predHome - predAway)) pts += poolConfig.pts_goal_difference
+            pointsEarned = pts
+          }
         } else {
-          let pts = 0
-          if (actualWinner === predictedWinner) pts += 5
-          if (ms.home === p.home_score_predicted) pts += 2
-          if (ms.away === p.away_score_predicted) pts += 2
-          pointsEarned = isKo ? pts * 2 : pts
+          const isExact = home === predHome && away === predAway
+          if (isExact) {
+            pointsEarned =
+              DEFAULT_POOL_CONFIG.pts_winner_selection +
+              DEFAULT_POOL_CONFIG.pts_exact_score +
+              DEFAULT_POOL_CONFIG.pts_team_goals +
+              DEFAULT_POOL_CONFIG.pts_goal_difference
+          } else {
+            let pts = 0
+            const actualDiff = Math.sign(home - away)
+            const predDiff = Math.sign(predHome - predAway)
+            if (actualDiff === predDiff && actualDiff !== 0) {
+              pts += DEFAULT_POOL_CONFIG.pts_winner_selection
+            } else if (actualDiff === 0 && predDiff === 0) {
+              pts += DEFAULT_POOL_CONFIG.pts_winner_selection
+            }
+            if (home === predHome) pts += DEFAULT_POOL_CONFIG.pts_team_goals
+            if (away === predAway) pts += DEFAULT_POOL_CONFIG.pts_team_goals
+            if ((home - away) === (predHome - predAway)) pts += DEFAULT_POOL_CONFIG.pts_goal_difference
+            pointsEarned = pts
+          }
         }
       }
 
