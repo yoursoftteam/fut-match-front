@@ -161,6 +161,11 @@ export default function DashboardPage() {
   }, [registeredMatchesMessage])
 
   const handleQuickUnregister = async (registrationId: string, matchId: string) => {
+    if (!user) {
+      setRegisteredMatchesMessage('Debes iniciar sesión para cancelar la inscripción.')
+      return
+    }
+
     setUnregisteringRegistrationId(registrationId)
     setRegisteredMatchesMessage(null)
 
