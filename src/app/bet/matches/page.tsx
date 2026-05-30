@@ -436,7 +436,19 @@ function BetMatchesContent() {
     async function checkMembership() {
       setMembershipStatus('loading')
       const { supabase } = await import('@/lib/supabase')
-      const { data } = await supabase
+
+      // Owner is always a member
+      const { data: pool } = await supabase
+        .from('bet_pools')
+        .select('owner_id')
+        .eq('id', poolId)
+        .single()
+      if (pool?.owner_id === currentUserId) {
+        if (!cancelled) setMembershipStatus('member')
+        return
+      }
+
+      const { data, error } = await supabase
         .from('bet_pool_members')
         .select('id')
         .eq('pool_id', poolId)
@@ -444,6 +456,9 @@ function BetMatchesContent() {
         .maybeSingle()
 
       if (!cancelled) {
+        if (error) {
+          console.error('Membership check failed:', error)
+        }
         setMembershipStatus(data ? 'member' : 'not-member')
       }
     }
