@@ -3,7 +3,7 @@
 import { useMemo } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 
-const MAX_SUBSTITUTE_SLOTS = 5;
+const MAX_SUBSTITUTE_SLOTS = 10;
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
 
 interface RegistrationStats {

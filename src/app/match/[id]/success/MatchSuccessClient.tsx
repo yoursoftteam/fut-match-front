@@ -10,6 +10,7 @@ import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 import { BrandLogo } from "@/components/BrandLogo";
 import { formatCurrency } from "@/lib/currency";
+import { formatLocalTime } from "@/lib/date-utils";
 import { Button } from "@/components/ui/button";
 import { useMatches } from "@/hooks/useMatches";
 
@@ -105,9 +106,7 @@ export default function MatchSuccessClient({ matchId }: MatchSuccessProps) {
       ? Math.ceil(totalCost / payingPlayers)
       : 0;
 
-  const matchTime = match.date.includes("T")
-    ? match.date.split("T")[1].slice(0, 5)
-    : "";
+  const matchTime = formatLocalTime(match.date);
 
   const infoRows = [
     { icon: MapPin, label: "Lugar", value: match.location },

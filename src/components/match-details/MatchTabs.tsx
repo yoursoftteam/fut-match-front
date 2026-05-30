@@ -1,13 +1,18 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Plus, Share2, Trash2 } from "lucide-react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
+import { useMatches } from "@/hooks/useMatches";
+import { formatCurrency } from "@/lib/currency";
+import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { ShareActions } from "@/components/ShareLink";
 import { PaymentStatus } from "./PaymentStatus";
 import { PaymentSummary } from "./PaymentSummary";
+import { buildConvocatoriaSummary, buildMatchShareSummary } from "./MatchShareSection";
 
 type PanelTab = "register" | "players" | "teams";
 
@@ -66,7 +71,7 @@ export function MatchTabs({ activeTab, onTabChange, onOpenTeams }: MatchTabsProp
 }
 
 export function RegistrationPanel() {
-  const { registrations, isCreator } = useMatchDetailsContext();
+  const { matchData, registrations, isCreator, user, matchId, refreshRegistrations } = useMatchDetailsContext();
   const {
     entries,
     loading,
@@ -81,12 +86,74 @@ export function RegistrationPanel() {
     handleEntryKeyDown,
     resetForm,
   } = useMatchRegistration();
-  const { isTitularFull, isSubstituteFull, goalkeepersRemaining, maxGoalkeepers, maxFieldPlayers, goalkeepersCount, fieldPlayersCount } = useMatchPricing();
+  const {
+    isTitularFull,
+    isSubstituteFull,
+    goalkeepersRemaining,
+    maxGoalkeepers,
+    maxFieldPlayers,
+    goalkeepersCount,
+    fieldPlayersCount,
+    formattedDate,
+    formattedTime,
+  } = useMatchPricing();
+  const { registerForMatch, unregisterFromMatch } = useMatches();
   const previousEntryIdsRef = useRef<string[]>([]);
+  const [detailsExpanded, setDetailsExpanded] = useState(false);
+  const [showShareToast, setShowShareToast] = useState(false);
+  const [quickActionLoading, setQuickActionLoading] = useState(false);
+  const [quickActionMessage, setQuickActionMessage] = useState<string | null>(null);
   const totalGoalkeepersRegistered = registrations.filter((registration) => registration.is_goalkeeper).length;
   const selectedGoalkeepersInForm = entries.filter((entry) => entry.isGoalkeeper).length;
   const isGoalkeeperCheckboxDisabled = totalGoalkeepersRegistered >= maxGoalkeepers;
   const goalkeeperSelectionLimitReached = totalGoalkeepersRegistered + selectedGoalkeepersInForm >= maxGoalkeepers;
+  const totalCost = matchData
+    ? getTotalCost(matchData.field_cost, matchData.rental_cost, matchData.has_rented_goalkeepers)
+    : 0;
+  const payingPlayers = matchData
+    ? getPayingPlayersCount(
+        matchData.max_players,
+        matchData.has_rented_goalkeepers,
+        matchData.rented_goalkeepers_count,
+      )
+    : 0;
+  const costPerPlayer = payingPlayers > 0 ? Math.ceil(totalCost / payingPlayers) : 0;
+  const shareableLink =
+    typeof window !== "undefined" && matchData
+      ? `${window.location.origin}/match/${matchData.id}`
+      : "";
+  const shareMatchSummary =
+    matchData && shareableLink
+      ? buildMatchShareSummary(matchData, shareableLink)
+      : shareableLink;
+
+  const normalizedAuthName = useMemo(() => {
+    if (!user) return null;
+
+    const metadata = user.user_metadata as { full_name?: string; name?: string } | null;
+    const candidate = metadata?.full_name || metadata?.name || user.email?.split("@")[0] || null;
+    const trimmed = candidate?.trim();
+    return trimmed && trimmed.length >= 2 ? trimmed : null;
+  }, [user]);
+
+  const ownRegistration = useMemo(() => {
+    if (!user) return null;
+
+    const fallbackName = normalizedAuthName?.toLowerCase();
+    return registrations.find((registration) => {
+      if (registration.user_id && registration.user_id === user.id) {
+        return true;
+      }
+
+      if (!registration.user_id && fallbackName) {
+        return registration.name.trim().toLowerCase() === fallbackName;
+      }
+
+      return false;
+    }) ?? null;
+  }, [registrations, user, normalizedAuthName]);
+
+  const useQuickAuthRegistration = Boolean(user && !isCreator && normalizedAuthName);
 
   useEffect(() => {
     if (!isGoalkeeperCheckboxDisabled) return;
@@ -112,7 +179,76 @@ export function RegistrationPanel() {
     previousEntryIdsRef.current = currentIds;
   }, [entries]);
 
+  useEffect(() => {
+    if (!showShareToast) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setShowShareToast(false);
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [showShareToast]);
+
+  useEffect(() => {
+    if (!quickActionMessage) return;
+
+    const timeoutId = window.setTimeout(() => {
+      setQuickActionMessage(null);
+    }, 3000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [quickActionMessage]);
+
+  const handleSubmitWithToast = async (e: React.FormEvent) => {
+    const success = await handleSubmit(e);
+    if (success) {
+      setShowShareToast(true);
+    }
+  };
+
+  const handleQuickAction = async () => {
+    if (!matchData || !user || !normalizedAuthName) return;
+
+    setQuickActionLoading(true);
+    setQuickActionMessage(null);
+
+    try {
+      if (ownRegistration) {
+        const { error } = await unregisterFromMatch(ownRegistration.id);
+        if (error) {
+          const msg = error instanceof Error ? error.message : "No se pudo completar la baja.";
+          setQuickActionMessage(msg);
+          return;
+        }
+
+        await refreshRegistrations();
+        setQuickActionMessage("Te bajaste del partido correctamente.");
+        return;
+      }
+
+      const { error } = await registerForMatch(matchId, normalizedAuthName, false, {
+        trackCurrentUser: true,
+      });
+      if (error) {
+        const msg = error instanceof Error ? error.message : "No se pudo completar la inscripción.";
+        setQuickActionMessage(msg);
+        return;
+      }
+
+      await refreshRegistrations();
+      setShowShareToast(true);
+      setQuickActionMessage("¡Inscripción completada con tu cuenta!");
+    } finally {
+      setQuickActionLoading(false);
+    }
+  };
+
   return (
+    <>
     <div id="panel-register" role="tabpanel" aria-labelledby="tab-register">
       <h2 className="mb-2 text-xl font-bold text-foreground">Inscribirme al partido</h2>
       <p className="mb-4 text-sm text-muted-foreground">Puedes inscribir varios jugadores. Presiona Enter para crear otra fila.</p>
@@ -131,6 +267,28 @@ export function RegistrationPanel() {
         <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
         {isGoalkeeperCheckboxDisabled && (
           <p className="mt-1 text-amber-400">Ya se completaron los cupos de portero. El check está deshabilitado.</p>
+        )}
+
+        {matchData && (
+          <>
+            <button
+              type="button"
+              onClick={() => setDetailsExpanded(!detailsExpanded)}
+              aria-expanded={detailsExpanded}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs font-semibold text-primary underline underline-offset-2"
+            >
+              {detailsExpanded ? "Ocultar detalles ▲" : "Ver detalles ▼"}
+            </button>
+
+            {detailsExpanded && (
+              <div className="mt-3 border-t border-border pt-3">
+                <p>Lugar: {matchData.location || "Por definir"}</p>
+                <p className="mt-1">Fecha: {formattedDate}</p>
+                <p className="mt-1">Hora: {formattedTime}</p>
+                <p className="mt-1">Costo por jugador: {formatCurrency(costPerPlayer)}</p>
+              </div>
+            )}
+          </>
         )}
       </div>
 
@@ -152,7 +310,38 @@ export function RegistrationPanel() {
         </div>
       )}
 
+      {quickActionMessage && (
+        <div role="status" aria-live="polite" className={`mb-4 rounded p-3 text-sm ${quickActionMessage.includes("complet") || quickActionMessage.includes("correctamente") ? "bg-green-900 text-green-200" : "bg-red-900 text-red-200"}`}>
+          {quickActionMessage}
+        </div>
+      )}
+
+      {useQuickAuthRegistration && (
+        <button
+          type="button"
+          onClick={handleQuickAction}
+          className={`w-full rounded py-2 px-4 font-semibold transition ${ownRegistration ? "bg-red-600 text-white hover:bg-red-700" : isTitularFull && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
+          disabled={quickActionLoading || (!ownRegistration && isTitularFull && isSubstituteFull)}
+        >
+          {quickActionLoading
+            ? (ownRegistration ? "Procesando baja..." : "Inscribiendo...")
+            : ownRegistration
+              ? "Cancelar inscripción"
+              : (isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : isTitularFull ? "Inscribirme como suplente" : "Inscribirme")}
+        </button>
+      )}
+
       {!showForm ? (
+        useQuickAuthRegistration ? (
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="mt-3 w-full rounded border border-border bg-muted py-2 px-4 font-semibold text-foreground transition hover:bg-secondary"
+            disabled={isTitularFull && isSubstituteFull}
+          >
+            Inscribir a otros
+          </button>
+        ) : (
         <button
           type="button"
           onClick={() => setShowForm(true)}
@@ -161,8 +350,9 @@ export function RegistrationPanel() {
         >
           {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : isTitularFull ? "Inscribirme como suplente" : "Inscribirme"}
         </button>
+        )
       ) : (
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmitWithToast} className="space-y-4">
           <div className="space-y-3">
             {entries.map((entry, index) => (
               <div key={entry.id} className="rounded border border-border bg-muted p-3">
@@ -238,6 +428,48 @@ export function RegistrationPanel() {
         </form>
       )}
     </div>
+
+    {showShareToast && (
+      <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-border bg-card p-3 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">
+        <p className="text-sm font-semibold text-foreground">Compartir partido</p>
+        <p className="mt-1 text-xs text-muted-foreground">Inscripción exitosa. Comparte el link con más jugadores.</p>
+        <div className="mt-3 h-1 overflow-hidden rounded bg-muted">
+          <div className="toast-progress-bar h-full bg-primary" />
+        </div>
+        <div className="mt-3">
+          <ShareActions
+            copyText={shareMatchSummary}
+            copiedStatusText="Información del partido copiada al portapapeles"
+            whatsappText={shareMatchSummary}
+            emailSubject={`Partido de fútbol${matchData?.location ? ` - ${matchData.location}` : ""}`}
+            emailBody={shareMatchSummary}
+            nativeShare={{
+              title: `Partido${matchData?.location ? ` en ${matchData.location}` : " de fútbol"}`,
+              text: shareMatchSummary,
+              url: shareableLink,
+            }}
+          />
+        </div>
+      </div>
+    )}
+
+    <style jsx>{`
+      .toast-progress-bar {
+        width: 100%;
+        transform-origin: left;
+        animation: toast-countdown 5s linear forwards;
+      }
+
+      @keyframes toast-countdown {
+        from {
+          transform: scaleX(1);
+        }
+        to {
+          transform: scaleX(0);
+        }
+      }
+    `}</style>
+    </>
   );
 }
 
@@ -245,11 +477,69 @@ export function PlayersPanel() {
   const { matchData, registrations, registrationsLoading, isCreator } = useMatchDetailsContext();
   const { showModal, target, loading, openModal, closeModal, handleUnregister, message } = useMatchUnregister();
   const { titulares, suplentes } = useMatchPricing();
+  const [convocatoriaOpen, setConvocatoriaOpen] = useState(false);
+  const convocatoriaRef = useRef<HTMLDivElement>(null);
+  const registrationLink =
+    typeof window !== "undefined" && matchData
+      ? `${window.location.origin}/match/${matchData.id}`
+      : matchData
+        ? `/match/${matchData.id}`
+        : "";
+  const convocatoriaText = useMemo(() => {
+    if (!matchData) return "";
+    return buildConvocatoriaSummary(matchData, registrations, registrationLink);
+  }, [matchData, registrations, registrationLink]);
+
+  useEffect(() => {
+    if (!convocatoriaOpen) return;
+
+    const handleClickOutside = (event: MouseEvent) => {
+      if (!convocatoriaRef.current) return;
+      if (!convocatoriaRef.current.contains(event.target as Node)) {
+        setConvocatoriaOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [convocatoriaOpen]);
 
   return (
     <>
     <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
-      <h2 className="mb-3 text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
+      <div ref={convocatoriaRef} className="relative mb-3 flex items-center justify-between gap-3">
+        <h2 className="text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
+        <button
+          type="button"
+          onClick={() => setConvocatoriaOpen((prev) => !prev)}
+          aria-label="Compartir convocatoria"
+          aria-expanded={convocatoriaOpen}
+          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted/30 text-foreground transition-colors hover:bg-muted"
+        >
+          <Share2 className="size-4" />
+        </button>
+
+        <div
+          className={`absolute right-0 top-11 z-20 w-[260px] rounded-xl border border-border bg-card p-3 shadow-xl transition-all duration-200 ${
+            convocatoriaOpen
+              ? "pointer-events-auto translate-y-0 opacity-100"
+              : "pointer-events-none -translate-y-1 opacity-0"
+          }`}
+        >
+          <ShareActions
+            copyText={convocatoriaText}
+            copyTooltip="Copiar convocatoria"
+            copiedStatusText="Convocatoria copiada al portapapeles"
+            whatsappText={convocatoriaText}
+            emailSubject={`Convocatoria - ${matchData?.title || "Partido"}`}
+            emailBody={convocatoriaText}
+            nativeShare={{
+              title: `Convocatoria - ${matchData?.title || "Partido"}`,
+              text: convocatoriaText,
+            }}
+          />
+        </div>
+      </div>
       {message && (
         <div
           role="status"
