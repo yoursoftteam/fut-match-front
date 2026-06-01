@@ -46,7 +46,12 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { Pool, PoolConfigVersion } from '@/types/bet'
+import {
+  Pool,
+  PoolCompetitionType,
+  PoolConfigVersion,
+  PREDICTION_COMPETITION_CONFIG,
+} from '@/types/bet'
 import { sanitizeText } from '@/lib/sanitize'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
@@ -59,7 +64,7 @@ if (!supabaseUrl || !supabaseServiceKey) {
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Default pool configuration values
-const DEFAULT_CONFIG = {
+const DEFAULT_POOL_CREATE_CONFIG = {
   lock_minutes: 10,
   pts_winner_selection: 3,
   pts_exact_score: 2,
@@ -76,12 +81,15 @@ const DEFAULT_CONFIG = {
   pts_least_conceded: 10,
 }
 
+const COMPETITION_TYPES: PoolCompetitionType[] = ['pool', 'predictions']
+
 interface CreatePoolRequestBody {
   tournament_id: string
   name: string
   description?: string
+  competition_type?: PoolCompetitionType
   visibility: 'public' | 'private'
-  config?: Partial<typeof DEFAULT_CONFIG>
+  config?: Partial<typeof DEFAULT_POOL_CREATE_CONFIG>
   client_request_id?: string
 }
 
@@ -185,11 +193,28 @@ export async function GET(
       )
     }
 
+    const requestedCompetitionType =
+      new URL(request.url).searchParams.get('competition_type') ?? 'pool'
+
+    if (!COMPETITION_TYPES.includes(requestedCompetitionType as PoolCompetitionType)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_COMPETITION_TYPE',
+            message: 'competition_type must be either "pool" or "predictions"',
+          },
+        } as ErrorResponse,
+        { status: 400 }
+      )
+    }
+
     // Get pools where user is owner or member
     const { data: ownedPools, error: ownedError } = await supabase
       .from('bet_pools')
       .select('*')
       .eq('owner_id', user.id)
+      .eq('competition_type', requestedCompetitionType)
       .order('created_at', { ascending: false })
 
     if (ownedError) {
@@ -216,6 +241,7 @@ export async function GET(
         .from('bet_pools')
         .select('*')
         .in('id', memberPoolIds)
+        .eq('competition_type', requestedCompetitionType)
         .order('created_at', { ascending: false })
 
       if (!poolsError && pools) {
@@ -284,6 +310,21 @@ export async function POST(
           error: {
             code: 'INVALID_VISIBILITY',
             message: 'Visibility must be either "public" or "private"',
+          },
+        } as ErrorResponse,
+        { status: 400 }
+      )
+    }
+
+    const competitionType = body.competition_type ?? 'pool'
+
+    if (!COMPETITION_TYPES.includes(competitionType)) {
+      return NextResponse.json(
+        {
+          success: false,
+          error: {
+            code: 'INVALID_COMPETITION_TYPE',
+            message: 'competition_type must be either "pool" or "predictions"',
           },
         } as ErrorResponse,
         { status: 400 }
@@ -379,11 +420,18 @@ export async function POST(
       )
     }
 
-    // Merge provided config with defaults
-    const mergedConfig = {
-      ...DEFAULT_CONFIG,
-      ...(body.config || {}),
-    }
+    const mergedConfig =
+      competitionType === 'predictions'
+        ? {
+            ...PREDICTION_COMPETITION_CONFIG,
+            lock_minutes:
+              body.config?.lock_minutes ??
+              PREDICTION_COMPETITION_CONFIG.lock_minutes,
+          }
+        : {
+            ...DEFAULT_POOL_CREATE_CONFIG,
+            ...(body.config || {}),
+          }
 
     // Validate config values
     const configValidation = validateConfigValues(mergedConfig)
@@ -426,6 +474,7 @@ export async function POST(
           owner_id: user.id,
           name: body.name,
           description: body.description || null,
+          competition_type: competitionType,
           visibility: body.visibility,
           invite_code: inviteCode,
         })

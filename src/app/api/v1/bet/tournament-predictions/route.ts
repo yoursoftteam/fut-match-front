@@ -32,6 +32,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ success: false, data: null, error: { code: 'INVALID_REQUEST', message: 'pool_id is required' } }, { status: 400 })
     }
 
+    const { data: pool } = await supabase
+      .from('bet_pools')
+      .select('competition_type')
+      .eq('id', poolId)
+      .maybeSingle()
+
+    if (pool?.competition_type === 'predictions') {
+      return NextResponse.json({ success: true, data: [], message: 'Tournament predictions are disabled for prediction competitions', error: null }, { status: 200 })
+    }
+
     const { data: predictions, error } = await supabase
       .from('bet_tournament_predictions')
       .select('*, team:team_id(id, name, fifa_code, flag_svg_url)')
@@ -71,6 +81,16 @@ export async function POST(request: NextRequest) {
 
     if (!VALID_CATEGORIES.includes(category)) {
       return NextResponse.json({ success: false, data: null, error: { code: 'INVALID_REQUEST', message: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` } }, { status: 400 })
+    }
+
+    const { data: pool } = await supabase
+      .from('bet_pools')
+      .select('competition_type')
+      .eq('id', pool_id)
+      .maybeSingle()
+
+    if (pool?.competition_type === 'predictions') {
+      return NextResponse.json({ success: false, data: null, error: { code: 'INVALID_POOL_MODE', message: 'Tournament predictions are disabled for prediction competitions' } }, { status: 400 })
     }
 
     const { data: membership } = await supabase

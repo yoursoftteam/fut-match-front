@@ -35,6 +35,8 @@ export enum PoolVisibility {
   PRIVATE = 'private',
 }
 
+export type PoolCompetitionType = 'pool' | 'predictions'
+
 export enum PredictionMode {
   POOL = 'pool',
   GLOBAL = 'global',
@@ -108,6 +110,7 @@ export interface Pool {
   owner_id: string;
   name: string;
   description?: string | null;
+  competition_type: PoolCompetitionType;
   visibility: PoolVisibility;
   invite_code: string;
   created_at: string;
@@ -283,6 +286,7 @@ export interface CreatePoolRequest {
   tournament_id: string;
   name: string;
   visibility: PoolVisibility;
+  competition_type?: PoolCompetitionType;
   config: Partial<PoolConfigVersion>;
 }
 
@@ -500,6 +504,23 @@ export const DEFAULT_POOL_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool_id' | 'cr
   pts_mvp: 12,
   pts_best_goalkeeper: 12,
   pts_least_conceded: 10,
+};
+
+export const PREDICTION_COMPETITION_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool_id' | 'created_at' | 'is_frozen' | 'frozen_at'> = {
+  lock_minutes: 10,
+  pts_winner_selection: 5,
+  pts_exact_score: 0,
+  pts_team_goals: 2,
+  pts_goal_difference: 1,
+  pts_qualified_round_2: 0,
+  pts_champion: 0,
+  pts_subchampion: 0,
+  pts_third_place: 0,
+  pts_top_scorer: 0,
+  pts_top_assistant: 0,
+  pts_mvp: 0,
+  pts_best_goalkeeper: 0,
+  pts_least_conceded: 0,
 };
 
 export const STAGE_ORDER: Record<MatchStage, number> = {

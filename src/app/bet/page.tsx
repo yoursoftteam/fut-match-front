@@ -55,13 +55,13 @@ export default function BetPage() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {/* Matches Card */}
           <Card className="group cursor-pointer hover:border-emerald-500/50 transition-all hover:shadow-lg hover:shadow-emerald-500/10">
-            <Link href="/bet/matches" className="block p-8 h-full">
+            <Link href="/bet/predictions" className="block p-8 h-full">
               <div className="text-5xl mb-4">🎯</div>
               <h2 className="text-xl font-bold text-slate-50 mb-2 group-hover:text-emerald-400 transition-colors">
                 Predicciones
               </h2>
               <p className="text-slate-400 text-sm mb-4">
-                Haz tus predicciones para todos los partidos de la Copa Mundial
+                Crea competencias solo de marcadores y reta a tu squad
               </p>
               <div className="text-emerald-400 text-sm font-semibold">
                 Ver Partidos →

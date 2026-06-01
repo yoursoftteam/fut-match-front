@@ -17,6 +17,7 @@
  *     data: {
  *       pool_id: string (UUID),
  *       tournament_id: string (UUID),
+ *       competition_type: "pool" | "predictions",
  *       next: string (redirect path, e.g. "/bet/pools/[poolId]")
  *     }
  *   }
@@ -31,7 +32,6 @@
 
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
-import { Pool } from '@/types/bet'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
 const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -51,6 +51,7 @@ interface JoinPoolResponse {
   data: {
     pool_id: string
     tournament_id: string
+    competition_type: string
     next: string
   }
 }
@@ -124,7 +125,7 @@ export async function POST(
     // Get pool by invite code
     const { data: pool, error: poolError } = await supabase
       .from('bet_pools')
-      .select('id, tournament_id, name, visibility')
+      .select('id, tournament_id, name, visibility, competition_type')
       .eq('invite_code', normalizedCode)
       .maybeSingle()
 
@@ -165,7 +166,11 @@ export async function POST(
           data: {
             pool_id: pool.id,
             tournament_id: pool.tournament_id,
-            next: `/bet/pools/${pool.id}`,
+            competition_type: pool.competition_type,
+            next:
+              pool.competition_type === 'predictions'
+                ? `/bet/predictions/${pool.id}`
+                : `/bet/pools/${pool.id}`,
           },
         } as JoinPoolResponse,
         { status: 200 }
@@ -196,7 +201,11 @@ export async function POST(
         data: {
           pool_id: pool.id,
           tournament_id: pool.tournament_id,
-          next: `/bet/pools/${pool.id}`,
+          competition_type: pool.competition_type,
+          next:
+            pool.competition_type === 'predictions'
+              ? `/bet/predictions/${pool.id}`
+              : `/bet/pools/${pool.id}`,
         },
       } as JoinPoolResponse,
       { status: 200 }

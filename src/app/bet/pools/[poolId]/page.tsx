@@ -24,6 +24,7 @@ interface PoolDetail {
   id: string;
   tournament_id: string;
   name: string;
+  competition_type: "pool" | "predictions";
   visibility: string;
   invite_code: string;
   owner_id: string;
@@ -164,6 +165,9 @@ export default function PoolDetailPage({
   );
 
   const isOwner = user && pool && user.id === pool.owner_id;
+  const isPredictionCompetition = pool?.competition_type === "predictions";
+  const listPath = isPredictionCompetition ? "/bet/predictions" : "/bet/pools";
+  const listLabel = isPredictionCompetition ? "Mis competencias" : "Mis pollas";
 
   if (authLoading || loading || !poolId) {
     return (

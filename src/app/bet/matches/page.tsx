@@ -16,12 +16,11 @@ import {
   ChevronRight,
   Clock3,
   Loader2,
-  Lock,
   Trophy,
   Users,
 } from 'lucide-react'
-import { LockCountdown } from '@/components/bet/LockCountdown'
 import { ScoreInput } from '@/components/bet/ScoreInput'
+import { GroupStandingsModal } from '@/components/bet/GroupStandingsModal'
 import { TournamentPredictions } from '@/components/bet/TournamentPredictions'
 import { Button, buttonVariants } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -119,50 +118,6 @@ function TeamCell({
   )
 }
 
-function StatusPill({
-  match,
-  locked,
-  onLocked,
-}: {
-  match: MatchWithTeams
-  locked: boolean
-  onLocked: () => void
-}) {
-  if (match.status === 'live') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-xs font-semibold text-emerald-300">
-        <span className="size-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
-        En vivo
-      </span>
-    )
-  }
-
-  if (match.status === 'finished') {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-slate-700 bg-slate-900 px-2 py-1 text-xs font-medium text-slate-300">
-        Finalizado
-      </span>
-    )
-  }
-
-  if (locked) {
-    return (
-      <span className="inline-flex items-center gap-1 rounded-md border border-red-500/30 bg-red-500/10 px-2 py-1 text-xs font-medium text-red-300">
-        <Lock className="size-3" aria-hidden="true" />
-        Cerrado
-      </span>
-    )
-  }
-
-  return (
-    <LockCountdown
-      kickoffAt={match.kickoff_at}
-      onLocked={onLocked}
-      showTimer={false}
-    />
-  )
-}
-
 function PredictionCell({
   match,
   prediction,
@@ -216,14 +171,16 @@ function MatchRow({
   canEdit,
   saving,
   onUpdatePrediction,
+  onShowGroup,
 }: {
   match: MatchWithTeams
   prediction?: MatchPrediction
   canEdit: boolean
   saving: boolean
   onUpdatePrediction: (homeScore: number, awayScore: number) => void
+  onShowGroup?: (groupName: string) => void
 }) {
-  const [locked, setLocked] = useState(() => match.status === 'finished' || isMatchLocked(match.kickoff_at))
+  const [locked] = useState(() => match.status === 'finished' || isMatchLocked(match.kickoff_at))
   const kickoffDate = new Date(match.kickoff_at)
   const stageLabel = {
     [MatchStage.GROUP_STAGE]: match.group_name ? `Grupo ${match.group_name}` : 'Grupos',
@@ -280,12 +237,18 @@ function MatchRow({
       <td className="max-w-[11rem] truncate px-3 py-2 text-xs text-slate-400" title={match.venue ?? undefined}>
         {match.venue ?? 'Por definir'}
       </td>
-      <td className="whitespace-nowrap px-3 py-2">
-        <StatusPill
-          match={match}
-          locked={locked}
-          onLocked={() => setLocked(true)}
-        />
+      <td className="whitespace-nowrap px-3 py-2 text-center">
+        {match.stage === MatchStage.GROUP_STAGE && match.group_name && onShowGroup ? (
+          <button
+            type="button"
+            onClick={() => onShowGroup(match.group_name!)}
+            className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[0.625rem] font-medium text-emerald-400 transition-colors hover:bg-slate-700"
+          >
+            Ver grupo
+          </button>
+        ) : (
+          <span className="text-[0.625rem] text-slate-600">–</span>
+        )}
       </td>
       <td className="whitespace-nowrap px-3 py-2 text-right">
         <PredictionCell
@@ -343,6 +306,8 @@ function BetMatchesContent() {
     pts_team_goals: number
     pts_goal_difference: number
   } | null>(null)
+  const [competitionType, setCompetitionType] = useState<'pool' | 'predictions' | null>(null)
+  const [groupModal, setGroupModal] = useState<string | null>(null)
 
   const poolParam = searchParams.get('pool')
   const poolId = poolParam ?? null
@@ -440,12 +405,15 @@ function BetMatchesContent() {
       // Owner is always a member
       const { data: pool } = await supabase
         .from('bet_pools')
-        .select('owner_id')
+        .select('owner_id, competition_type')
         .eq('id', poolId)
         .single()
-      if (pool?.owner_id === currentUserId) {
-        if (!cancelled) setMembershipStatus('member')
-        return
+      if (!cancelled && pool) {
+        setCompetitionType(pool.competition_type)
+        if (pool.owner_id === currentUserId) {
+          setMembershipStatus('member')
+          return
+        }
       }
 
       const { data, error } = await supabase
@@ -589,6 +557,9 @@ function BetMatchesContent() {
                 ? ' · picks guardados en la polla · puntuación configurada'
                 : ` · puntuación por defecto (${DEFAULT_POOL_CONFIG.pts_winner_selection}/${DEFAULT_POOL_CONFIG.pts_exact_score}/${DEFAULT_POOL_CONFIG.pts_team_goals}/${DEFAULT_POOL_CONFIG.pts_goal_difference})`}
             </p>
+            <p className="mt-1 text-xs text-slate-500">
+              Los marcadores no tienen en cuenta tiempo extra, solo resultado oficial de los 90 minutos del partido.
+            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-64">
@@ -641,7 +612,16 @@ function BetMatchesContent() {
           </div>
         )}
 
-        <TournamentPredictions poolId={poolId} />
+        {competitionType === 'pool' && <TournamentPredictions poolId={poolId} />}
+
+        {groupModal && (
+          <GroupStandingsModal
+            groupName={groupModal}
+            matches={sortedMatches}
+            getPrediction={getPrediction}
+            onClose={() => setGroupModal(null)}
+          />
+        )}
 
         <section
           aria-labelledby="matches-table-heading"
@@ -682,7 +662,7 @@ function BetMatchesContent() {
                   <col />
                   <col className="w-28" />
                   <col className="w-36" />
-                  <col className="w-28" />
+                  <col className="w-24" />
                   <col className="w-28" />
                   <col className="w-14" />
                 </colgroup>
@@ -709,8 +689,8 @@ function BetMatchesContent() {
                     <th scope="col" className="px-3 py-2 font-semibold">
                       Sede
                     </th>
-                    <th scope="col" className="px-3 py-2 font-semibold">
-                      Estado
+                    <th scope="col" className="px-3 py-2 text-center font-semibold">
+                      Grupo
                     </th>
                     <th scope="col" className="px-3 py-2 text-right font-semibold">
                       Pick
@@ -731,6 +711,7 @@ function BetMatchesContent() {
                       onUpdatePrediction={(homeScore, awayScore) =>
                         handleUpdatePrediction(match.id, homeScore, awayScore)
                       }
+                      onShowGroup={setGroupModal}
                     />
                   ))}
                 </tbody>

@@ -11,6 +11,7 @@ interface ShareInviteModalProps {
   poolName: string;
   inviteUrl: string;
   loading?: boolean;
+  competitionLabel?: "polla" | "competencia";
 }
 
 export function ShareInviteModal({
@@ -19,6 +20,7 @@ export function ShareInviteModal({
   poolName,
   inviteUrl,
   loading = false,
+  competitionLabel = "polla",
 }: ShareInviteModalProps) {
   const dialogRef = useRef<HTMLDivElement>(null);
   const initialFocusRef = useRef<HTMLButtonElement>(null);
@@ -97,7 +99,7 @@ export function ShareInviteModal({
             Link ready. Suelta la bomba.
           </h2>
           <p className="mt-1 text-sm text-slate-400">
-            Comparte la polla y que el squad meta sus marcadores.
+            Comparte la {competitionLabel} y que el squad meta sus marcadores.
           </p>
         </div>
 
@@ -107,7 +109,11 @@ export function ShareInviteModal({
             <p className="text-sm text-slate-400">Link en camino...</p>
           </div>
         ) : (
-          <ShareInviteActions poolName={poolName} inviteUrl={inviteUrl} />
+          <ShareInviteActions
+            poolName={poolName}
+            inviteUrl={inviteUrl}
+            competitionLabel={competitionLabel}
+          />
         )}
       </div>
     </div>

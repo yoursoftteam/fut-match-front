@@ -12,6 +12,7 @@
  *       tournament_id: string,
  *       pool_name: string,
  *       owner_name: string (email or "Pool Creator"),
+ *       competition_type: "pool" | "predictions",
  *       visibility: "public" | "private",
  *       total_members: number,
  *       created_at: string
@@ -43,6 +44,7 @@ interface PoolPreviewResponse {
     tournament_id: string
     pool_name: string
     owner_name: string
+    competition_type: string
     visibility: string
     total_members: number
     created_at: string
@@ -89,6 +91,7 @@ export async function GET(
         tournament_id,
         name,
         owner_id,
+        competition_type,
         visibility,
         created_at
       `
@@ -134,6 +137,7 @@ export async function GET(
           tournament_id: pool.tournament_id,
           pool_name: pool.name,
           owner_name: ownerEmail,
+          competition_type: pool.competition_type,
           visibility: pool.visibility,
           total_members: totalMembers || 0,
           created_at: pool.created_at,

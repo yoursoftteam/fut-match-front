@@ -5,11 +5,17 @@ import { ShareActions } from "@/components/ShareLink";
 interface ShareInviteActionsProps {
   poolName: string;
   inviteUrl: string;
+  competitionLabel?: string;
 }
 
-export function ShareInviteActions({ poolName, inviteUrl }: ShareInviteActionsProps) {
+export function ShareInviteActions({
+  poolName,
+  inviteUrl,
+  competitionLabel = "polla",
+}: ShareInviteActionsProps) {
+  const title = competitionLabel === "competencia" ? "competencia de predicciones" : "polla";
   const defaultMessage = [
-    `Ey, arme la polla "${poolName}" en parti2.app.`,
+    `Ey, arme la ${title} "${poolName}" en parti2.app.`,
     "Entra, mete tus marcadores y ven a pelear la tabla:",
     inviteUrl,
     "",
@@ -18,15 +24,15 @@ export function ShareInviteActions({ poolName, inviteUrl }: ShareInviteActionsPr
 
   return (
     <ShareActions
-      title="Compartir polla"
+      title={`Compartir ${competitionLabel}`}
       copyText={inviteUrl}
-      copiedStatusText="Enlace de la polla copiado al portapapeles"
-      whatsappText={`Ey, arme la polla "${poolName}" en parti2.app. Entra, mete tus marcadores y ven a pelear la tabla: ${inviteUrl}`}
-      emailSubject={`Polla Parti2 Bet - ${poolName}`}
+      copiedStatusText={`Enlace de la ${competitionLabel} copiado al portapapeles`}
+      whatsappText={`Ey, arme la ${title} "${poolName}" en parti2.app. Entra, mete tus marcadores y ven a pelear la tabla: ${inviteUrl}`}
+      emailSubject={`${competitionLabel === "competencia" ? "Competencia" : "Polla"} Parti2 Bet - ${poolName}`}
       emailBody={defaultMessage}
       nativeShare={{
-        title: `Polla Parti2 Bet - ${poolName}`,
-        text: `Ey, arme la polla "${poolName}" en parti2.app. Entra y mete tus marcadores.`,
+        title: `${competitionLabel === "competencia" ? "Competencia" : "Polla"} Parti2 Bet - ${poolName}`,
+        text: `Ey, arme la ${title} "${poolName}" en parti2.app. Entra y mete tus marcadores.`,
         url: inviteUrl,
       }}
     />

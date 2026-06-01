@@ -51,6 +51,7 @@ interface PoolDetailResponse {
     tournament_id: string
     owner_id: string
     name: string
+    competition_type: string
     visibility: string
     invite_code: string
     created_at: string
@@ -121,6 +122,7 @@ export async function GET(
         tournament_id,
         owner_id,
         name,
+        competition_type,
         visibility,
         invite_code,
         created_at

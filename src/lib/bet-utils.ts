@@ -15,6 +15,7 @@ import {
   MAX_SCORE,
   MIN_SCORE,
 } from '@/types/bet';
+import { calculateMatchPredictionPoints } from '@/lib/bet-scoring';
 
 // =============================================================================
 // SCORING UTILITIES
@@ -81,41 +82,13 @@ export function calculatePoolPoints(
   awayScorePredicted: number,
   config: PoolConfigVersion
 ): number {
-  let points = 0;
-
-  const isExactScore =
-    homeScoreOfficial === homeScorePredicted &&
-    awayScoreOfficial === awayScorePredicted;
-
-  if (isExactScore) {
-    return config.pts_exact_score;
-  }
-
-  // Winner/Draw prediction
-  const actualWinner = getOutcome(homeScoreOfficial, awayScoreOfficial);
-  const predictedWinner = getOutcome(homeScorePredicted, awayScorePredicted);
-
-  if (actualWinner === predictedWinner) {
-    points += config.pts_winner_selection;
-  }
-
-  // Individual team goals
-  if (homeScoreOfficial === homeScorePredicted) {
-    points += config.pts_team_goals;
-  }
-  if (awayScoreOfficial === awayScorePredicted) {
-    points += config.pts_team_goals;
-  }
-
-  // Goal difference
-  const actualDiff = homeScoreOfficial - awayScoreOfficial;
-  const predictedDiff = homeScorePredicted - awayScorePredicted;
-
-  if (actualDiff === predictedDiff) {
-    points += config.pts_goal_difference;
-  }
-
-  return points;
+  return calculateMatchPredictionPoints(
+    config,
+    homeScoreOfficial,
+    awayScoreOfficial,
+    homeScorePredicted,
+    awayScorePredicted
+  );
 }
 
 /**
