@@ -12,6 +12,7 @@ import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { formatLocalTime } from '@/lib/date-utils'
+import { getLocalTimeInputValue } from '@/lib/date-utils'
 import { supabase } from '@/lib/supabase'
 
 interface RegisteredMatchCardItem {
@@ -416,7 +417,7 @@ export default function DashboardPage() {
                         rentalCost={match.rental_cost}
                         hasRentedGoalkeepers={match.has_rented_goalkeepers}
                         rentedGoalkeepersCount={match.rented_goalkeepers_count}
-                        time={formatLocalTime(match.date)}
+                        time={getLocalTimeInputValue(match.date)}
                       />
                     </div>
 

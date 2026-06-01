@@ -4,6 +4,7 @@ import { useEffect, useRef } from "react";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
 import type { UseMatchEditingReturn } from "@/hooks/useMatchEditing";
+import { formatTimeAmPm } from "@/lib/date-utils";
 
 interface MatchEditFormProps {
   editing?: UseMatchEditingReturn;
@@ -57,6 +58,9 @@ export function MatchEditForm({ editing }: MatchEditFormProps) {
           <div>
             <label htmlFor="edit-time" className="mb-2 block text-sm font-medium text-foreground">Hora</label>
             <input type="time" id="edit-time" name="time" value={form.time} onChange={handleInputChange} className="w-full rounded border border-border bg-muted px-4 py-3 text-foreground" required />
+            {form.time && (
+              <p className="mt-1.5 text-xs font-medium text-primary">{formatTimeAmPm(form.time)}</p>
+            )}
           </div>
         </div>
         <div>

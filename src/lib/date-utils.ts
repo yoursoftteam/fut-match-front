@@ -41,9 +41,26 @@ export function combineLocalDateAndTime(dateValue: string, timeValue: string): s
   return new Date(year, month - 1, day, hours, minutes, 0).toISOString();
 }
 
-export function formatLocalTime(dateValue: string): string {
-  return new Date(dateValue).toLocaleTimeString("es-CO", {
-    hour: "2-digit",
+export function formatTimeAmPm(timeValue: string): string {
+  const normalized = timeValue.trim();
+  const parts = normalized.match(/^(\d{1,2}):(\d{2})$/);
+  if (!parts) return normalized;
+
+  const [, hhRaw, mmRaw] = parts;
+  const hh = Number(hhRaw);
+  const mm = Number(mmRaw);
+  if (!Number.isInteger(hh) || !Number.isInteger(mm) || hh < 0 || hh > 23 || mm < 0 || mm > 59) {
+    return normalized;
+  }
+
+  const sampleDate = new Date(2000, 0, 1, hh, mm, 0);
+  return new Intl.DateTimeFormat("en-US", {
+    hour: "numeric",
     minute: "2-digit",
-  });
+    hour12: true,
+  }).format(sampleDate);
+}
+
+export function formatLocalTime(dateValue: string): string {
+  return formatTimeAmPm(getLocalTimeInputValue(dateValue));
 }
