@@ -81,6 +81,7 @@ CREATE INDEX IF NOT EXISTS idx_matches_source_template_id ON matches (source_tem
 CREATE TABLE match_registrations (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   match_id UUID REFERENCES matches(id) ON DELETE CASCADE,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   name TEXT NOT NULL,
   is_goalkeeper BOOLEAN NOT NULL DEFAULT FALSE,
   self_unreg_token_hash TEXT,
@@ -114,6 +115,10 @@ CREATE POLICY "Only match owner can update payments" ON match_registrations
     )
   );
 
+CREATE UNIQUE INDEX IF NOT EXISTS idx_match_registrations_match_user_unique
+ON match_registrations (match_id, user_id)
+WHERE user_id IS NOT NULL;
+
 CREATE OR REPLACE FUNCTION register_for_match_public(
   p_match_id UUID,
   p_name TEXT,
@@ -127,7 +132,8 @@ RETURNS TABLE (
   registered_at TIMESTAMP WITH TIME ZONE,
   has_paid BOOLEAN,
   paid_at TIMESTAMP WITH TIME ZONE,
-  paid_by UUID
+  paid_by UUID,
+  user_id UUID
 )
 LANGUAGE plpgsql
 SECURITY DEFINER
@@ -151,14 +157,25 @@ BEGIN
     RAISE EXCEPTION 'Token de auto-baja inválido.';
   END IF;
 
+  IF auth.uid() IS NOT NULL AND EXISTS (
+    SELECT 1
+    FROM match_registrations r
+    WHERE r.match_id = p_match_id
+      AND r.user_id = auth.uid()
+  ) THEN
+    RAISE EXCEPTION 'Ya estas inscrito en este partido';
+  END IF;
+
   INSERT INTO match_registrations (
     match_id,
+    user_id,
     name,
     is_goalkeeper,
     self_unreg_token_hash
   )
   VALUES (
     p_match_id,
+    auth.uid(),
     v_trimmed_name,
     p_is_goalkeeper,
     encode(digest(p_self_token, 'sha256'), 'hex')
@@ -173,7 +190,8 @@ BEGIN
     r.registered_at,
     r.has_paid,
     r.paid_at,
-    r.paid_by
+    r.paid_by,
+    r.user_id
   FROM match_registrations r
   WHERE r.id = v_registration_id;
 END;
@@ -212,8 +230,8 @@ GRANT EXECUTE ON FUNCTION unregister_self_from_match(UUID, TEXT) TO anon, authen
 
 -- Enforce registration rules at DB level:
 -- 1) max 2 goalkeepers (for titular slots only)
--- 2) always reserve 2 slots for goalkeepers (for titular slots only)
--- 3) allow up to max_players + 5 substitute slots (no position restrictions for substitutes)
+-- 2) reserve 2 titular slots for goalkeepers while titulars are being filled
+-- 3) allow up to max_players + 10 substitute slots (no position restrictions for substitutes)
 CREATE OR REPLACE FUNCTION validate_match_registration()
 RETURNS TRIGGER
 LANGUAGE plpgsql
@@ -225,7 +243,7 @@ DECLARE
   v_field_players INTEGER;
   v_reserved_goalkeeper_slots INTEGER;
   v_max_field_players INTEGER;
-  v_max_substitute_slots CONSTANT INTEGER := 5;
+  v_max_substitute_slots CONSTANT INTEGER := 10;
 BEGIN
   SELECT m.max_players INTO v_max_players
   FROM get_public_match_by_id(NEW.match_id) AS m;
@@ -247,7 +265,7 @@ BEGIN
     RAISE EXCEPTION 'No hay cupos disponibles, ni siquiera como suplente.';
   END IF;
 
-  -- Position restrictions only apply while filling titular slots
+  -- Position restrictions only apply while filling titular slots.
   IF v_total < v_max_players THEN
     v_reserved_goalkeeper_slots := LEAST(2, v_max_players);
     v_max_field_players := GREATEST(0, v_max_players - v_reserved_goalkeeper_slots);

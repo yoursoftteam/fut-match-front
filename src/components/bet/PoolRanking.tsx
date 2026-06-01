@@ -1,9 +1,10 @@
 'use client'
 
 import { useEffect, useState, useCallback, useMemo } from 'react'
-import { Trophy, Users } from 'lucide-react'
+import { Trophy, Users, Trash2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ShareActions } from '@/components/ShareLink'
+import { RemoveMemberDialog } from '@/components/bet/RemoveMemberDialog'
 
 const MEDAL_EMOJI = ['🥇', '🥈', '🥉']
 
@@ -27,11 +28,14 @@ interface PoolRankingProps {
   poolId: string
   poolName: string
   maxEntries?: number
+  isOwner?: boolean
 }
 
-export function PoolRanking({ poolId, poolName, maxEntries }: PoolRankingProps) {
+export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRankingProps) {
   const [allEntries, setAllEntries] = useState<RankingEntry[]>([])
   const [loading, setLoading] = useState(true)
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null)
+  const [pendingRemove, setPendingRemove] = useState<{ userId: string; name: string } | null>(null)
 
   const entries = maxEntries ? allEntries.slice(0, maxEntries) : allEntries
 
@@ -54,6 +58,30 @@ export function PoolRanking({ poolId, poolName, maxEntries }: PoolRankingProps) 
       // ignore
     } finally {
       setLoading(false)
+    }
+  }, [poolId])
+
+  const execRemove = useCallback(async (memberUserId: string) => {
+    setRemovingUserId(memberUserId)
+    setPendingRemove(null)
+    try {
+      const { supabase } = await import('@/lib/supabase')
+      const { data: authData } = await supabase.auth.getSession()
+      const token = authData?.session?.access_token
+      if (!token) return
+
+      const response = await fetch(`/api/v1/bet/pools/${poolId}/members/${memberUserId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      })
+
+      if (response.ok) {
+        setAllEntries((prev) => prev.filter((e) => e.user_id !== memberUserId))
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRemovingUserId(null)
     }
   }, [poolId])
 
@@ -122,6 +150,7 @@ export function PoolRanking({ poolId, poolName, maxEntries }: PoolRankingProps) 
               <col />
               <col className="w-20" />
               <col className="w-24" />
+              {isOwner && <col className="w-12" />}
             </colgroup>
             <thead className="border-b border-slate-800 bg-slate-900/50 text-left text-[0.6875rem] uppercase text-slate-500">
               <tr>
@@ -129,6 +158,7 @@ export function PoolRanking({ poolId, poolName, maxEntries }: PoolRankingProps) 
                 <th scope="col" className="px-3 py-2 font-semibold">Participante</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Pts</th>
                 <th scope="col" className="px-3 py-2 text-right font-semibold">Exactas</th>
+                {isOwner && <th scope="col" className="px-3 py-2 text-right font-semibold sr-only">Acción</th>}
               </tr>
             </thead>
             <tbody>
@@ -169,6 +199,23 @@ export function PoolRanking({ poolId, poolName, maxEntries }: PoolRankingProps) 
                     <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-slate-400">
                       {entry.exact_predictions}
                     </td>
+                    {isOwner && (
+                      <td className="px-1 py-2.5 text-right">
+                        <button
+                          type="button"
+                          onClick={() => setPendingRemove({ userId: entry.user_id, name: entry.name })}
+                          disabled={removingUserId === entry.user_id}
+                          className="rounded p-1 text-red-400 transition hover:bg-red-900/30 hover:text-red-300 disabled:opacity-40"
+                          aria-label={`Eliminar a ${entry.name} de la polla`}
+                        >
+                          {removingUserId === entry.user_id ? (
+                            <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+                          ) : (
+                            <Trash2 size={14} aria-hidden />
+                          )}
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 )
               })}
@@ -176,6 +223,14 @@ export function PoolRanking({ poolId, poolName, maxEntries }: PoolRankingProps) 
           </table>
         </div>
       )}
+
+      <RemoveMemberDialog
+        open={!!pendingRemove}
+        memberName={pendingRemove?.name ?? ""}
+        loading={!!removingUserId}
+        onConfirm={() => pendingRemove && execRemove(pendingRemove.userId)}
+        onCancel={() => setPendingRemove(null)}
+      />
     </div>
   )
 }

@@ -67,6 +67,8 @@ interface UseTeamBuilderReturn {
   resetTeamBuilder: () => void;
   randomizeTeams: () => void;
   saveTeams: () => void;
+  startDraggingPlayer: (playerId: string) => void;
+  setDragOverZoneState: (zone: TeamZone | null) => void;
   handlePlayerDragStart: (event: React.DragEvent<HTMLDivElement>, playerId: string) => void;
   handlePlayerDragEnd: () => void;
   handleDropOnZone: (targetZone: TeamZone) => void;
@@ -230,12 +232,20 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
     }
   }, [matchId, teamA, teamB, unassigned]);
 
-  const handlePlayerDragStart = useCallback((event: React.DragEvent<HTMLDivElement>, playerId: string) => {
+  const startDraggingPlayer = useCallback((playerId: string) => {
     draggingIdRef.current = playerId;
     setDraggingId(playerId);
+  }, []);
+
+  const setDragOverZoneState = useCallback((zone: TeamZone | null) => {
+    setDragOverZone(zone);
+  }, []);
+
+  const handlePlayerDragStart = useCallback((event: React.DragEvent<HTMLDivElement>, playerId: string) => {
+    startDraggingPlayer(playerId);
     event.dataTransfer.setData("text/plain", playerId);
     event.dataTransfer.effectAllowed = "move";
-  }, []);
+  }, [startDraggingPlayer]);
 
   const handlePlayerDragEnd = useCallback(() => {
     draggingIdRef.current = null;
@@ -347,6 +357,7 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
   return {
     teamA, teamB, unassigned, draggingId, dragOverZone, teamSaved, hasUnsavedChanges, message, playersPerTeamLimit,
     initTeamBuilder, resetTeamBuilder, randomizeTeams, saveTeams,
+    startDraggingPlayer, setDragOverZoneState,
     handlePlayerDragStart, handlePlayerDragEnd, handleDropOnZone,
     assignPlayerToZone, canDropInZone, canSwapWithPlayer, handleDropOnPlayer,
     getSourceZoneByPlayerId,

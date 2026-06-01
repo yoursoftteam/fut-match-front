@@ -19,3 +19,31 @@ export function getNextDateForDayOfWeek(targetDay: number): string {
   const dd = String(target.getDate()).padStart(2, "0");
   return `${yyyy}-${mm}-${dd}`;
 }
+
+export function getLocalDateInputValue(dateValue: string): string {
+  const date = new Date(dateValue);
+  const yyyy = date.getFullYear();
+  const mm = String(date.getMonth() + 1).padStart(2, "0");
+  const dd = String(date.getDate()).padStart(2, "0");
+  return `${yyyy}-${mm}-${dd}`;
+}
+
+export function getLocalTimeInputValue(dateValue: string): string {
+  const date = new Date(dateValue);
+  const hh = String(date.getHours()).padStart(2, "0");
+  const mm = String(date.getMinutes()).padStart(2, "0");
+  return `${hh}:${mm}`;
+}
+
+export function combineLocalDateAndTime(dateValue: string, timeValue: string): string {
+  const [year, month, day] = dateValue.split("-").map(Number);
+  const [hours, minutes] = timeValue.split(":").map(Number);
+  return new Date(year, month - 1, day, hours, minutes, 0).toISOString();
+}
+
+export function formatLocalTime(dateValue: string): string {
+  return new Date(dateValue).toLocaleTimeString("es-CO", {
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}

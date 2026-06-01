@@ -1,7 +1,7 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
-import { useMatches } from '@/hooks/useMatches'
+import { useMatches, type Match } from '@/hooks/useMatches'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -11,6 +11,17 @@ import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { formatLocalTime } from '@/lib/date-utils'
+import { supabase } from '@/lib/supabase'
+
+interface RegisteredMatchCardItem {
+  registrationId: string
+  match: Match
+}
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
 
 function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
   if (maxPlayers <= 6)  return { label: 'Casual',  cls: 'level-casual'  }
@@ -24,16 +35,182 @@ export default function DashboardPage() {
     autoFetch: true,
     onlyOwnedByCurrentUser: true,
   })
+  const { unregisterFromMatch } = useMatches()
   const router = useRouter()
   const [deletingMatchId, setDeletingMatchId] = useState<string | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [registeredMatches, setRegisteredMatches] = useState<RegisteredMatchCardItem[]>([])
+  const [registeredMatchesLoading, setRegisteredMatchesLoading] = useState(true)
+  const [unregisteringRegistrationId, setUnregisteringRegistrationId] = useState<string | null>(null)
+  const [registeredMatchesMessage, setRegisteredMatchesMessage] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
       router.push('/auth')
     }
   }, [user, authLoading, router])
+
+  useEffect(() => {
+    if (!user) {
+      setRegisteredMatches([])
+      setRegisteredMatchesLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const loadRegisteredMatches = async () => {
+      try {
+        setRegisteredMatchesLoading(true)
+
+        const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+        const preferredName = (
+          metadata?.full_name ||
+          metadata?.name ||
+          user.email?.split('@')[0] ||
+          ''
+        ).trim()
+
+        const { data: byUserIdData, error: byUserIdError } = await supabase
+          .from('match_registrations')
+          .select('id, match_id, registered_at')
+          .eq('user_id', user.id)
+          .order('registered_at', { ascending: false })
+
+        if (byUserIdError) throw byUserIdError
+
+        let legacyByNameData: Array<{
+          id: string
+          match_id: string
+          registered_at: string
+        }> = []
+
+        if (preferredName.length >= 2) {
+          const { data: byNameData, error: byNameError } = await supabase
+            .from('match_registrations')
+            .select('id, match_id, registered_at')
+            .is('user_id', null)
+            .ilike('name', preferredName)
+            .order('registered_at', { ascending: false })
+
+          if (byNameError) throw byNameError
+          legacyByNameData = (byNameData || []) as typeof legacyByNameData
+        }
+
+        const combinedRows = [
+          ...(((byUserIdData || []) as Array<{ id: string; match_id: string; registered_at: string }>)),
+          ...legacyByNameData,
+        ]
+
+        const uniqueMatchIds = Array.from(new Set(combinedRows.map((row) => row.match_id)))
+        const byMatchId = new Map<string, Match>()
+
+        await Promise.all(
+          uniqueMatchIds.map(async (matchId) => {
+            const { data: publicMatch, error: publicMatchError } = await supabase
+              .rpc('get_public_match_by_id', { p_match_id: matchId })
+              .maybeSingle()
+
+            if (publicMatchError || !publicMatch) return
+            byMatchId.set(matchId, publicMatch as Match)
+          })
+        )
+
+        const orderedMatches: RegisteredMatchCardItem[] = []
+        const seen = new Set<string>()
+        for (const row of combinedRows) {
+          if (seen.has(row.match_id)) continue
+          const match = byMatchId.get(row.match_id)
+          if (!match) continue
+          seen.add(row.match_id)
+          orderedMatches.push({ registrationId: row.id, match })
+        }
+
+        if (!cancelled) {
+          setRegisteredMatches(orderedMatches)
+        }
+      } catch {
+        if (!cancelled) {
+          setRegisteredMatches([])
+        }
+      } finally {
+        if (!cancelled) {
+          setRegisteredMatchesLoading(false)
+        }
+      }
+    }
+
+    loadRegisteredMatches()
+
+    return () => {
+      cancelled = true
+    }
+  }, [user])
+
+  useEffect(() => {
+    if (!registeredMatchesMessage) return
+
+    const timeoutId = window.setTimeout(() => {
+      setRegisteredMatchesMessage(null)
+    }, 3000)
+
+    return () => {
+      window.clearTimeout(timeoutId)
+    }
+  }, [registeredMatchesMessage])
+
+  const handleQuickUnregister = async (registrationId: string, matchId: string) => {
+    if (!user) {
+      setRegisteredMatchesMessage('Debes iniciar sesión para cancelar la inscripción.')
+      return
+    }
+
+    setUnregisteringRegistrationId(registrationId)
+    setRegisteredMatchesMessage(null)
+
+    try {
+      let effectiveRegistrationId = registrationId
+
+      if (!isUuid(effectiveRegistrationId)) {
+        const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+        const preferredName = (
+          metadata?.full_name ||
+          metadata?.name ||
+          user.email?.split('@')[0] ||
+          ''
+        ).trim()
+
+        const { data: fallbackRows, error: fallbackError } = await supabase
+          .from('match_registrations')
+          .select('id, user_id, name, registered_at')
+          .eq('match_id', matchId)
+          .or(`user_id.eq.${user.id},and(user_id.is.null,name.ilike.${preferredName})`)
+          .order('registered_at', { ascending: false })
+
+        if (!fallbackError && fallbackRows && fallbackRows.length > 0) {
+          const fallbackId = fallbackRows[0]?.id
+          if (typeof fallbackId === 'string' && isUuid(fallbackId)) {
+            effectiveRegistrationId = fallbackId
+          }
+        }
+      }
+
+      const { error } = await unregisterFromMatch(effectiveRegistrationId)
+      if (error) {
+        const errorMessage = error instanceof Error
+          ? error.message
+          : 'No se pudo completar la baja. Intenta nuevamente.'
+        setRegisteredMatchesMessage(errorMessage)
+        return
+      }
+
+      setRegisteredMatches((prev) => prev.filter((item) => item.match.id !== matchId))
+      setRegisteredMatchesMessage('Te diste de baja del partido correctamente.')
+    } finally {
+      setUnregisteringRegistrationId(null)
+    }
+  }
 
   if (authLoading) {
     return (
@@ -65,7 +242,9 @@ export default function DashboardPage() {
   const sevenDaysAgo = new Date()
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
 
-  const recentMatches = matches.filter((match) => {
+  const uniqueOwnedMatches = Array.from(new Map(matches.map((match) => [match.id, match])).values())
+
+  const recentMatches = uniqueOwnedMatches.filter((match) => {
     if (!match.created_at) return false
     const createdAt = new Date(match.created_at)
     if (Number.isNaN(createdAt.getTime())) return false
@@ -75,7 +254,18 @@ export default function DashboardPage() {
   const isInitialMatchesLoading = matchesLoading && recentMatches.length === 0
   const isRefreshingMatches = matchesLoading && recentMatches.length > 0
 
-  const userName = user.email?.split('@')[0] ?? 'crack'
+  const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+  const userNameFull = (
+    metadata?.full_name ||
+    metadata?.name ||
+    user.email?.split('@')[0] ||
+    'crack'
+  ).trim()
+  // Solo el primer nombre y primera letra mayúscula
+  let userName = userNameFull.split(' ')[0]
+  if (userName.length > 0) {
+    userName = userName.charAt(0).toUpperCase() + userName.slice(1)
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -150,7 +340,7 @@ export default function DashboardPage() {
           <div className="flex justify-between items-center mb-6">
             <div>
               <h2 className="text-2xl font-heading font-bold text-foreground">
-                Mis Partidos
+                Partidos Creados
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">Últimos 7 días</p>
             </div>
@@ -226,7 +416,7 @@ export default function DashboardPage() {
                         rentalCost={match.rental_cost}
                         hasRentedGoalkeepers={match.has_rented_goalkeepers}
                         rentedGoalkeepersCount={match.rented_goalkeepers_count}
-                        time={match.date.split("T")[1]?.substring(0, 5) || ""}
+                        time={formatLocalTime(match.date)}
                       />
                     </div>
 
@@ -303,6 +493,90 @@ export default function DashboardPage() {
 
           {deleteError && (
             <p className="mt-4 text-sm text-red-400">{deleteError}</p>
+          )}
+        </section>
+
+        {/* Registered Matches */}
+        <section className="mt-12">
+          <div className="flex justify-between items-center mb-6">
+            <div>
+              <h2 className="text-2xl font-heading font-bold text-foreground">
+                Partidos en los que estoy inscrito
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5">Acceso rapido a tus inscripciones</p>
+            </div>
+          </div>
+
+          {registeredMatchesLoading ? (
+            <div className="text-center py-10">
+              <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-r-transparent mx-auto mb-4" />
+              <p className="text-muted-foreground text-sm">Cargando inscripciones…</p>
+            </div>
+          ) : registeredMatches.length === 0 ? (
+            <div className="card p-8 text-center">
+              <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
+                No tienes inscripciones activas
+              </h3>
+              <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                Cuando te inscribas en un partido con tu cuenta, aparecera aqui para entrar rapido.
+              </p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
+              {registeredMatches.map(({ registrationId, match }) => (
+                <div key={`${match.id}-${registrationId}`} className="card match-card p-5 relative flex flex-col gap-4">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <h3 className="text-base font-heading font-bold text-card-foreground leading-tight truncate">
+                        {match.title}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <MapPin className="w-3.5 h-3.5 shrink-0" />
+                      <span className="truncate">{match.location}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Calendar className="w-3.5 h-3.5 shrink-0" />
+                      <span>
+                        {new Date(match.date).toLocaleDateString('es-CO', {
+                          weekday: 'short',
+                          day: '2-digit',
+                          month: 'short',
+                        })}
+                        {' · '}
+                        {formatLocalTime(match.date)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col gap-2">
+                    <Link
+                      href={`/match/${match.id}`}
+                      className="btn-primary-fm px-4 py-2.5 text-sm text-center w-full rounded-xl font-bold cursor-pointer inline-block"
+                    >
+                      Ver partido
+                    </Link>
+                    <button
+                      type="button"
+                      onClick={() => handleQuickUnregister(registrationId, match.id)}
+                      disabled={unregisteringRegistrationId === registrationId}
+                      className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-500/30 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer"
+                    >
+                      {unregisteringRegistrationId === registrationId ? 'Procesando...' : 'Cancelar inscripción'}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {registeredMatchesMessage && (
+            <p className={`mt-4 text-sm ${registeredMatchesMessage.includes('correctamente') ? 'text-green-400' : 'text-red-400'}`}>
+              {registeredMatchesMessage}
+            </p>
           )}
         </section>
 

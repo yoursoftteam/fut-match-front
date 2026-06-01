@@ -45,6 +45,7 @@ function buildRedirectUrl(pathWithQuery: string): string | undefined {
 
 function AuthForm() {
   const { user, loading: authLoading } = useAuth();
+  const [fullName, setFullName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -119,6 +120,7 @@ function AuthForm() {
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setMessage("");
+    setFullName("");
     setPassword("");
     setConfirmPassword("");
     const newUrl =
@@ -182,6 +184,13 @@ function AuthForm() {
       return;
     }
 
+    if (isSignUp && fullName.trim().length < 2) {
+      setMessage("Ingresa tu nombre completo para continuar.");
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
     if (
       (mode === "signin" || mode === "signup" || mode === "reset") &&
       !password
@@ -208,13 +217,18 @@ function AuthForm() {
 
     try {
       if (isSignUp) {
-        const redirectTo = pendingInvite
-          ? buildRedirectUrl(`/auth?mode=signin&invite=${pendingInvite}`)
-          : buildRedirectUrl("/dashboard");
+        const redirectTo = buildRedirectUrl("/dashboard");
+        const normalizedFullName = fullName.trim();
         const { error } = await supabase.auth.signUp({
           email,
           password,
-          options: { emailRedirectTo: redirectTo },
+          options: {
+            emailRedirectTo: redirectTo,
+            data: {
+              full_name: normalizedFullName,
+              name: normalizedFullName,
+            },
+          },
         });
         if (error) throw error;
         setMessageType("success");
@@ -431,7 +445,24 @@ function AuthForm() {
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {isSignUp && (
+              <div className="space-y-2">
+                <label className="text-sm font-semibold text-card-foreground">Nombre completo</label>
+                <div className="relative">
+                  <Input
+                    type="text"
+                    value={fullName}
+                    onChange={(e) => setFullName(e.target.value)}
+                    placeholder="Tu nombre"
+                    className="h-12"
+                    autoComplete="name"
+                    required
+                  />
+                </div>
+              </div>
+            )}
+
             {/* Email */}
             {!isResetMode && (
               <div>

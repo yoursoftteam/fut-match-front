@@ -6,8 +6,9 @@ import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { ShareInviteModal } from "@/components/bet/ShareInviteModal";
 import { PoolRanking } from "@/components/bet/PoolRanking";
+import { RemoveMemberDialog } from "@/components/bet/RemoveMemberDialog";
 import { cn } from "@/lib/utils";
-import { Globe, Lock, Users, ArrowLeft, Share2, Target, ChevronLeft, ChevronRight } from "lucide-react";
+import { Globe, Lock, Users, ArrowLeft, Share2, Target, ChevronLeft, ChevronRight, Trash2 } from "lucide-react";
 
 interface RankingEntry {
   rank: number;
@@ -45,6 +46,8 @@ export default function PoolDetailPage({
   const [allRankings, setAllRankings] = useState<RankingEntry[]>([]);
   const [rankingsLoading, setRankingsLoading] = useState(false);
   const [rankingsPage, setRankingsPage] = useState(1);
+  const [removingUserId, setRemovingUserId] = useState<string | null>(null);
+  const [pendingRemove, setPendingRemove] = useState<{ userId: string; name: string } | null>(null);
   const RANKINGS_PER_PAGE = 10;
 
   useEffect(() => {
@@ -100,6 +103,32 @@ export default function PoolDetailPage({
       ? `${window.location.origin}/join/${pool.invite_code}`
       : ""
     : "";
+
+  const execRemove = async (memberUserId: string) => {
+    if (!pool) return;
+
+    setRemovingUserId(memberUserId);
+    setPendingRemove(null);
+    try {
+      const { supabase } = await import('@/lib/supabase');
+      const { data: authData } = await supabase.auth.getSession();
+      const token = authData?.session?.access_token;
+      if (!token) { setRemovingUserId(null); return; }
+
+      const response = await fetch(`/api/v1/bet/pools/${poolId}/members/${memberUserId}`, {
+        method: 'DELETE',
+        headers: { Authorization: `Bearer ${token}` },
+      });
+
+      if (response.ok) {
+        setAllRankings((prev) => prev.filter((e) => e.user_id !== memberUserId));
+      }
+    } catch {
+      // ignore
+    } finally {
+      setRemovingUserId(null);
+    }
+  };
 
   useEffect(() => {
     if (!showFullTable || !poolId) return;
@@ -264,6 +293,7 @@ export default function PoolDetailPage({
                       <col />
                       <col className="w-20" />
                       <col className="w-24" />
+                      {isOwner && <col className="w-12" />}
                     </colgroup>
                     <thead className="border-b border-slate-800 bg-slate-900/50 text-left text-[0.6875rem] uppercase text-slate-500">
                       <tr>
@@ -271,6 +301,7 @@ export default function PoolDetailPage({
                         <th scope="col" className="px-3 py-2 font-semibold">Participante</th>
                         <th scope="col" className="px-3 py-2 text-right font-semibold">Pts</th>
                         <th scope="col" className="px-3 py-2 text-right font-semibold">Exactas</th>
+                        {isOwner && <th scope="col" className="px-3 py-2 text-right font-semibold sr-only">Acción</th>}
                       </tr>
                     </thead>
                     <tbody>
@@ -291,6 +322,23 @@ export default function PoolDetailPage({
                           <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-slate-400">
                             {entry.exact_predictions}
                           </td>
+                          {isOwner && (
+                            <td className="px-1 py-2.5 text-right">
+                              <button
+                                type="button"
+                                onClick={() => setPendingRemove({ userId: entry.user_id, name: entry.name })}
+                                disabled={removingUserId === entry.user_id}
+                                className="rounded p-1 text-red-400 transition hover:bg-red-900/30 hover:text-red-300 disabled:opacity-40"
+                                aria-label={`Eliminar a ${entry.name} de la polla`}
+                              >
+                                {removingUserId === entry.user_id ? (
+                                  <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+                                ) : (
+                                  <Trash2 size={14} aria-hidden />
+                                )}
+                              </button>
+                            </td>
+                          )}
                         </tr>
                       ))}
                     </tbody>
@@ -330,7 +378,7 @@ export default function PoolDetailPage({
         )}
 
         <div className="mt-6">
-          <PoolRanking poolId={poolId} poolName={pool.name} maxEntries={5} />
+          <PoolRanking poolId={poolId} poolName={pool.name} maxEntries={5} isOwner={isOwner} />
         </div>
 
         <div className="mt-6 text-center">
@@ -339,6 +387,14 @@ export default function PoolDetailPage({
           </p>
         </div>
       </div>
+
+      <RemoveMemberDialog
+        open={!!pendingRemove}
+        memberName={pendingRemove?.name ?? ""}
+        loading={!!removingUserId}
+        onConfirm={() => pendingRemove && execRemove(pendingRemove.userId)}
+        onCancel={() => setPendingRemove(null)}
+      />
 
       <ShareInviteModal
         open={showShareModal}

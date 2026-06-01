@@ -14,7 +14,7 @@ import SaveFrecuenteCard from "@/components/SaveFrecuenteCard";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Separator } from "@/components/ui/separator";
-import ShareLink from "@/components/ShareLink";
+import { MatchShareSection } from "@/components/match-details/MatchShareSection";
 
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
@@ -22,10 +22,10 @@ interface MatchInfoSidebarProps {
 }
 
 export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSidebarProps) {
-  const { matchData, isCreator, registrations } = useMatchDetailsContext();
+  const { matchData, isCreator, registrations, refreshRegistrations } = useMatchDetailsContext();
   const { formattedDate, formattedTime, tituloStatus, colorStatus, titulares, suplentes, registeredPercent } = useMatchPricing();
   const router = useRouter();
-  const { deleteMatch } = useMatches();
+  const { deleteMatch, clearMatchRegistrations } = useMatches();
   const fallbackEditing = useMatchEditing();
   const { showForm, openForm, message } = editing ?? fallbackEditing;
   const { templates, getTemplateByMatchId, deleteTemplateByMatchId, loading: loadingFrec } = useFrecuentes();
@@ -35,6 +35,9 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [showClearRegistrationsConfirm, setShowClearRegistrationsConfirm] = useState(false);
+  const [clearingRegistrations, setClearingRegistrations] = useState(false);
+  const [clearRegistrationsMessage, setClearRegistrationsMessage] = useState<string | null>(null);
 
   useEffect(() => {
     if (!matchData?.id) return;
@@ -81,6 +84,25 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
     }
   };
 
+  const handleClearRegistrations = async () => {
+    setClearingRegistrations(true);
+    setClearRegistrationsMessage(null);
+
+    try {
+      const result = await clearMatchRegistrations(matchData.id);
+      if (result.error) throw result.error;
+
+      await refreshRegistrations();
+
+      setShowClearRegistrationsConfirm(false);
+      setClearRegistrationsMessage("Se eliminaron todos los inscritos correctamente.");
+    } catch {
+      setClearRegistrationsMessage("No se pudieron eliminar los inscritos. Intenta nuevamente.");
+    } finally {
+      setClearingRegistrations(false);
+    }
+  };
+
   return (
     <>
       <aside className="space-y-4 lg:sticky lg:top-24 lg:h-fit">
@@ -89,7 +111,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
         {/* ── MOBILE (lg:hidden) ── */}
         <div className="lg:hidden px-5 py-4">
           <p className="text-2xl font-heading font-bold leading-tight mb-1 text-foreground">{matchData.title}</p>
-          <p className="text-xs mt-1 text-muted-foreground">{matchData.location} · {formattedDate} · {formattedTime}</p>
+          <p className="text-xs mt-1 text-muted-foreground">{formattedDate} · {formattedTime}</p>
           <button
             type="button"
             onClick={() => setExpanded(!expanded)}
@@ -114,6 +136,14 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
                       <p><span className="text-muted-foreground">Formato:</span> {matchData.players_per_team} vs {matchData.players_per_team}</p>
                     </div>
                   )}
+                  {isCreator && (
+                    <div className="pt-2">
+                      <Separator />
+                      <div className="mt-4">
+                        <MatchShareSection matchData={matchData} />
+                      </div>
+                    </div>
+                  )}
             </div>
           )}
 
@@ -123,6 +153,14 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
             <div className="mt-3 flex flex-col gap-2">
               <button type="button" onClick={openForm} className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition">Editar partido</button>
               <button type="button" onClick={onOpenTeamBuilder} className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Armar equipos</button>
+              <button
+                type="button"
+                onClick={() => setShowClearRegistrationsConfirm(true)}
+                disabled={clearingRegistrations || registrations.length === 0}
+                className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {clearingRegistrations ? "Eliminando inscritos..." : `Eliminar inscritos (${registrations.length})`}
+              </button>
               {existingTemplateId ? (
                 <button type="button" disabled={loadingFrec} onClick={async () => { const ok = await deleteTemplateByMatchId(matchData.id); if (ok) setExistingTemplateId(null) }} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
                   {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
@@ -142,15 +180,10 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
             </div>
           )}
           {isCreator && deleteError && <p className="mt-3 text-sm text-red-400">{deleteError}</p>}
+          {isCreator && clearRegistrationsMessage && <p className={`mt-3 text-sm ${clearRegistrationsMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>{clearRegistrationsMessage}</p>}
           {isCreator && !existingTemplateId && showSaveFrecuente && (
             <div className="mt-4">
               <SaveFrecuenteCard location={matchData.location} defaultName={getMatchTitleFromLocation(matchData.location)} playersPerTeam={matchData.players_per_team} hasRentedGoalkeepers={matchData.has_rented_goalkeepers} rentedGoalkeepersCount={matchData.rented_goalkeepers_count} fieldCost={matchData.field_cost} rentalCost={matchData.rental_cost} time={formattedTime} matchId={matchData.id} matchDate={matchData.date} participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))} onSaved={() => setShowSaveFrecuente(false)} />
-            </div>
-          )}
-          {isCreator && matchData && (
-            <div className="mt-4 space-y-4">
-              <Separator />
-              <ShareLink matchId={matchData.id} />
             </div>
           )}
         </div>
@@ -160,7 +193,6 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           <h1 className="text-2xl font-bold text-foreground">{matchData.title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">Fecha: {formattedDate}</p>
           <p className="mt-1 text-sm text-muted-foreground">Hora: {formattedTime}</p>
-          <p className="mt-1 text-sm text-muted-foreground">Ubicación: {matchData.location}</p>
           <p className="mt-3 text-sm text-muted-foreground">
             Titulares: {titulares.length}/{matchData.max_players} ({registeredPercent}% completo)
           </p>
@@ -182,6 +214,14 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
             <div className="mt-4 flex flex-col gap-2">
               <button type="button" onClick={openForm} className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition">Editar partido</button>
               <button type="button" onClick={onOpenTeamBuilder} className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Armar equipos</button>
+              <button
+                type="button"
+                onClick={() => setShowClearRegistrationsConfirm(true)}
+                disabled={clearingRegistrations || registrations.length === 0}
+                className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {clearingRegistrations ? "Eliminando inscritos..." : `Eliminar inscritos (${registrations.length})`}
+              </button>
               {existingTemplateId ? (
                 <button type="button" disabled={loadingFrec} onClick={async () => { const ok = await deleteTemplateByMatchId(matchData.id); if (ok) setExistingTemplateId(null) }} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
                   {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
@@ -201,6 +241,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
             </div>
           )}
           {isCreator && deleteError && <p className="mt-3 text-sm text-red-400">{deleteError}</p>}
+          {isCreator && clearRegistrationsMessage && <p className={`mt-3 text-sm ${clearRegistrationsMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>{clearRegistrationsMessage}</p>}
           {isCreator && !existingTemplateId && showSaveFrecuente && (
             <div className="mt-4">
               <SaveFrecuenteCard location={matchData.location} defaultName={getMatchTitleFromLocation(matchData.location)} playersPerTeam={matchData.players_per_team} hasRentedGoalkeepers={matchData.has_rented_goalkeepers} rentedGoalkeepersCount={matchData.rented_goalkeepers_count} fieldCost={matchData.field_cost} rentalCost={matchData.rental_cost} time={formattedTime} matchId={matchData.id} matchDate={matchData.date} participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))} onSaved={() => setShowSaveFrecuente(false)} />
@@ -212,13 +253,29 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           {isCreator && matchData && (
             <div className="mt-6 space-y-4">
               <Separator />
-              <ShareLink matchId={matchData.id} />
+              <MatchShareSection matchData={matchData} />
             </div>
           )}
         </div>
 
       </div>
     </aside>
+
+    <ConfirmDialog
+      open={showClearRegistrationsConfirm}
+      title="Eliminar inscritos"
+      description={
+        <>
+          Se eliminarán <strong className="text-foreground">todos los jugadores inscritos</strong> de este partido. Esta acción no se puede deshacer.
+        </>
+      }
+      confirmLabel="Sí, eliminar inscritos"
+      cancelLabel="Cancelar"
+      destructive
+      loading={clearingRegistrations}
+      onConfirm={handleClearRegistrations}
+      onCancel={() => setShowClearRegistrationsConfirm(false)}
+    />
 
     <ConfirmDialog
       open={showDeleteConfirm}

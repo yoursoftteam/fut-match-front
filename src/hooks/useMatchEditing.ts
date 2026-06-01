@@ -5,6 +5,7 @@ import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatches } from "@/hooks/useMatches";
 import { formatCurrency } from "@/lib/currency";
 import { getMatchTitleFromLocation } from "@/lib/match-title";
+import { combineLocalDateAndTime, getLocalDateInputValue, getLocalTimeInputValue } from "@/lib/date-utils";
 
 export interface MatchEditFormData {
   location: string;
@@ -31,7 +32,7 @@ export interface UseMatchEditingReturn {
 }
 
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
-const MAX_SUBSTITUTE_SLOTS = 5;
+const MAX_SUBSTITUTE_SLOTS = 10;
 
 function clampPlayersPerTeam(value: number): number {
   if (value < PLAYER_OPTIONS[0]) return PLAYER_OPTIONS[0];
@@ -84,12 +85,10 @@ export function useMatchEditing(): UseMatchEditingReturn {
   useEffect(() => {
     if (!matchData) return;
 
-    const [datePart = "", timePartRaw = ""] = matchData.date.split("T");
-
     setForm({
       location: matchData.location,
-      date: datePart,
-      time: timePartRaw.slice(0, 5),
+      date: getLocalDateInputValue(matchData.date),
+      time: getLocalTimeInputValue(matchData.date),
       playersPerTeam: clampPlayersPerTeam(Math.round(matchData.max_players / 2)),
       fieldCost: matchData.field_cost,
       hasRentedGoalkeepers: matchData.has_rented_goalkeepers,
@@ -166,7 +165,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
 
     try {
       const nextLocation = form.location.trim();
-      const nextDate = `${form.date}T${form.time}:00`;
+      const nextDate = combineLocalDateAndTime(form.date, form.time);
 
       const { data, error } = await updateMatch(matchId, {
         title: getMatchTitleFromLocation(nextLocation),
