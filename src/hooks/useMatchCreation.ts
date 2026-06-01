@@ -76,6 +76,24 @@ export function useMatchCreation(): UseMatchCreationReturn {
         }
       }
 
+      if (templateId) {
+        await supabase
+          .from("match_templates")
+          .update({
+            location: data.location,
+            time: data.time,
+            players_per_team: data.playersPerTeam,
+            has_rented_goalkeepers: data.hasRentedGoalkeepers,
+            rented_goalkeepers_count: data.rentedGoalkeepersCount,
+            field_cost: data.fieldCost,
+            rental_cost: data.rentalCost,
+            match_date: combineLocalDateAndTime(data.date, data.time),
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", templateId)
+          .eq("user_id", user.id)
+      }
+
       router.push(`/match/${newMatch.id}/success`);
       return newMatch.id;
 

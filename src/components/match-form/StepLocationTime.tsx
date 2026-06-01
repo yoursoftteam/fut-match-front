@@ -9,6 +9,7 @@ import { Card, CardHeader, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FieldGroup } from "@/components/form/FieldGroup";
+import { formatTimeAmPm } from "@/lib/date-utils";
 
 interface StepLocationTimeProps {
   stepNumber: number;
@@ -129,6 +130,11 @@ export default function StepLocationTime({ stepNumber }: StepLocationTimeProps) 
                 {...timeField}
               />
             </div>
+            {timeField.value && (
+              <p className="mt-1.5 text-xs font-medium text-primary" aria-live="polite">
+                {formatTimeAmPm(String(timeField.value))}
+              </p>
+            )}
           </FieldGroup>
         </div>
 

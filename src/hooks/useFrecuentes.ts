@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react"
 import { supabase } from "@/lib/supabase"
 import { getMatchTitleFromLocation } from "@/lib/match-title"
+import { getLocalTimeInputValue } from "@/lib/date-utils"
 import { useAuth } from "@/hooks/useAuth"
 import { useMatches } from "@/hooks/useMatches"
 import type {
@@ -132,10 +133,16 @@ export function useFrecuentes() {
     async (data: CreateTemplateData): Promise<MatchTemplate | null> => {
       if (!user) return null
       try {
+        const normalizedTime = /^\d{2}:\d{2}$/.test(data.time)
+          ? data.time
+          : data.match_date
+            ? getLocalTimeInputValue(data.match_date)
+            : "20:00"
+
         const baseTemplateData: Record<string, unknown> = {
           name: data.name,
           location: data.location,
-          time: data.time,
+          time: normalizedTime,
           players_per_team: data.players_per_team,
           has_rented_goalkeepers: data.has_rented_goalkeepers,
           rented_goalkeepers_count: data.rented_goalkeepers_count,

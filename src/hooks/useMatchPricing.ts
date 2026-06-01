@@ -2,6 +2,7 @@
 
 import { useMemo } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
+import { formatLocalTime, formatTimeAmPm } from "@/lib/date-utils";
 
 const MAX_SUBSTITUTE_SLOTS = 10;
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
@@ -68,7 +69,7 @@ export function useMatchPricing(): MatchPricingData {
 
     const formatting: MatchFormatting = {
       formattedDate: new Date(matchData.date).toLocaleDateString("es-ES", { weekday: "long", year: "numeric", month: "long", day: "numeric" }),
-      formattedTime: matchData.time || new Date(matchData.date).toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" }),
+      formattedTime: matchData.time ? formatTimeAmPm(matchData.time) : formatLocalTime(matchData.date),
     };
 
     const titulares = registrations.slice(0, matchData.max_players);
