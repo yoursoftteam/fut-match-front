@@ -15,6 +15,7 @@ import { getMatchTitleFromLocation } from "@/lib/match-title";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Separator } from "@/components/ui/separator";
 import { MatchShareSection } from "@/components/match-details/MatchShareSection";
+import { getLocalTimeInputValue } from "@/lib/date-utils";
 
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
@@ -183,7 +184,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           {isCreator && clearRegistrationsMessage && <p className={`mt-3 text-sm ${clearRegistrationsMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>{clearRegistrationsMessage}</p>}
           {isCreator && !existingTemplateId && showSaveFrecuente && (
             <div className="mt-4">
-              <SaveFrecuenteCard location={matchData.location} defaultName={getMatchTitleFromLocation(matchData.location)} playersPerTeam={matchData.players_per_team} hasRentedGoalkeepers={matchData.has_rented_goalkeepers} rentedGoalkeepersCount={matchData.rented_goalkeepers_count} fieldCost={matchData.field_cost} rentalCost={matchData.rental_cost} time={formattedTime} matchId={matchData.id} matchDate={matchData.date} participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))} onSaved={() => setShowSaveFrecuente(false)} />
+              <SaveFrecuenteCard location={matchData.location} defaultName={getMatchTitleFromLocation(matchData.location)} playersPerTeam={matchData.players_per_team} hasRentedGoalkeepers={matchData.has_rented_goalkeepers} rentedGoalkeepersCount={matchData.rented_goalkeepers_count} fieldCost={matchData.field_cost} rentalCost={matchData.rental_cost} time={getLocalTimeInputValue(matchData.date)} matchId={matchData.id} matchDate={matchData.date} participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))} onSaved={() => setShowSaveFrecuente(false)} />
             </div>
           )}
         </div>
@@ -244,7 +245,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           {isCreator && clearRegistrationsMessage && <p className={`mt-3 text-sm ${clearRegistrationsMessage.includes("correctamente") ? "text-green-400" : "text-red-400"}`}>{clearRegistrationsMessage}</p>}
           {isCreator && !existingTemplateId && showSaveFrecuente && (
             <div className="mt-4">
-              <SaveFrecuenteCard location={matchData.location} defaultName={getMatchTitleFromLocation(matchData.location)} playersPerTeam={matchData.players_per_team} hasRentedGoalkeepers={matchData.has_rented_goalkeepers} rentedGoalkeepersCount={matchData.rented_goalkeepers_count} fieldCost={matchData.field_cost} rentalCost={matchData.rental_cost} time={formattedTime} matchId={matchData.id} matchDate={matchData.date} participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))} onSaved={() => setShowSaveFrecuente(false)} />
+              <SaveFrecuenteCard location={matchData.location} defaultName={getMatchTitleFromLocation(matchData.location)} playersPerTeam={matchData.players_per_team} hasRentedGoalkeepers={matchData.has_rented_goalkeepers} rentedGoalkeepersCount={matchData.rented_goalkeepers_count} fieldCost={matchData.field_cost} rentalCost={matchData.rental_cost} time={getLocalTimeInputValue(matchData.date)} matchId={matchData.id} matchDate={matchData.date} participants={registrations.map((r) => ({ name: r.name, is_goalkeeper: r.is_goalkeeper }))} onSaved={() => setShowSaveFrecuente(false)} />
             </div>
           )}
           {isCreator && !showForm && message && (

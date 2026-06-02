@@ -6,6 +6,8 @@ import { createPortal } from "react-dom"
 import { Pencil, Trash2, Check, X, Loader2, Share2, Users, UserPlus, Copy, MessageCircle, Mail, Smartphone, ExternalLink } from "lucide-react"
 import { useFrecuentes } from "@/hooks/useFrecuentes"
 import { getNextDateForDayOfWeek } from "@/lib/date-utils"
+import { getLocalTimeInputValue } from "@/lib/date-utils"
+import { formatTimeAmPm } from "@/lib/date-utils"
 import { ConfirmDialog } from "@/components/ConfirmDialog"
 import type { MatchTemplate, MatchTemplateParticipant } from "@/lib/match-schema"
 
@@ -88,7 +90,11 @@ export default function FrecuenteCard({ template }: FrecuenteCardProps) {
 
     const selectedIds = withPlayers ? shareParticipants.map((p) => p.id) : []
     const dateForMatch = nextDate ?? new Date().toISOString().slice(0, 10)
-    const timeForMatch = /^\d{2}:\d{2}$/.test(template.time) ? template.time : "20:00"
+    const timeForMatch = /^\d{2}:\d{2}$/.test(template.time)
+      ? template.time
+      : template.match_date
+        ? getLocalTimeInputValue(template.match_date)
+        : "20:00"
 
     const newMatchId = await createMatchFromTemplate(template.id, dateForMatch, timeForMatch, selectedIds)
 
@@ -195,7 +201,7 @@ export default function FrecuenteCard({ template }: FrecuenteCardProps) {
 
       <div className="flex items-center justify-between text-xs text-muted-foreground mb-4">
         <span>👥 {maxPlayers} jugadores</span>
-        {template.time && <span>🕐 {template.time}</span>}
+        {template.time && <span>🕐 {formatTimeAmPm(template.time)}</span>}
         {formattedDate && <span>📅 {formattedDate}</span>}
       </div>
 
@@ -388,7 +394,7 @@ export default function FrecuenteCard({ template }: FrecuenteCardProps) {
       <ConfirmDialog
         open={confirmDelete}
         title="Eliminar plantilla"
-        description={<>¿Eliminar la plantilla <strong className="text-foreground">"{template.name}"</strong>? Esta acción no se puede deshacer.</>}
+        description={<>¿Eliminar la plantilla <strong className="text-foreground">&quot;{template.name}&quot;</strong>? Esta acción no se puede deshacer.</>}
         confirmLabel="Sí, eliminar"
         cancelLabel="Cancelar"
         destructive
