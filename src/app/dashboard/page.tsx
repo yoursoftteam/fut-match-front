@@ -257,8 +257,8 @@ export default function DashboardPage() {
 
   const metadata = user.user_metadata as { full_name?: string; name?: string } | null
   const userNameFull = (
-    metadata?.full_name ||
     metadata?.name ||
+    metadata?.full_name ||
     user.email?.split('@')[0] ||
     'crack'
   ).trim()
