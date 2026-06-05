@@ -49,7 +49,7 @@ export function PoolConfigForm({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    const errors = []
+    const errors: string[] = []
     Object.entries(config).forEach(([key, val]) => {
       if (val < 0) errors.push(`${key} must be >= 0`)
       if (val > 50) errors.push(`${key} cannot exceed 50`)

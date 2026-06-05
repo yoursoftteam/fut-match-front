@@ -102,7 +102,7 @@ export async function GET(
     return NextResponse.json(
       {
         success: true,
-        data: data as Match,
+        data: data as unknown as Match,
         error: null,
       },
       { status: 200 }

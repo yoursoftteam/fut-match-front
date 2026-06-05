@@ -48,7 +48,7 @@ const SLIDES: HeadlineSlide[] = [
     ),
     description:
       "Fixture automático, tabla de posiciones y fase de grupos. El football manager que siempre quisiste, pronto.",
-    cta: { label: "Próximamente" },
+    cta: { label: "Próximamente", href: "#" },
   },
 ];
 

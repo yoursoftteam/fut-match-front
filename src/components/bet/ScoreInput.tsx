@@ -26,8 +26,8 @@ export function ScoreInput({
 }: ScoreInputProps) {
   const [homeInput, setHomeInput] = useState(String(homeScore))
   const [awayInput, setAwayInput] = useState(String(awayScore))
-  const homeTimeoutRef = useRef<NodeJS.Timeout>()
-  const awayTimeoutRef = useRef<NodeJS.Timeout>()
+  const homeTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const awayTimeoutRef = useRef<NodeJS.Timeout | null>(null)
 
   const debouncedHome = useCallback(
     (value: number) => {
