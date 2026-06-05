@@ -7,6 +7,7 @@ ALTER VIEW vw_bet_global_leaderboard SET (security_invoker = true);
 ALTER VIEW vw_bet_pools_with_stats RESET (security_invoker);
 
 -- Allow reading all global scores for leaderboard (all authenticated users)
+DROP POLICY IF EXISTS "Global scores readable by all authenticated" ON bet_scores_aggregate;
 CREATE POLICY "Global scores readable by all authenticated"
   ON bet_scores_aggregate
   FOR SELECT

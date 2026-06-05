@@ -119,7 +119,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.json(
       {
         success: true,
-        data: (data || []) as Match[],
+        data: (data || []) as unknown as Match[],
         count: count || 0,
         error: null,
       },

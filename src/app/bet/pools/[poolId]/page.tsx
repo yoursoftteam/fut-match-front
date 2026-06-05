@@ -382,7 +382,7 @@ export default function PoolDetailPage({
         )}
 
         <div className="mt-6">
-          <PoolRanking poolId={poolId} poolName={pool.name} maxEntries={5} isOwner={isOwner} />
+          <PoolRanking poolId={poolId} poolName={pool.name} maxEntries={5} isOwner={isOwner ?? undefined} />
         </div>
 
         <div className="mt-6 text-center">
