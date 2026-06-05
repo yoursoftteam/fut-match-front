@@ -11,6 +11,7 @@ export interface LeaderboardEntry {
   rank: number
   user_id: string
   user_email?: string
+  name: string
   points_total: number
 }
 

@@ -20,18 +20,19 @@ export function AppHeader() {
     router.push("/");
   };
 
-  const navLinks = [
-    ...(!isLoggedIn ? [{ href: "/", label: "Inicio" }] : []),
-    { href: "/create", label: "Armar partido" },
-    { href: user ? "/bet" : "/auth", label: "Crear Predicciones" },
-    ...(isLoggedIn ? [
+  const isActive = (href: string) => pathname === href;
+
+  const navLinks = loading ? [] : [
+    ...(!isLoggedIn ? [
+      { href: "/", label: "Inicio" },
+      { href: "/create", label: "Armar partido" },
+      { href: "/auth", label: "Crear Predicciones" },
+    ] : [
       { href: "/dashboard", label: "Mi Dashboard" },
       { href: "/matches", label: "Mis Partidos" },
       { href: "/bet", label: "Predicciones" },
-    ] : []),
+    ]),
   ];
-
-  const isActive = (href: string) => pathname === href;
 
   const navItems = (
     <ul className="flex flex-col gap-1">

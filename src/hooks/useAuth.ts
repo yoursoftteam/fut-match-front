@@ -17,22 +17,19 @@ export function useAuth() {
       return () => clearTimeout(timer)
     }
 
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
-    }
+    let mounted = true
 
-    getSession()
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (mounted) {
+        setUser(user)
         setLoading(false)
       }
-    )
+    }
 
-    return () => subscription.unsubscribe()
+    init()
+
+    return () => { mounted = false }
   }, [])
 
   const signIn = async (email: string, password: string) => {

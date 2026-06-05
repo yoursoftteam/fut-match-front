@@ -112,25 +112,32 @@ export async function GET(
     }
 
     const { data: authUsers } = await supabase.auth.admin.listUsers()
-    const emailMap = new Map<string, string>()
+    const userMetaMap = new Map<string, { email: string; fullName: string | null }>()
     if (authUsers?.users) {
       for (const u of authUsers.users) {
-        emailMap.set(u.id, u.email ?? 'Unknown')
+        const meta = u.user_metadata as Record<string, unknown> | undefined
+        const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim()) ? meta.full_name.trim() : null
+        userMetaMap.set(u.id, { email: u.email ?? 'Unknown', fullName })
       }
     }
 
     const entries: RankingEntry[] = userIds
       .filter((uid) => (scoreMap.get(uid) ?? 0) > 0 || (totalPredMap.get(uid) ?? 0) > 0)
       .map((uid) => {
-        const email = emailMap.get(uid) ?? 'Unknown'
-        const name = email.split('@')[0].replace(/[._-]/g, ' ')
-        const nameCapitalized = name.replace(/\b\w/g, (c) => c.toUpperCase())
+        const meta = userMetaMap.get(uid) ?? { email: 'Unknown', fullName: null }
+        let name: string
+        if (meta.fullName) {
+          name = meta.fullName
+        } else {
+          name = meta.email.split('@')[0].replace(/[._-]/g, ' ')
+          name = name.replace(/\b\w/g, (c) => c.toUpperCase())
+        }
 
         return {
           rank: 0,
           user_id: uid,
-          name: nameCapitalized,
-          email,
+          name,
+          email: meta.email,
           points_total: scoreMap.get(uid) ?? 0,
           exact_predictions: exactCountMap.get(uid) ?? 0,
           total_predictions: totalPredMap.get(uid) ?? 0,

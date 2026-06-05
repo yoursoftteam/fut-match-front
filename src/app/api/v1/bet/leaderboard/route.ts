@@ -33,18 +33,19 @@ import { createClient } from '@supabase/supabase-js'
 import { ErrorCode } from '@/types/bet'
 
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
 
-if (!supabaseUrl || !supabaseAnonKey) {
+if (!supabaseUrl || !supabaseServiceKey) {
   throw new Error('Missing Supabase environment variables')
 }
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
+const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 interface LeaderboardEntry {
   rank: number
   user_id: string
   user_email?: string
+  name: string
   points_total: number
 }
 
@@ -150,12 +151,35 @@ export async function GET(request: NextRequest) {
       )
     }
 
+    // Resolve user names from auth metadata
+    const { data: authUsers } = await supabase.auth.admin.listUsers()
+    const userMetaMap = new Map<string, { email: string; fullName: string | null }>()
+    if (authUsers?.users) {
+      for (const u of authUsers.users) {
+        const meta = u.user_metadata as Record<string, unknown> | undefined
+        const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim()) ? meta.full_name.trim() : null
+        userMetaMap.set(u.id, { email: u.email ?? 'Unknown', fullName })
+      }
+    }
+
     // Transform to LeaderboardEntry with rank
-    const entries: LeaderboardEntry[] = (data || []).map((item: any, index: number) => ({
-      rank: offset + index + 1,
-      user_id: item.user_id,
-      points_total: item.points_total,
-    }))
+    const entries: LeaderboardEntry[] = (data || []).map((item: any, index: number) => {
+      const meta = userMetaMap.get(item.user_id) ?? { email: 'Unknown', fullName: null }
+      let name: string
+      if (meta.fullName) {
+        name = meta.fullName
+      } else {
+        name = meta.email.split('@')[0].replace(/[._-]/g, ' ')
+        name = name.replace(/\b\w/g, (c) => c.toUpperCase())
+      }
+      return {
+        rank: offset + index + 1,
+        user_id: item.user_id,
+        user_email: meta.email,
+        name,
+        points_total: item.points_total,
+      }
+    })
 
     return NextResponse.json(
       {
