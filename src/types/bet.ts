@@ -360,6 +360,19 @@ export interface PredictionLockInfo {
 }
 
 // =============================================================================
+// TOURNAMENT STATS TYPES
+// =============================================================================
+
+export interface TournamentStats {
+  total_teams: number;
+  total_groups: number;
+  group_stage_matches: number;
+  knockout_stage_matches: number;
+  matches_completed: number;
+  completion_percentage: number;
+}
+
+// =============================================================================
 // PAGINATION & QUERY TYPES
 // =============================================================================
 

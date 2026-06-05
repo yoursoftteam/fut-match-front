@@ -5,12 +5,18 @@
 'use client'
 
 import { useAuth } from '@/hooks/useAuth'
+import { useTournamentStats } from '@/hooks/useTournamentStats'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import Link from 'next/link'
 
 export default function BetPage() {
   const { user, loading } = useAuth()
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError,
+  } = useTournamentStats()
 
   if (loading) {
     return (
@@ -28,9 +34,16 @@ export default function BetPage() {
       <div className="max-w-5xl mx-auto">
         {/* Hero Section */}
         <div className="text-center mb-12">
-          <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent mb-4">
-            ⚽ FIFA 2026
-          </h1>
+          <div className="mb-6 flex flex-col items-center gap-4">
+            <img
+              src="/mundial_2026.png"
+              alt="FIFA World Cup 2026"
+              className="w-40 h-40 md:w-52 md:h-52 object-contain drop-shadow-lg"
+            />
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-emerald-400 via-blue-400 to-emerald-400 bg-clip-text text-transparent">
+              FIFA World Cup 2026
+            </h1>
+          </div>
           <p className="text-xl text-slate-300 mb-2">Predicciones de Fútbol</p>
           <p className="text-slate-400">
             Compite con amigos y demuestra tu expertise en fútbol
@@ -52,7 +65,7 @@ export default function BetPage() {
         )}
 
         {/* Main Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           {/* Matches Card */}
           <Card className="group cursor-pointer hover:border-emerald-500/50 transition-all hover:shadow-lg hover:shadow-emerald-500/10">
             <Link href="/bet/predictions" className="block p-8 h-full">
@@ -65,22 +78,6 @@ export default function BetPage() {
               </p>
               <div className="text-emerald-400 text-sm font-semibold">
                 Ver Partidos →
-              </div>
-            </Link>
-          </Card>
-
-          {/* Leaderboard Card */}
-          <Card className="group cursor-pointer hover:border-blue-500/50 transition-all hover:shadow-lg hover:shadow-blue-500/10">
-            <Link href="/bet/leaderboard" className="block p-8 h-full">
-              <div className="text-5xl mb-4">🏆</div>
-              <h2 className="text-xl font-bold text-slate-50 mb-2 group-hover:text-blue-400 transition-colors">
-                Clasificaciones
-              </h2>
-              <p className="text-slate-400 text-sm mb-4">
-                Compite globalmente y sube en el ranking mundial
-              </p>
-              <div className="text-blue-400 text-sm font-semibold">
-                Ver Rankings →
               </div>
             </Link>
           </Card>
@@ -105,24 +102,57 @@ export default function BetPage() {
         {/* Tournament Info */}
         <Card className="mb-12 p-8 bg-slate-800/30 border-slate-700/50">
           <h2 className="text-2xl font-bold text-slate-50 mb-4">📊 Copa Mundial FIFA 2026</h2>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-            <div>
-              <p className="text-slate-400 text-sm mb-1">Equipos</p>
-              <p className="text-3xl font-bold text-emerald-400">32</p>
+          {statsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i}>
+                  <div className="h-4 w-20 bg-slate-700/50 rounded animate-pulse mb-2" />
+                  <div className="h-8 w-16 bg-slate-700/50 rounded animate-pulse" />
+                </div>
+              ))}
             </div>
-            <div>
-              <p className="text-slate-400 text-sm mb-1">Partidos de Grupos</p>
-              <p className="text-3xl font-bold text-blue-400">48</p>
-            </div>
-            <div>
-              <p className="text-slate-400 text-sm mb-1">Grupos</p>
-              <p className="text-3xl font-bold text-purple-400">8</p>
-            </div>
-            <div>
-              <p className="text-slate-400 text-sm mb-1">Fase Eliminatoria</p>
-              <p className="text-3xl font-bold text-yellow-400">16</p>
-            </div>
-          </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                  <p className="text-slate-400 text-sm mb-1">Equipos</p>
+                  <p className="text-3xl font-bold text-emerald-400">{stats.total_teams}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm mb-1">Partidos de Grupos</p>
+                  <p className="text-3xl font-bold text-blue-400">{stats.group_stage_matches}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm mb-1">Grupos</p>
+                  <p className="text-3xl font-bold text-purple-400">{stats.total_groups}</p>
+                </div>
+                <div>
+                  <p className="text-slate-400 text-sm mb-1">Fase Eliminatoria</p>
+                  <p className="text-3xl font-bold text-yellow-400">{stats.knockout_stage_matches}</p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-slate-400">Progreso del torneo</span>
+                  <span className="text-slate-300 font-medium">{stats.completion_percentage}%</span>
+                </div>
+                <div className="h-2 bg-slate-700/50 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-emerald-500 to-emerald-400 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(stats.completion_percentage, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-slate-500 mt-1">
+                  {stats.matches_completed} de {stats.group_stage_matches + stats.knockout_stage_matches} partidos disputados
+                </p>
+              </div>
+            </>
+          )}
+          {statsError && (
+            <p className="text-xs text-red-400 mt-2">
+              No se pudieron cargar las estadísticas en tiempo real
+            </p>
+          )}
         </Card>
 
         {/* How it Works */}

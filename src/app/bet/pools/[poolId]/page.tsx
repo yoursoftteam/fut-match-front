@@ -187,11 +187,11 @@ export default function PoolDetailPage({
         <div className="mb-6">
           <button
             type="button"
-            onClick={() => router.push("/bet/pools")}
+            onClick={() => router.push(listPath)}
             className="mb-4 flex items-center gap-1.5 text-sm text-slate-400 hover:text-slate-50 transition-colors"
           >
             <ArrowLeft className="size-4" />
-            Mis pollas
+            {listLabel}
           </button>
 
           <div className="flex items-start justify-between gap-4">

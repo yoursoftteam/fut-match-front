@@ -209,6 +209,49 @@ export async function GET(
       )
     }
 
+    const scope = new URL(request.url).searchParams.get('scope') ?? 'mine'
+
+    if (scope === 'public') {
+      const { data: memberRows, error: memberError } = await supabase
+        .from('bet_pool_members')
+        .select('pool_id')
+        .eq('user_id', user.id)
+
+      if (memberError) throw memberError
+
+      const excludeIds = new Set(memberRows?.map((r) => r.pool_id) ?? [])
+
+      const { data: publicPools, error: poolsError } = await supabase
+        .from('bet_pools')
+        .select('*')
+        .eq('visibility', 'public')
+        .eq('competition_type', requestedCompetitionType)
+        .neq('owner_id', user.id)
+        .order('created_at', { ascending: false })
+
+      if (poolsError) throw poolsError
+
+      const available = (publicPools ?? []).filter(
+        (p) => !excludeIds.has(p.id)
+      )
+
+      const poolsWithCounts = await Promise.all(
+        available.map(async (pool) => {
+          const { count } = await supabase
+            .from('bet_pool_members')
+            .select('id', { count: 'exact', head: true })
+            .eq('pool_id', pool.id)
+
+          return { ...pool, member_count: count || 0 }
+        })
+      )
+
+      return NextResponse.json({
+        success: true,
+        data: { pools: poolsWithCounts },
+      })
+    }
+
     // Get pools where user is owner or member
     const { data: ownedPools, error: ownedError } = await supabase
       .from('bet_pools')

@@ -23,10 +23,11 @@ export function AppHeader() {
   const navLinks = [
     ...(!isLoggedIn ? [{ href: "/", label: "Inicio" }] : []),
     { href: "/create", label: "Armar partido" },
+    { href: user ? "/bet" : "/auth", label: "Crear Predicciones" },
     ...(isLoggedIn ? [
       { href: "/dashboard", label: "Mi Dashboard" },
       { href: "/matches", label: "Mis Partidos" },
-      { href: "/bet", label: "Picks" },
+      { href: "/bet", label: "Predicciones" },
     ] : []),
   ];
 
