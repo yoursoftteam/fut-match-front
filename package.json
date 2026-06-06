@@ -9,7 +9,8 @@
     "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
     "build:cf-pages": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "telegram:webhook": "node scripts/set-telegram-webhook.mjs"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -38,6 +39,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.2",
+    "supabase": "^2.102.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
