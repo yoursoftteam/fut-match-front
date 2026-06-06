@@ -1,0 +1,204 @@
+/**
+ * Página Principal de Apuestas - FIFA 2026
+ */
+
+'use client'
+
+import { useAuth } from '@/hooks/useAuth'
+import { useTournamentStats } from '@/hooks/useTournamentStats'
+import { Button } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
+import Link from 'next/link'
+
+export default function BetPage() {
+  const { user, loading } = useAuth()
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError,
+  } = useTournamentStats()
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-2 border-primary border-r-transparent" />
+          <p className="text-muted-foreground text-sm">Cargando…</p>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-background py-12 px-4 md:px-6">
+      <div className="max-w-5xl mx-auto">
+        {/* Hero Section */}
+        <div className="text-center mb-12">
+          <div className="mb-6 flex flex-col items-center gap-4">
+            <img
+              src="/mundial_2026.png"
+              alt="FIFA World Cup 2026"
+              className="w-40 h-40 md:w-52 md:h-52 object-contain drop-shadow-lg"
+            />
+            <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
+              FIFA World Cup 2026
+            </h1>
+          </div>
+          <p className="text-xl text-foreground/80 mb-2">Predicciones de Fútbol</p>
+          <p className="text-muted-foreground">
+            Compite con amigos y demuestra tu expertise en fútbol
+          </p>
+        </div>
+
+        {/* CTA Buttons (if not authenticated) */}
+        {!user && (
+          <div className="text-center mb-12">
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link href="/auth?mode=signin">
+                <Button size="lg">Iniciar Sesión</Button>
+              </Link>
+              <Link href="/auth?mode=signup">
+                <Button size="lg" variant="outline">Crear Cuenta</Button>
+              </Link>
+            </div>
+          </div>
+        )}
+
+        {/* Main Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
+          {/* Matches Card */}
+          <Card className="group cursor-pointer hover:border-primary/50 transition-all hover:shadow-lg hover:shadow-primary/10">
+            <Link href="/bet/predictions" className="block p-8 h-full">
+              <div className="text-5xl mb-4">🎯</div>
+              <h2 className="text-xl font-bold text-card-foreground mb-2 group-hover:text-primary transition-colors">
+                Predicciones
+              </h2>
+              <p className="text-muted-foreground text-sm mb-4">
+                Crea competencias solo de marcadores y reta a tu squad
+              </p>
+              <div className="text-primary text-sm font-semibold">
+                Ver Partidos →
+              </div>
+            </Link>
+          </Card>
+
+          {/* Pools Card */}
+          <Card className="group cursor-pointer hover:border-accent/50 transition-all hover:shadow-lg hover:shadow-accent/10">
+            <Link href="/bet/pools" className="block p-8 h-full">
+              <div className="text-5xl mb-4">👥</div>
+              <h2 className="text-xl font-bold text-card-foreground mb-2 group-hover:text-accent transition-colors">
+                Pollas
+              </h2>
+              <p className="text-muted-foreground text-sm mb-4">
+                Crea y únete a pollas privadas con amigos
+              </p>
+              <div className="text-accent text-sm font-semibold">
+                Ver Pollas →
+              </div>
+            </Link>
+          </Card>
+        </div>
+
+        {/* Tournament Info */}
+        <Card className="mb-12 p-8">
+          <h2 className="text-2xl font-bold text-card-foreground mb-4">📊 Copa Mundial FIFA 2026</h2>
+          {statsLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+              {[...Array(4)].map((_, i) => (
+                <div key={i}>
+                  <div className="h-4 w-20 bg-muted rounded animate-pulse mb-2" />
+                  <div className="h-8 w-16 bg-muted rounded animate-pulse" />
+                </div>
+              ))}
+            </div>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Equipos</p>
+                  <p className="text-3xl font-bold text-primary">{stats.total_teams}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Partidos de Grupos</p>
+                  <p className="text-3xl font-bold text-accent">{stats.group_stage_matches}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Grupos</p>
+                  <p className="text-3xl font-bold text-accent">{stats.total_groups}</p>
+                </div>
+                <div>
+                  <p className="text-muted-foreground text-sm mb-1">Fase Eliminatoria</p>
+                  <p className="text-3xl font-bold text-primary">{stats.knockout_stage_matches}</p>
+                </div>
+              </div>
+              <div className="mt-6">
+                <div className="flex items-center justify-between text-sm mb-2">
+                  <span className="text-muted-foreground">Progreso del torneo</span>
+                  <span className="text-foreground font-medium">{stats.completion_percentage}%</span>
+                </div>
+                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-gradient-to-r from-primary to-primary/60 rounded-full transition-all duration-500"
+                    style={{ width: `${Math.min(stats.completion_percentage, 100)}%` }}
+                  />
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {stats.matches_completed} de {stats.group_stage_matches + stats.knockout_stage_matches} partidos disputados
+                </p>
+              </div>
+            </>
+          )}
+          {statsError && (
+            <p className="text-xs text-destructive mt-2">
+              No se pudieron cargar las estadísticas en tiempo real
+            </p>
+          )}
+        </Card>
+
+        {/* How it Works */}
+        <div className="bg-muted/30 rounded-lg border border-border p-8">
+          <h2 className="text-2xl font-bold text-foreground mb-8">
+            🎮 ¿Cómo funciona?
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div>
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 text-primary font-bold mb-4">
+                1
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">Haz Predicciones</h3>
+              <p className="text-muted-foreground text-sm">
+                Predice el resultado de cada partido antes de que comience
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-accent/20 text-accent font-bold mb-4">
+                2
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">Gana Puntos</h3>
+              <p className="text-muted-foreground text-sm">
+                Obtén puntos basados en qué tan precisa es tu predicción
+              </p>
+            </div>
+            <div>
+              <div className="flex items-center justify-center w-12 h-12 rounded-full bg-primary/20 text-primary font-bold mb-4">
+                3
+              </div>
+              <h3 className="font-semibold text-foreground mb-2">Compite</h3>
+              <p className="text-muted-foreground text-sm">
+                Sube en el ranking global o desafía a tus amigos en pollas privadas
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Scoring Info */}
+        <div className="mt-12 text-center">
+          <p className="text-muted-foreground text-sm">
+            💡 <strong className="text-foreground">Consejo:</strong> Las predicciones se cierran 10 minutos antes de cada partido.
+            Asegúrate de hacer tus predicciones a tiempo.
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
