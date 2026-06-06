@@ -49,6 +49,15 @@ const noCacheHeaders = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.20.32"],
+  async redirects() {
+    return [
+      {
+        source: "/j/:code(\\w{10})",
+        destination: "/join/:code",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       // Seguridad global en todas las rutas.
