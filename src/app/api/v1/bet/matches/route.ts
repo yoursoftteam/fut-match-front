@@ -22,6 +22,8 @@
  *   - 500: Internal server error
  */
 
+export const runtime = "edge";
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getAnonClient } from '@/lib/supabase-admin'
 import { Match } from '@/types/bet'

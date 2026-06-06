@@ -43,6 +43,7 @@ coverage/
 # Vercel / next-on-pages output
 .vercel/
 .vercel.open-next
+.wrangler/
 
 # Build artifacts
 tsconfig.tsbuildinfo

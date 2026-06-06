@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+export const runtime = "edge";
+
 import { getAnonClient } from '@/lib/supabase-admin'
 
 export async function GET(

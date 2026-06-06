@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "preview": "opennextjs-cloudflare build && opennextjs-cloudflare preview",
-    "deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy",
-    "build:cf-pages": "next build",
+    "build:cf-pages": "npx @cloudflare/next-on-pages@1",
+    "preview": "npx @cloudflare/next-on-pages@1 && wrangler pages dev .vercel/output/static",
+    "deploy": "npx @cloudflare/next-on-pages@1 && wrangler pages deploy .vercel/output/static --project-name=parti2",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint"
@@ -32,7 +32,6 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@opennextjs/cloudflare": "^1.19.9",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

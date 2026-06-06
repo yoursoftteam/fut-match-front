@@ -1,4 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
+export const runtime = "edge";
+
 import { getServiceClient } from '@/lib/supabase-admin'
 import { Match } from '@/types/bet'
 import { simulateMatchResult } from '@/lib/simulate-results'
