@@ -18,8 +18,8 @@ npm run deploy        # OpenNext build + wrangler deploy to Cloudflare Workers
 # CI
 
 `.github/workflows/ci.yml`:
-- On push/PR to `release/2.0.0`: runs `typecheck` + `lint`.
-- On push to `release/2.0.0`: also runs `deploy` job (needs `check`) → `npm run deploy` to Workers.
+- On push/PR to `main`: runs `typecheck` + `lint`.
+- On push to `main`: also runs `deploy` job (needs `check`) → `npm run deploy` to Workers.
 
 Requires `CLOUDFLARE_API_TOKEN` repo secret (set in GitHub Settings → Secrets and variables → Actions).
 
