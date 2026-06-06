@@ -45,7 +45,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-admin'
+import { getAuthenticatedClient } from '@/lib/supabase-admin'
 import {
   Pool,
   PoolCompetitionType,
@@ -150,14 +150,6 @@ export async function GET(
   request: NextRequest
 ): Promise<NextResponse<{ success: true; data: { pools: Pool[] } } | ErrorResponse>> {
   try {
-    const supabase = getServiceClient()
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
-        { status: 500 }
-      )
-    }
-
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -174,6 +166,14 @@ export async function GET(
     }
 
     const token = authHeader.substring(7)
+    const supabase = getAuthenticatedClient(token)
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
+        { status: 500 }
+      )
+    }
+
     const {
       data: { user },
       error: authError,
@@ -327,14 +327,6 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<CreatePoolResponse | ErrorResponse>> {
   try {
-    const supabase = getServiceClient()
-    if (!supabase) {
-      return NextResponse.json(
-        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
-        { status: 500 }
-      )
-    }
-
     // Parse request body
     const body: CreatePoolRequestBody = await request.json()
 
@@ -432,6 +424,14 @@ export async function POST(
     }
 
     const token = authHeader.substring(7)
+    const supabase = getAuthenticatedClient(token)
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
+        { status: 500 }
+      )
+    }
+
     const {
       data: { user },
       error: authError,

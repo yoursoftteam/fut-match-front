@@ -67,6 +67,7 @@ function AuthForm() {
   const isSignUp = mode === "signup";
   const isForgotMode = mode === "forgot";
   const isResetMode = mode === "reset";
+  const redirectTo = searchParams.get("redirect_to") || "/dashboard";
 
   useEffect(() => {
     setMode(getModeFromSearchParams(searchParams.get("mode")));
@@ -113,9 +114,9 @@ function AuthForm() {
         return;
       }
 
-      router.replace("/dashboard");
+      router.replace(redirectTo);
     }
-  }, [authLoading, user, router, searchParams]);
+  }, [authLoading, user, router, redirectTo]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -274,7 +275,7 @@ function AuthForm() {
           // Let AuthInviteBridge handle the redirect
           return;
         }
-        router.push("/dashboard");
+        router.push(redirectTo);
       }
     } catch (error: unknown) {
       const err = error as { message?: string; status?: number };

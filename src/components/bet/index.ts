@@ -20,3 +20,9 @@ export type { LeaderboardTableProps, ScoreRow as LeaderboardScoreRow } from './L
 
 export { PoolConfigForm } from './PoolConfigForm'
 export type { PoolConfigFormProps, BetPoolConfig } from './PoolConfigForm'
+
+export { default as BetSplash } from './BetSplash'
+export { JoinByCodeSection } from './JoinByCodeSection'
+export { PoolCard } from './PoolCard'
+export { PublicPoolsModal } from './PublicPoolsModal'
+

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState } from "react";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/hooks/useAuth";
 import { sanitizeText } from "@/lib/sanitize";
@@ -50,6 +51,7 @@ export function PoolCreationWizard({
   tournamentId,
   competitionType = "pool",
 }: PoolCreationWizardProps) {
+  const router = useRouter();
   const { user } = useAuth();
   const isPredictions = competitionType === "predictions";
   const defaultConfig = isPredictions
@@ -197,7 +199,7 @@ export function PoolCreationWizard({
           <button
             type="button"
             onClick={() => {
-              window.location.href = closePath;
+              router.push(closePath);
             }}
             className="text-sm text-slate-400 transition-colors hover:text-slate-300"
           >
@@ -270,7 +272,7 @@ export function PoolCreationWizard({
       <ShareInviteModal
         open={showShareModal}
         onClose={() => {
-          window.location.href = closePath;
+          router.push(closePath);
         }}
         poolName={name}
         inviteUrl={inviteUrl}
