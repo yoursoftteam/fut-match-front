@@ -1,28 +1,16 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "parti2",
+  "name": "fut-match-front",
   "main": ".open-next/worker.js",
   "compatibility_date": "2026-06-01",
   "compatibility_flags": ["nodejs_compat"],
-  "services": [
-    {
-      "binding": "WORKER_SELF_REFERENCE",
-      "service": "parti2"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "parti2-opennext-cache"
-    }
-  ],
-  "env": {
-    "production": {
-      "vars": {
-"NEXT_PUBLIC_SUPABASE_URL": "https://iajkipugoylzmjsrnflh.supabase.co",
+  "assets": {
+    "directory": ".open-next/assets",
+    "binding": "ASSETS"
+  },
+  "vars": {
+    "NEXT_PUBLIC_SUPABASE_URL": "https://iajkipugoylzmjsrnflh.supabase.co",
     "NEXT_PUBLIC_SUPABASE_ANON_KEY": "sb_publishable_Or_fzc3a-0yPu4vXiyiAEw_azITUHnc",
-        "NEXT_PUBLIC_APP_URL": "https://parti2.yoursoftteam.workers.dev"
-      }
-    }
+    "NEXT_PUBLIC_APP_URL": "https://fut-match-front.bara1021.workers.dev"
   }
 }
