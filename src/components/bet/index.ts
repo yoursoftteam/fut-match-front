@@ -25,4 +25,8 @@ export { default as BetSplash } from './BetSplash'
 export { JoinByCodeSection } from './JoinByCodeSection'
 export { PoolCard } from './PoolCard'
 export { PublicPoolsModal } from './PublicPoolsModal'
+export { PoolRanking } from './PoolRanking'
+export { PoolMatches } from './PoolMatches'
+export { PoolDetailView } from './PoolDetailView'
+
 
