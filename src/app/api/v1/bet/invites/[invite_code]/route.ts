@@ -26,16 +26,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
+import { getServiceClient } from '@/lib/supabase-admin'
 
 interface PoolPreviewResponse {
   success: true
@@ -64,6 +55,14 @@ export async function GET(
   { params }: { params: Promise<{ invite_code: string }> }
 ): Promise<NextResponse<PoolPreviewResponse | ErrorResponse>> {
   try {
+    const supabase = getServiceClient()
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
+        { status: 500 }
+      )
+    }
+
     const { invite_code: rawCode } = await params
 
     if (!rawCode) {

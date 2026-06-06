@@ -19,20 +19,18 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getAnonClient } from '@/lib/supabase-admin'
 import { Team } from '@/types/bet'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 export async function GET(request: NextRequest) {
   try {
+    const supabase = getAnonClient()
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
+        { status: 500 }
+      )
+    }
     const { searchParams } = new URL(request.url)
     const tournamentId = searchParams.get('tournament_id')
 

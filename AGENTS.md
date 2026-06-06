@@ -9,10 +9,15 @@ This version has breaking changes — APIs, conventions, and file structure may 
 ```bash
 npm run dev           # Start dev server
 npm run build         # Production build
-npm run lint          # ESLint — only verification step (no tests, no typecheck script)
+npm run typecheck     # TypeScript check without build (fast)
+npm run lint          # ESLint — only verification step (no tests)
 npm run preview       # OpenNext Cloudflare preview
 npm run deploy        # Deploy to Cloudflare Pages
 ```
+
+# CI
+
+`.github/workflows/ci.yml` runs `typecheck` + `lint` on push/PR to `release/2.0.0`. Run `npm run typecheck` locally before deploy — catches TS errors fast (no bundle).
 
 # Architecture
 
@@ -58,6 +63,7 @@ Business: `time` is **not a column** — derived from `date` (ISO). Location "Po
 - UI primitives in `src/components/ui/` (shadcn generated). Utils: `cn()` in `src/lib/utils.ts`.
 - Currency formatting: `formatCurrency()` in `src/lib/currency.ts` (Intl.NumberFormat("es-CO")).
 - Client-side Supabase proxy in `src/lib/supabase.ts` — always import `supabase` or `getSupabaseClient` from there.
+- Admin/service-role client in `src/lib/supabase-admin.ts` — use `getServiceClient()` (for private routes that bypass RLS) or `getAnonClient()` (for public-read routes). Both return `null` if env vars are missing, so guard with `if (!supabase) return error`. Never create a Supabase client at module level in API routes — lazy-create inside handler only.
 - Realtime: subscribe to `match_registrations` changes via `supabase.channel()` with `postgres_changes`.
 
 ## Brand manual

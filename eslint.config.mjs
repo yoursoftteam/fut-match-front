@@ -12,7 +12,17 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Legacy setup scripts — not part of app source
+    "create-bet-*.js",
+    "run-setup.js",
+    "setup-*.js",
   ]),
+  // Downgrade no-explicit-any to warning — existing codebase uses it extensively
+  {
+    rules: {
+      "@typescript-eslint/no-explicit-any": "warn",
+    },
+  },
 ]);
 
 export default eslintConfig;

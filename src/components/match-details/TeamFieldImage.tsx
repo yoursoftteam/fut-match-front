@@ -157,7 +157,8 @@ export function TeamFieldImage({ teamA, teamB, matchTitle = "Parti2" }: TeamFiel
   useEffect(() => {
     if (!show || !canvasRef.current) return;
     drawField(canvasRef.current, teamA, teamB, matchTitle);
-    setGenerated(true);
+    const id = setTimeout(() => setGenerated(true), 0);
+    return () => clearTimeout(id);
   }, [show, teamA, teamB, matchTitle]);
 
   const handleDownload = () => {
