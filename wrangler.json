@@ -2,7 +2,7 @@
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "parti2",
   "main": ".open-next/worker.js",
-  "compatibility_date": "2026-06-01",
+  "compatibility_date": "2025-06-01",
   "compatibility_flags": ["nodejs_compat"],
   "assets": {
     "directory": ".open-next/assets",
@@ -12,12 +12,6 @@
     {
       "binding": "WORKER_SELF_REFERENCE",
       "service": "parti2"
-    }
-  ],
-  "r2_buckets": [
-    {
-      "binding": "NEXT_INC_CACHE_R2_BUCKET",
-      "bucket_name": "parti2-opennext-cache"
     }
   ]
 }
