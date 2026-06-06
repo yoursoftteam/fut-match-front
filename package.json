@@ -5,9 +5,9 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf-pages": "npx @cloudflare/next-on-pages@1",
-    "preview": "npx @cloudflare/next-on-pages@1 && wrangler pages dev .vercel/output/static",
-    "deploy": "npx @cloudflare/next-on-pages@1 && wrangler pages deploy .vercel/output/static --project-name=parti2",
+    "build:cf-pages": "npx @cloudflare/next-on-pages@1 && node scripts/prune-pages-output.mjs",
+    "preview": "npm run build:cf-pages && wrangler pages dev .vercel/output/static",
+    "deploy": "npm run build:cf-pages && wrangler pages deploy .vercel/output/static --project-name=parti2",
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "lint": "eslint"
@@ -21,7 +21,7 @@
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^1.14.0",
-    "next": "16.2.6",
+    "next": "15.5.19",
     "next-themes": "^0.4.6",
     "react": "19.2.4",
     "react-dom": "19.2.4",
@@ -37,7 +37,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "16.2.2",
+    "eslint-config-next": "15.5.19",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

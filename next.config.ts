@@ -10,8 +10,9 @@ const csp = [
   "object-src 'none'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  // Scripts: solo el propio origen. Next inyecta scripts internos desde 'self'.
-  "script-src 'self'",
+  // Scripts: unsafe-inline necesario en prod porque Next.js inyecta scripts inline de bootstrap.
+  // unsafe-eval solo en dev (Fast Refresh / webpack).
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   // Styles: unsafe-inline requerido por Tailwind en producción (no usa nonces por defecto).
   "style-src 'self' 'unsafe-inline'",
   // Fuentes embebidas en CSS (data: URI) usadas por next/font.
@@ -49,6 +50,10 @@ const noCacheHeaders = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.20.32"],
+  productionBrowserSourceMaps: false,
+  experimental: {
+    serverSourceMaps: false,
+  },
   async redirects() {
     return [
       {
