@@ -4,10 +4,6 @@
   "name": "parti2",
   "compatibility_date": "2025-06-01",
   "compatibility_flags": ["nodejs_compat"],
-  "assets": {
-    "directory": ".open-next/assets",
-    "binding": "ASSETS"
-  },
   "pages_build_output_dir": ".open-next/assets",
   "services": [
     {
