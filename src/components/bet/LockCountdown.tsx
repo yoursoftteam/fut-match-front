@@ -19,7 +19,7 @@ export function LockCountdown({
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
-    setMounted(true)
+    const id = setTimeout(() => setMounted(true), 0)
 
     const updateCountdown = () => {
       const now = new Date()
@@ -42,7 +42,7 @@ export function LockCountdown({
     updateCountdown()
     const interval = setInterval(updateCountdown, 1000)
 
-    return () => clearInterval(interval)
+    return () => { clearTimeout(id); clearInterval(interval) }
   }, [kickoffAt, onLocked])
 
   if (!mounted) return null
