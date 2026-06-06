@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ```bash
 npm run dev           # Start dev server
-npm run build         # Production build (OpenNext Cloudflare)
+npm run build         # Next.js build (local). Cloudflare dashboard: `npx @opennextjs/cloudflare@latest build`
 npm run typecheck     # TypeScript check without build (fast)
 npm run lint          # ESLint — only verification step (no tests)
 npm run preview       # OpenNext Cloudflare preview
