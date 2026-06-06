@@ -6,6 +6,8 @@ import { supabase } from '@/lib/supabase'
 import { useAuth } from '@/hooks/useAuth'
 import type { Pool, PoolCompetitionType } from '@/types/bet'
 
+const PAGE_SIZE = 20
+
 interface PoolWithMemberCount extends Pool {
   member_count: number
 }
@@ -18,11 +20,39 @@ interface UsePoolsOptions {
 interface UsePoolsReturn {
   pools: PoolWithMemberCount[]
   loading: boolean
+  hasMore: boolean
+  loadingMore: boolean
+  totalCount: number
+  loadMore: () => void
   joinByCode: (code: string) => Promise<{ success: boolean; error?: string }>
   joinLoading: boolean
   joinError: string | null
   clearJoinError: () => void
   refetch: () => void
+}
+
+function fetchPage(page: number, competitionType: PoolCompetitionType): Promise<{
+  pools: PoolWithMemberCount[]
+  total_count: number
+}> {
+  return supabase.auth.getSession().then((session) => {
+    const token = session.data.session?.access_token
+    if (!token) return { pools: [], total_count: 0 }
+
+    const params = new URLSearchParams({
+      competition_type: competitionType,
+      page: String(page),
+      limit: String(PAGE_SIZE),
+    })
+    return fetch(`/api/v1/bet/pools?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((res) => res.ok ? res.json() : null)
+      .then((payload) => payload?.success
+        ? { pools: payload.data.pools ?? [], total_count: payload.data.total_count ?? 0 }
+        : { pools: [], total_count: 0 }
+      )
+  })
 }
 
 export function usePools(options: UsePoolsOptions = {}): UsePoolsReturn {
@@ -32,10 +62,31 @@ export function usePools(options: UsePoolsOptions = {}): UsePoolsReturn {
 
   const [pools, setPools] = useState<PoolWithMemberCount[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [page, setPage] = useState(1)
+  const [totalCount, setTotalCount] = useState(0)
   const [joinLoading, setJoinLoading] = useState(false)
   const [joinError, setJoinError] = useState<string | null>(null)
 
   const clearJoinError = useCallback(() => setJoinError(null), [])
+
+  const hasMore = page * PAGE_SIZE < totalCount
+
+  const loadPage = useCallback(async (pageNum: number, append: boolean) => {
+    const result = await fetchPage(pageNum, competitionType)
+
+    if (append) {
+      setPools((prev) => {
+        const existing = new Set(prev.map((p) => p.id))
+        const newPools = result.pools.filter((p) => !existing.has(p.id))
+        return [...prev, ...newPools]
+      })
+    } else {
+      setPools(result.pools)
+    }
+    setTotalCount(result.total_count)
+    setPage(pageNum)
+  }, [competitionType])
 
   useEffect(() => {
     if (authLoading) return
@@ -49,64 +100,31 @@ export function usePools(options: UsePoolsOptions = {}): UsePoolsReturn {
       return
     }
 
-    let cancelled = false
-
     setLoading(true)
 
-    supabase.auth.getSession().then((session) => {
-      if (cancelled) return
-      const token = session.data.session?.access_token
-      if (!token) {
-        setLoading(false)
-        return
-      }
-
-      const params = new URLSearchParams({ competition_type: competitionType })
-      fetch(`/api/v1/bet/pools?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.ok ? res.json() : null)
-        .then((payload) => {
-          if (cancelled) return
-          if (payload?.success) {
-            setPools(payload.data.pools)
-          }
-        })
-        .catch(() => {})
-        .finally(() => {
-          if (!cancelled) setLoading(false)
-        })
+    loadPage(1, false).finally(() => {
+      setLoading(false)
     })
+  }, [user, authLoading, router, loadPage, redirectOnUnauth])
 
-    return () => { cancelled = true }
-  }, [user, authLoading, router, competitionType, redirectOnUnauth])
+  const loadMore = useCallback(() => {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const nextPage = page + 1
+    loadPage(nextPage, true).finally(() => {
+      setLoadingMore(false)
+    })
+  }, [loadingMore, hasMore, page, loadPage])
 
   const refetch = useCallback(() => {
     if (!user) return
 
     setLoading(true)
 
-    supabase.auth.getSession().then((session) => {
-      const token = session.data.session?.access_token
-      if (!token) {
-        setLoading(false)
-        return
-      }
-
-      const params = new URLSearchParams({ competition_type: competitionType })
-      fetch(`/api/v1/bet/pools?${params}`, {
-        headers: { Authorization: `Bearer ${token}` },
-      })
-        .then((res) => res.ok ? res.json() : null)
-        .then((payload) => {
-          if (payload?.success) {
-            setPools(payload.data.pools)
-          }
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false))
+    loadPage(1, false).finally(() => {
+      setLoading(false)
     })
-  }, [user, competitionType])
+  }, [user, loadPage])
 
   const joinByCode = useCallback(async (code: string) => {
     const trimmed = code.trim().toUpperCase()
@@ -165,6 +183,10 @@ export function usePools(options: UsePoolsOptions = {}): UsePoolsReturn {
   return {
     pools,
     loading,
+    hasMore,
+    loadingMore,
+    totalCount,
+    loadMore,
     joinByCode,
     joinLoading,
     joinError,

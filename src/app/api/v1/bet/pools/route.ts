@@ -208,6 +208,11 @@ export async function GET(
       )
     }
 
+    const page = Math.max(1, parseInt(new URL(request.url).searchParams.get('page') ?? '1', 10))
+    const limit = Math.min(50, Math.max(1, parseInt(new URL(request.url).searchParams.get('limit') ?? '20', 10)))
+    const from = (page - 1) * limit
+    const to = from + limit - 1
+
     const scope = new URL(request.url).searchParams.get('scope') ?? 'mine'
 
     if (scope === 'public') {
@@ -220,13 +225,18 @@ export async function GET(
 
       const excludeIds = new Set(memberRows?.map((r) => r.pool_id) ?? [])
 
-      const { data: publicPools, error: poolsError } = await supabase
+      const {
+        data: publicPools,
+        error: poolsError,
+        count: rawTotal,
+      } = await supabase
         .from('bet_pools')
-        .select('*')
+        .select('*', { count: 'exact', head: false })
         .eq('visibility', 'public')
         .eq('competition_type', requestedCompetitionType)
         .neq('owner_id', user.id)
         .order('created_at', { ascending: false })
+        .range(from, to)
 
       if (poolsError) throw poolsError
 
@@ -247,54 +257,43 @@ export async function GET(
 
       return NextResponse.json({
         success: true,
-        data: { pools: poolsWithCounts },
+        data: { pools: poolsWithCounts, total_count: rawTotal ?? 0, page, limit },
       })
     }
 
-    // Get pools where user is owner or member
-    const { data: ownedPools, error: ownedError } = await supabase
-      .from('bet_pools')
-      .select('*')
-      .eq('owner_id', user.id)
-      .eq('competition_type', requestedCompetitionType)
-      .order('created_at', { ascending: false })
-
-    if (ownedError) {
-      throw ownedError
-    }
-
-    // Get pools where user is a member (but not owner)
+    // Get all pool IDs where user is a member (includes owned pools)
     const { data: memberRows, error: memberError } = await supabase
       .from('bet_pool_members')
       .select('pool_id')
       .eq('user_id', user.id)
 
-    if (memberError) {
-      throw memberError
+    if (memberError) throw memberError
+
+    const poolIds = [...new Set(memberRows?.map((r) => r.pool_id) ?? [])]
+
+    if (poolIds.length === 0) {
+      return NextResponse.json({
+        success: true,
+        data: { pools: [], total_count: 0, page, limit },
+      })
     }
 
-    const memberPoolIds = memberRows
-      .map((r) => r.pool_id)
-      .filter((pid) => !ownedPools.some((p) => p.id === pid))
+    const {
+      data: pools,
+      error: poolsError,
+      count: totalCount,
+    } = await supabase
+      .from('bet_pools')
+      .select('*', { count: 'exact', head: false })
+      .in('id', poolIds)
+      .eq('competition_type', requestedCompetitionType)
+      .order('created_at', { ascending: false })
+      .range(from, to)
 
-    let memberPools: Pool[] = []
-    if (memberPoolIds.length > 0) {
-      const { data: pools, error: poolsError } = await supabase
-        .from('bet_pools')
-        .select('*')
-        .in('id', memberPoolIds)
-        .eq('competition_type', requestedCompetitionType)
-        .order('created_at', { ascending: false })
+    if (poolsError) throw poolsError
 
-      if (!poolsError && pools) {
-        memberPools = pools
-      }
-    }
-
-    // For each pool, get member count
-    const allPools = [...ownedPools, ...memberPools]
     const poolsWithCounts = await Promise.all(
-      allPools.map(async (pool) => {
+      (pools ?? []).map(async (pool) => {
         const { count } = await supabase
           .from('bet_pool_members')
           .select('id', { count: 'exact', head: true })
@@ -306,7 +305,7 @@ export async function GET(
 
     return NextResponse.json({
       success: true,
-      data: { pools: poolsWithCounts },
+      data: { pools: poolsWithCounts, total_count: totalCount ?? 0, page, limit },
     })
   } catch (error) {
     console.error('List pools error:', error)

@@ -8,7 +8,10 @@ import { Plus, ArrowLeft, Compass } from "lucide-react";
 
 export default function PoolsPage() {
   const router = useRouter();
-  const { pools, loading, joinByCode, joinLoading, joinError, clearJoinError } = usePools();
+  const {
+    pools, loading, hasMore, loadingMore, loadMore,
+    joinByCode, joinLoading, joinError, clearJoinError,
+  } = usePools();
   const [showPublicModal, setShowPublicModal] = useState(false);
 
   if (loading) {
@@ -91,6 +94,16 @@ export default function PoolsPage() {
                 <span className="text-xs text-slate-500">→</span>
               </PoolCard>
             ))}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full rounded-lg border border-slate-700 py-3 text-sm font-medium text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-50 disabled:opacity-50"
+              >
+                {loadingMore ? "Cargando..." : "Cargar más"}
+              </button>
+            )}
           </div>
         )}
       </div>

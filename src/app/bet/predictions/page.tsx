@@ -11,6 +11,9 @@ export default function PredictionCompetitionsPage() {
   const {
     pools: competitions,
     loading,
+    hasMore,
+    loadingMore,
+    loadMore,
     joinByCode,
     joinLoading,
     joinError,
@@ -106,6 +109,16 @@ export default function PredictionCompetitionsPage() {
                 <span className="text-xs text-[#22C55E] font-medium">Abrir</span>
               </PoolCard>
             ))}
+            {hasMore && (
+              <button
+                type="button"
+                onClick={loadMore}
+                disabled={loadingMore}
+                className="w-full rounded-lg border border-slate-700 py-3 text-sm font-medium text-slate-400 transition-colors hover:border-slate-600 hover:text-slate-50 disabled:opacity-50"
+              >
+                {loadingMore ? "Cargando..." : "Cargar más"}
+              </button>
+            )}
           </div>
         )}
       </div>
