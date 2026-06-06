@@ -45,7 +45,7 @@
  */
 
 import { NextRequest, NextResponse } from 'next/server'
-import { createClient } from '@supabase/supabase-js'
+import { getServiceClient } from '@/lib/supabase-admin'
 import {
   Pool,
   PoolCompetitionType,
@@ -53,15 +53,6 @@ import {
   PREDICTION_COMPETITION_CONFIG,
 } from '@/types/bet'
 import { sanitizeText } from '@/lib/sanitize'
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-if (!supabaseUrl || !supabaseServiceKey) {
-  throw new Error('Missing Supabase environment variables')
-}
-
-const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
 // Default pool configuration values
 const DEFAULT_POOL_CREATE_CONFIG = {
@@ -159,6 +150,14 @@ export async function GET(
   request: NextRequest
 ): Promise<NextResponse<{ success: true; data: { pools: Pool[] } } | ErrorResponse>> {
   try {
+    const supabase = getServiceClient()
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
+        { status: 500 }
+      )
+    }
+
     // Get user from Authorization header
     const authHeader = request.headers.get('authorization')
     if (!authHeader || !authHeader.startsWith('Bearer ')) {
@@ -328,6 +327,14 @@ export async function POST(
   request: NextRequest
 ): Promise<NextResponse<CreatePoolResponse | ErrorResponse>> {
   try {
+    const supabase = getServiceClient()
+    if (!supabase) {
+      return NextResponse.json(
+        { success: false, data: null, error: { code: 'MISSING_ENV', message: 'Server configuration error' } },
+        { status: 500 }
+      )
+    }
+
     // Parse request body
     const body: CreatePoolRequestBody = await request.json()
 
