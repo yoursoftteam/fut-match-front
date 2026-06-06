@@ -1,7 +1,7 @@
 import type { NextConfig } from "next";
 
-const SUPABASE_URL = "https://iajkipugoylzmjsrnflh.supabase.co";
-const SUPABASE_WS  = "wss://iajkipugoylzmjsrnflh.supabase.co";
+const SUPABASE_URL = "https://ooewvkfxvbxghqwgajem.supabase.co";
+const SUPABASE_WS  = "wss://ooewvkfxvbxghqwgajem.supabase.co";
 
 // Directivas CSP adaptadas a Next.js + Tailwind (unsafe-inline en styles) + Supabase auth/realtime
 const csp = [
