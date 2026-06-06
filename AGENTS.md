@@ -8,7 +8,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ```bash
 npm run dev           # Start dev server
-npm run build         # Production build
+npm run build         # Production build (OpenNext Cloudflare)
 npm run typecheck     # TypeScript check without build (fast)
 npm run lint          # ESLint — only verification step (no tests)
 npm run preview       # OpenNext Cloudflare preview
@@ -39,6 +39,8 @@ npm run deploy        # Deploy to Cloudflare Pages
 | `/create` | Multi-step match creation. |
 | `/dashboard` | Authenticated. "Mis Partidos" shows matches from last 7 days. |
 | `/matches` | Authenticated. All user matches. |
+| `/join/[invite_code]` | **Edge runtime**. Accepts invite code from URL; passes to `JoinInviteGate` client component. |
+| `/j/[code]` | Redirects to `/join/[code]` via `next.config.ts` redirects (no proxy.ts). |
 | `/match/[id]` | **Edge runtime** (`export const runtime = "edge"`). Client component for the heavy work. |
 
 # Database (Supabase)
@@ -54,6 +56,7 @@ Business: `time` is **not a column** — derived from `date` (ISO). Location "Po
 
 # Next.js 16 gotchas
 
+- `proxy.ts` (formerly `middleware.ts`) defaults to Node.js runtime, which **OpenNext Cloudflare doesn't support**. Solution: handle redirects via `next.config.ts` and use Edge runtime on pages directly. There is no `proxy.ts` in this project.
 - For slow client navigations: export `unstable_instant` from the route. Read `node_modules/next/dist/docs/01-app/02-guides/instant-navigation.md` before making changes.
 - `params` in page props is a **Promise** (not a plain object) — must `await` before use.
 
