@@ -132,7 +132,7 @@ function AuthForm() {
     setMessage("");
     setLoading(true);
 
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       setMessage(
         "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
@@ -168,7 +168,7 @@ function AuthForm() {
     setMessage("");
     setLoading(true);
 
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       setMessage(
         "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );

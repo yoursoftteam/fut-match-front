@@ -9,7 +9,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       const timer = setTimeout(() => {
         setUser(null)
         setLoading(false)
