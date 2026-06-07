@@ -622,8 +622,14 @@ export async function POST(
     const errorDetails = {
       type: typeof error,
       isNull: error === null,
-      message: error instanceof Error ? error.message : String(error),
-      ...(error && typeof error === 'object'
+      isArray: Array.isArray(error),
+      message:
+        error instanceof Error
+          ? error.message
+          : error && typeof error === 'object'
+            ? JSON.stringify(error)
+            : String(error),
+      ...(error && typeof error === 'object' && !Array.isArray(error)
         ? {
             code: (error as Record<string, unknown>).code,
             details: (error as Record<string, unknown>).details,
@@ -638,6 +644,7 @@ export async function POST(
         error: {
           code: 'INTERNAL_ERROR',
           message: `Failed to create pool: ${errorDetails.message}`,
+          ...(errorDetails.code ? { details: errorDetails.code } : {}),
         },
       } as ErrorResponse,
       { status: 500 }
