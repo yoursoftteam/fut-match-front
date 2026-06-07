@@ -87,20 +87,20 @@ export function GroupStandingsModal({ groupName, matches, getPrediction, onClose
       aria-label={`Tabla de grupo ${groupName}`}
     >
       <div
-        className="mx-4 w-full max-w-sm rounded-lg border border-slate-700 bg-slate-900 shadow-2xl"
+        className="mx-4 w-full max-w-sm rounded-lg border border-border bg-card shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b border-slate-700 px-4 py-3">
+        <div className="flex items-center justify-between border-b border-border px-4 py-3">
           <div className="flex items-center gap-2">
             <Trophy className="size-4 text-emerald-400" aria-hidden="true" />
-            <h2 className="text-sm font-semibold text-slate-100">
+            <h2 className="text-sm font-semibold text-foreground">
               Grupo {groupName}
             </h2>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-800 hover:text-slate-200"
+            className="rounded-md p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
             aria-label="Cerrar"
           >
             <X className="size-4" />
@@ -108,7 +108,7 @@ export function GroupStandingsModal({ groupName, matches, getPrediction, onClose
         </div>
 
         <div className="p-4">
-          <p className="mb-3 text-[0.6875rem] text-slate-500">
+          <p className="mb-3 text-[0.6875rem] text-muted-foreground">
             Clasificación según tus picks · 3 pts victoria, 1 pt empate
           </p>
           <table className="w-full text-xs">
@@ -125,7 +125,7 @@ export function GroupStandingsModal({ groupName, matches, getPrediction, onClose
               <col className="w-7" />
             </colgroup>
             <thead>
-              <tr className="text-[0.625rem] uppercase text-slate-500">
+              <tr className="text-[0.625rem] uppercase text-muted-foreground">
                 <th scope="col" className="px-1 py-1.5 text-center font-semibold">#</th>
                 <th scope="col" className="px-1 py-1.5 text-left font-semibold">Equipo</th>
                 <th scope="col" className="px-1 py-1.5 text-center font-semibold">PJ</th>
@@ -142,11 +142,11 @@ export function GroupStandingsModal({ groupName, matches, getPrediction, onClose
                 <tr
                   key={team.team_id}
                   className={cn(
-                    'border-t border-slate-800/60 transition-colors',
+                    'border-t border-border/60 transition-colors',
                     idx < 2 && 'bg-emerald-500/[0.03]'
                   )}
                 >
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-500">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-muted-foreground">
                     {idx + 1}
                   </td>
                   <td className="flex items-center gap-1.5 px-1 py-1.5">
@@ -158,31 +158,31 @@ export function GroupStandingsModal({ groupName, matches, getPrediction, onClose
                         loading="lazy"
                       />
                     ) : (
-                      <span className="size-4 shrink-0 rounded-sm border border-slate-700 bg-slate-800" />
+                      <span className="size-4 shrink-0 rounded-sm border border-border bg-muted" />
                     )}
-                    <span className="truncate font-medium text-slate-200">
+                    <span className="truncate font-medium text-foreground">
                       {team.team_name}
                     </span>
-                    <span className="hidden shrink-0 font-mono text-[0.625rem] text-slate-500 sm:inline" translate="no">
+                    <span className="hidden shrink-0 font-mono text-[0.625rem] text-muted-foreground sm:inline" translate="no">
                       {team.fifa_code}
                     </span>
                   </td>
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-300">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-foreground">
                     {team.played}
                   </td>
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-300">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-foreground">
                     {team.wins}
                   </td>
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-300">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-foreground">
                     {team.draws}
                   </td>
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-300">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-foreground">
                     {team.losses}
                   </td>
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-300">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-foreground">
                     {team.goals_for}
                   </td>
-                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-slate-300">
+                  <td className="px-1 py-1.5 text-center font-mono tabular-nums text-foreground">
                     {team.goals_against}
                   </td>
                   <td className="px-1 py-1.5 text-center font-mono text-sm font-bold tabular-nums text-emerald-400">

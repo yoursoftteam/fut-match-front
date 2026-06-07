@@ -39,8 +39,8 @@ export function MatchCard({
     setIsLocked(now >= lockTime)
   }, [match.kickoff_at])
 
-  const borderColor = !isLocked && canEdit ? 'border-emerald-500' : isLocked ? 'border-red-500/30' : 'border-slate-700'
-  const bgColor = isLocked ? 'bg-red-500/5' : canEdit ? 'bg-emerald-500/5' : 'bg-slate-900/50'
+  const borderColor = !isLocked && canEdit ? 'border-emerald-500' : isLocked ? 'border-red-500/30' : 'border-border'
+  const bgColor = isLocked ? 'bg-red-500/5' : canEdit ? 'bg-emerald-500/5' : 'bg-muted/50'
 
   const kickoffTime = new Date(match.kickoff_at).toLocaleTimeString('es-CO', {
     hour: '2-digit',
@@ -61,7 +61,7 @@ export function MatchCard({
         {/* Time + Teams in a row */}
         <div className="flex items-center gap-1 flex-1 min-w-0">
           {/* Time */}
-          <span className="text-slate-500 font-mono whitespace-nowrap">{kickoffTime}</span>
+          <span className="text-muted-foreground font-mono whitespace-nowrap">{kickoffTime}</span>
           
           {/* Home Team */}
           <div className="flex-1 min-w-0">
@@ -74,7 +74,7 @@ export function MatchCard({
           </div>
 
           {/* vs separator + score */}
-          <div className="text-slate-600 font-bold mx-1">vs</div>
+          <div className="text-muted-foreground font-bold mx-1">vs</div>
 
           {/* Away Team */}
           <div className="flex-1 min-w-0">
@@ -103,9 +103,9 @@ export function MatchCard({
 
           {(isLocked || !canEdit) && prediction && (
             <div className="flex items-center gap-1">
-              <span className="font-bold text-slate-50">{prediction.home_score_predicted}</span>
-              <span className="text-slate-500">-</span>
-              <span className="font-bold text-slate-50">{prediction.away_score_predicted}</span>
+              <span className="font-bold text-foreground">{prediction.home_score_predicted}</span>
+              <span className="text-muted-foreground">-</span>
+              <span className="font-bold text-foreground">{prediction.away_score_predicted}</span>
             </div>
           )}
 
@@ -127,7 +127,7 @@ export function MatchCard({
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="rounded text-xs font-semibold text-slate-400">
+          <span className="rounded text-xs font-semibold text-muted-foreground">
             {kickoffTime}
           </span>
         </div>
@@ -158,11 +158,11 @@ export function MatchCard({
         {(isLocked || !canEdit) && prediction && (
           <div className="flex items-center justify-center gap-2 py-1">
             <div className="text-center text-xs">
-              <div className="font-bold text-slate-50">{prediction.home_score_predicted}</div>
+              <div className="font-bold text-foreground">{prediction.home_score_predicted}</div>
             </div>
-            <div className="text-sm font-bold text-slate-500">-</div>
+            <div className="text-sm font-bold text-muted-foreground">-</div>
             <div className="text-center text-xs">
-              <div className="font-bold text-slate-50">{prediction.away_score_predicted}</div>
+              <div className="font-bold text-foreground">{prediction.away_score_predicted}</div>
             </div>
           </div>
         )}

@@ -80,7 +80,7 @@ export function ShareInviteModal({
         ref={dialogRef}
         className={cn(
           "relative z-10 w-full max-w-md rounded-t-2xl sm:rounded-2xl",
-          "border border-slate-800 bg-slate-950 p-5 text-slate-50 shadow-2xl",
+          "border border-border bg-card text-foreground shadow-2xl",
           "animate-in slide-in-from-bottom sm:slide-in-from-bottom-0 sm:zoom-in-90 duration-200"
         )}
       >
@@ -88,25 +88,25 @@ export function ShareInviteModal({
           ref={initialFocusRef}
           type="button"
           onClick={onClose}
-          className="absolute right-4 top-4 rounded-lg p-1 text-slate-400 transition-colors hover:text-slate-50 focus-visible:ring-2 focus-visible:ring-[#22C55E]/70"
+          className="absolute right-4 top-4 rounded-lg p-1 text-muted-foreground transition-colors hover:text-foreground focus-visible:ring-2 focus-visible:ring-[#22C55E]/70"
           aria-label="Cerrar"
         >
           <X className="size-5" />
         </button>
 
         <div className="mb-5 pr-8">
-          <h2 id="share-invite-title" className="text-lg font-bold text-slate-50">
+          <h2 id="share-invite-title" className="text-lg font-bold text-foreground">
             Link ready. Suelta la bomba.
           </h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <p className="mt-1 text-sm text-muted-foreground">
             Comparte la {competitionLabel} y que el squad meta sus marcadores.
           </p>
         </div>
 
         {loading ? (
           <div className="flex flex-col items-center gap-3 py-6">
-            <div className="size-6 animate-spin rounded-full border-2 border-slate-700 border-t-[#22C55E]" />
-            <p className="text-sm text-slate-400">Link en camino...</p>
+            <div className="size-6 animate-spin rounded-full border-2 border-border border-t-[#22C55E]" />
+            <p className="text-sm text-muted-foreground">Link en camino...</p>
           </div>
         ) : (
           <ShareInviteActions

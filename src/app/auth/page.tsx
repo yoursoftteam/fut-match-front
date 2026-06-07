@@ -67,6 +67,7 @@ function AuthForm() {
   const isSignUp = mode === "signup";
   const isForgotMode = mode === "forgot";
   const isResetMode = mode === "reset";
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   useEffect(() => {
     setMode(getModeFromSearchParams(searchParams.get("mode")));
@@ -113,9 +114,9 @@ function AuthForm() {
         return;
       }
 
-      router.replace("/dashboard");
+      router.replace(redirectTo);
     }
-  }, [authLoading, user, router, searchParams]);
+  }, [authLoading, user, router, redirectTo]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -132,7 +133,7 @@ function AuthForm() {
     setMessage("");
     setLoading(true);
 
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       setMessage(
         "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
@@ -142,13 +143,13 @@ function AuthForm() {
     }
 
     try {
-      const redirectTo = pendingInvite
+      const googleRedirect = pendingInvite
         ? buildRedirectUrl(`/join/${pendingInvite}`)
-        : buildRedirectUrl("/dashboard");
+        : buildRedirectUrl(redirectTo);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo,
+          redirectTo: googleRedirect,
           queryParams: {
             prompt: "select_account",
           },
@@ -168,7 +169,7 @@ function AuthForm() {
     setMessage("");
     setLoading(true);
 
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       setMessage(
         "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
@@ -274,7 +275,7 @@ function AuthForm() {
           // Let AuthInviteBridge handle the redirect
           return;
         }
-        router.push("/dashboard");
+        router.push(redirectTo);
       }
     } catch (error: unknown) {
       const err = error as { message?: string; status?: number };

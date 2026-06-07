@@ -104,10 +104,10 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
   const empty = entries.length === 0
 
   return (
-    <div className="rounded-lg border border-slate-800 bg-slate-950">
-      <div className="border-b border-slate-800 bg-slate-900/70 px-4 py-3">
+    <div className="rounded-lg border border-border bg-card">
+      <div className="border-b border-border bg-muted px-4 py-3">
         <div className="flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+          <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
             <Trophy className="size-4 text-emerald-400" aria-hidden="true" />
             Ranking
           </h2>
@@ -131,15 +131,15 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
       </div>
 
       {loading ? (
-        <div className="flex items-center justify-center gap-3 py-12 text-sm text-slate-400">
-          <div className="size-5 animate-spin rounded-full border-2 border-slate-700 border-t-emerald-400" />
+        <div className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground">
+          <div className="size-5 animate-spin rounded-full border-2 border-border border-t-emerald-400" />
           Cargando ranking…
         </div>
       ) : empty ? (
         <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
-          <Users className="size-8 text-slate-600" aria-hidden="true" />
-          <p className="text-sm text-slate-500">Aún no hay participantes con puntaje</p>
-          <p className="text-xs text-slate-600">Los resultados aparecerán cuando haya partidos finalizados</p>
+          <Users className="size-8 text-muted-foreground" aria-hidden="true" />
+          <p className="text-sm text-muted-foreground">Aún no hay participantes con puntaje</p>
+          <p className="text-xs text-muted-foreground">Los resultados aparecerán cuando haya partidos finalizados</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
@@ -152,7 +152,7 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
               <col className="w-24" />
               {isOwner && <col className="w-12" />}
             </colgroup>
-            <thead className="border-b border-slate-800 bg-slate-900/50 text-left text-[0.6875rem] uppercase text-slate-500">
+            <thead className="border-b border-border bg-muted/50 text-left text-[0.6875rem] uppercase text-muted-foreground">
               <tr>
                 <th scope="col" className="px-3 py-2 font-semibold">#</th>
                 <th scope="col" className="px-3 py-2 font-semibold">Participante</th>
@@ -170,7 +170,7 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
                   <tr
                     key={entry.user_id}
                     className={cn(
-                      'border-b border-slate-800/60 transition-colors hover:bg-slate-900/50',
+                      'border-b border-border/60 transition-colors hover:bg-muted/50',
                       isPodium && style.bg
                     )}
                   >
@@ -180,7 +180,7 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
                           'flex size-7 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums',
                           isPodium
                             ? `${style.border} ${style.text} border`
-                            : 'text-slate-500'
+                            : 'text-muted-foreground'
                         )}
                       >
                         {entry.rank <= 3 ? (
@@ -190,13 +190,13 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
                         )}
                       </div>
                     </td>
-                    <td className="max-w-[200px] truncate px-3 py-2.5 font-medium text-slate-100">
+                    <td className="max-w-[200px] truncate px-3 py-2.5 font-medium text-foreground">
                       {entry.name}
                     </td>
-                    <td className={cn('px-3 py-2.5 text-right font-mono text-sm font-bold tabular-nums', isPodium ? style.text : 'text-slate-200')}>
+                    <td className={cn('px-3 py-2.5 text-right font-mono text-sm font-bold tabular-nums', isPodium ? style.text : 'text-foreground')}>
                       {entry.points_total}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-slate-400">
+                    <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
                       {entry.exact_predictions}
                     </td>
                     {isOwner && (

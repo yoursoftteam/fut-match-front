@@ -1,11 +1,7 @@
-/**
- * Hook personalizado para obtener leaderboards
- * Integra con el endpoint GET /api/v1/bet/leaderboard
- */
-
 'use client'
 
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
+import { supabase } from '@/lib/supabase'
 
 export interface LeaderboardEntry {
   rank: number
@@ -21,6 +17,7 @@ interface UseBetLeaderboardParams {
   tournamentId?: string
   limit?: number
   offset?: number
+  realtime?: boolean
 }
 
 interface UseBetLeaderboardReturn {
@@ -37,11 +34,14 @@ export function useBetLeaderboard({
   tournamentId,
   limit = 100,
   offset = 0,
+  realtime = true,
 }: UseBetLeaderboardParams = {}): UseBetLeaderboardReturn {
   const [entries, setEntries] = useState<LeaderboardEntry[]>([])
   const [totalCount, setTotalCount] = useState(0)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const fetchLeaderboard = useCallback(async () => {
     if (mode === 'pool' && !poolId) {
@@ -89,6 +89,55 @@ export function useBetLeaderboard({
   useEffect(() => {
     fetchLeaderboard()
   }, [fetchLeaderboard])
+
+  // Real-time subscription
+  useEffect(() => {
+    if (!realtime) return
+
+    const channelName = `bet_scores:${mode}:${poolId || 'global'}`
+
+    const existingChannels = supabase
+      .getChannels()
+      .filter((ch) => ch.topic === `realtime:${channelName}`)
+
+    existingChannels.forEach((ch) => {
+      supabase.removeChannel(ch)
+    })
+
+    const filter: Record<string, string> = {
+      mode: `eq.${mode}`,
+    }
+    if (poolId) {
+      filter.pool_id = `eq.${poolId}`
+    } else {
+      filter.pool_id = 'is.null'
+    }
+
+    const channel = supabase
+      .channel(channelName)
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'bet_scores_aggregate',
+          filter: Object.entries(filter)
+            .map(([k, v]) => `${k}=${v}`)
+            .join(' and '),
+        },
+        () => {
+          if (debounceRef.current) clearTimeout(debounceRef.current)
+          debounceRef.current = setTimeout(() => {
+            fetchLeaderboard()
+          }, 500)
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [realtime, mode, poolId, fetchLeaderboard])
 
   return {
     entries,
