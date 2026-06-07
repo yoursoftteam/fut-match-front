@@ -14,14 +14,14 @@ export function PoolCard({ pool, onClick, children }: PoolCardProps) {
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-lg border border-slate-800 bg-slate-900/70 p-4 text-left transition-colors hover:border-[#22C55E]/50"
+      className="w-full rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-[#22C55E]/50"
     >
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-semibold text-slate-50 truncate">
+          <h3 className="text-sm font-semibold text-foreground truncate">
             {pool.name}
           </h3>
-          <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
             <span className="flex items-center gap-1">
               {pool.visibility === 'public' ? (
                 <Globe className="size-3" />

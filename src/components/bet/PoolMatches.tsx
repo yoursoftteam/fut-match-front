@@ -150,7 +150,7 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-3 py-12 text-sm text-slate-400">
+      <div className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground">
         <Loader2 className="size-5 animate-spin text-emerald-400" />
         Cargando partidos…
       </div>
@@ -168,7 +168,7 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
 
   if (matches.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-12 text-center text-sm text-slate-500">
+      <div className="flex flex-col items-center gap-2 py-12 text-center text-sm text-muted-foreground">
         No hay partidos disponibles para este torneo
       </div>
     )

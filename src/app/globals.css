@@ -4,13 +4,10 @@
 
 @custom-variant dark (&:is(.dark *));
 html {
-  color-scheme: light dark;
+  color-scheme: light;
 }
 html.dark {
   color-scheme: dark;
-}
-html.light {
-  color-scheme: light;
 }
 
 .skip-to-main {
@@ -694,6 +691,12 @@ p {
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+}
+
+@variant dark {
+  &:where(.dark, .dark *) {
+    @slot;
+  }
 }
 
 @layer base {

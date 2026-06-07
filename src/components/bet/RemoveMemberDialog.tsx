@@ -52,21 +52,21 @@ export function RemoveMemberDialog({
       aria-label="Confirmar eliminación de participante"
     >
       <div
-        className="w-full max-w-sm rounded-lg border border-slate-800 bg-slate-950 shadow-xl"
+        className="w-full max-w-sm rounded-lg border border-border bg-card shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="px-5 pt-5 pb-3">
-          <h2 className="text-base font-semibold text-slate-50">
+          <h2 className="text-base font-semibold text-foreground">
             Eliminar participante
           </h2>
-          <p className="mt-1.5 text-sm text-slate-400 leading-relaxed">
-            Vas a eliminar a <span className="font-medium text-slate-200">{memberName}</span> de la polla. Esta acción no se puede deshacer.
+          <p className="mt-1.5 text-sm text-muted-foreground leading-relaxed">
+            Vas a eliminar a <span className="font-medium text-foreground">{memberName}</span> de la polla. Esta acción no se puede deshacer.
           </p>
         </div>
 
         <div className="px-5 pb-3">
-          <label htmlFor="confirm-remove-input" className="block text-xs text-slate-500 mb-1.5">
-            Escribe <span className="font-mono text-slate-400 bg-slate-900 px-1 rounded">{CONFIRM_PHRASE}</span> para confirmar
+          <label htmlFor="confirm-remove-input" className="block text-xs text-muted-foreground mb-1.5">
+            Escribe <span className="font-mono text-foreground bg-muted px-1 rounded">{CONFIRM_PHRASE}</span> para confirmar
           </label>
           <input
             ref={inputRef}
@@ -76,17 +76,17 @@ export function RemoveMemberDialog({
             onChange={(e) => setValue(e.target.value)}
             autoComplete="off"
             spellCheck={false}
-            className="w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 text-sm text-slate-50 placeholder-slate-600 outline-none transition-colors focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
+            className="w-full rounded-lg border border-border bg-muted px-3 py-2 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-red-500/50 focus:ring-1 focus:ring-red-500/20"
             placeholder="Escribe para confirmar..."
           />
         </div>
 
-        <div className="flex items-center justify-end gap-2 border-t border-slate-800 px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-t border-border px-5 py-3">
           <button
             type="button"
             onClick={onCancel}
             disabled={loading}
-            className="rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-slate-600 hover:text-slate-50 disabled:opacity-50"
+            className="rounded-lg border border-border bg-muted px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground disabled:opacity-50"
           >
             Cancelar
           </button>

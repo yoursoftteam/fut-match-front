@@ -48,7 +48,7 @@ export function BracketRenderer({
   const columnX = [50, 250, 450, 650, 850]
 
   return (
-    <div className="overflow-x-auto rounded-lg border border-slate-700 bg-slate-900/50 p-4">
+    <div className="overflow-x-auto rounded-lg border border-border bg-muted/50 p-4">
       <svg
         ref={svgRef}
         viewBox={`0 0 ${width} ${height}`}
@@ -66,13 +66,13 @@ export function BracketRenderer({
               fill="none"
               stroke="currentColor"
               strokeWidth="1"
-              className="text-slate-700"
+              className="text-muted-foreground"
             />
             <text
               x="70"
               y={`${68 + i * 33}`}
               textAnchor="middle"
-              className="cursor-pointer fill-slate-50 text-xs hover:fill-emerald-500"
+              className="cursor-pointer fill-foreground text-xs hover:fill-emerald-500"
               onClick={() => setSelectedTeam(team)}
               aria-label={`Round of 32: ${team}`}
             >
@@ -92,13 +92,13 @@ export function BracketRenderer({
               fill="none"
               stroke="currentColor"
               strokeWidth="1"
-              className="text-slate-700"
+              className="text-muted-foreground"
             />
             <text
               x="270"
               y={`${118 + i * 66}`}
               textAnchor="middle"
-              className="cursor-pointer fill-slate-50 text-xs hover:fill-emerald-500"
+              className="cursor-pointer fill-foreground text-xs hover:fill-emerald-500"
               onClick={() => setSelectedTeam(team)}
               aria-label={`Quarter Finals: ${team}`}
             >
@@ -118,13 +118,13 @@ export function BracketRenderer({
               fill="none"
               stroke="currentColor"
               strokeWidth="1"
-              className="text-slate-700"
+              className="text-muted-foreground"
             />
             <text
               x="470"
               y={`${168 + i * 132}`}
               textAnchor="middle"
-              className="cursor-pointer fill-slate-50 text-xs hover:fill-emerald-500"
+              className="cursor-pointer fill-foreground text-xs hover:fill-emerald-500"
               onClick={() => setSelectedTeam(team)}
               aria-label={`Semi Finals: ${team}`}
             >
@@ -150,7 +150,7 @@ export function BracketRenderer({
               x="670"
               y="168"
               textAnchor="middle"
-              className="cursor-pointer fill-slate-50 text-xs font-bold hover:fill-emerald-500"
+              className="cursor-pointer fill-foreground text-xs hover:fill-emerald-500"
               onClick={() => setSelectedTeam(qualified.final[0])}
               aria-label={`Final: ${qualified.final[0]}`}
             >
@@ -175,7 +175,7 @@ export function BracketRenderer({
               x="670"
               y="318"
               textAnchor="middle"
-              className="cursor-pointer fill-slate-50 text-xs font-bold hover:fill-emerald-500"
+              className="cursor-pointer fill-foreground text-xs font-bold hover:fill-emerald-500"
               onClick={() => setSelectedTeam(qualified.final[1])}
               aria-label={`Final: ${qualified.final[1]}`}
             >
@@ -198,14 +198,14 @@ export function BracketRenderer({
           x="850"
           y="230"
           textAnchor="middle"
-          className="fill-slate-400 text-xs"
+          className="fill-muted-foreground text-xs"
         >
           Champion
         </text>
       </svg>
 
       {selectedTeam && (
-        <div className="mt-4 rounded-md bg-slate-800 p-2 text-sm text-slate-50">
+        <div className="mt-4 rounded-md bg-muted p-2 text-sm text-foreground">
           Selected: <span className="font-semibold text-emerald-400">{selectedTeam}</span>
         </div>
       )}

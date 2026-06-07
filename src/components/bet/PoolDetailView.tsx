@@ -77,20 +77,20 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
 
   if (loading) {
     return (
-      <div className="flex min-h-dvh items-center justify-center bg-[#0F172A]">
-        <div className="size-8 animate-spin rounded-full border-2 border-slate-700 border-t-[#22C55E]" />
+      <div className="flex min-h-dvh items-center justify-center bg-background">
+        <div className="size-8 animate-spin rounded-full border-2 border-border border-t-[#22C55E]" />
       </div>
     )
   }
 
   if (error || !pool) {
     return (
-      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-[#0F172A] px-4 text-slate-50">
-        <p className="text-red-400">{error || 'Polla no encontrada'}</p>
+      <div className="flex min-h-dvh flex-col items-center justify-center gap-4 bg-background px-4 text-foreground">
+        <p className="text-red-500">{error || 'Polla no encontrada'}</p>
           <button
             type="button"
             onClick={() => router.push(pool ? listPath : fallbackPath)}
-            className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-slate-300 transition-colors hover:bg-slate-700"
+            className="rounded-lg bg-card px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
           >
             Volver
           </button>
@@ -110,13 +110,13 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
   const inviteUrl = `${baseUrl}/join/${pool.invite_code}`
 
   return (
-    <div className="min-h-dvh bg-[#0F172A] text-slate-50">
+    <div className="min-h-dvh bg-background text-foreground">
       <div className="mx-auto max-w-2xl px-4 py-8">
         <div className="mb-6">
           <button
             type="button"
             onClick={() => router.push(listPath)}
-            className="mb-3 flex items-center gap-1.5 text-sm text-slate-400 transition-colors hover:text-slate-50"
+            className="mb-3 flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             <ArrowLeft className="size-4" />
             {listLabel}
@@ -125,7 +125,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           <div className="flex items-start justify-between gap-4">
             <div className="min-w-0 flex-1">
               <h1 className="truncate text-2xl font-bold">{pool.name}</h1>
-              <div className="mt-1 flex items-center gap-3 text-xs text-slate-500">
+              <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   {pool.visibility === 'public' ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
                   {pool.visibility === 'public' ? 'Pública' : 'Privada'}
@@ -153,7 +153,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           </div>
         </div>
 
-        <div className="mb-6 flex border-b border-slate-800" role="tablist">
+        <div className="mb-6 flex border-b border-border" role="tablist">
           {tabs.map(({ id: tabId, label, icon: Icon }) => (
             <button
               key={tabId}
@@ -165,7 +165,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
                 'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors',
                 tab === tabId
                   ? 'border-[#22C55E] text-[#22C55E]'
-                  : 'border-transparent text-slate-500 hover:text-slate-300'
+                  : 'border-transparent text-muted-foreground hover:text-foreground/80'
               )}
             >
               <Icon className="size-4" />

@@ -24,14 +24,14 @@ export function JoinByCodeSection({ onJoin, loading, error, onClearError }: Join
       <button
         type="button"
         onClick={() => setShowInput(!showInput)}
-        className="mb-6 flex w-full items-center gap-2 rounded-lg border border-dashed border-slate-800 px-4 py-2.5 text-sm text-slate-500 transition-colors hover:border-slate-700 hover:text-slate-400"
+        className="mb-6 flex w-full items-center gap-2 rounded-lg border border-dashed border-border px-4 py-2.5 text-sm text-muted-foreground transition-colors hover:border-foreground/20 hover:text-foreground/80"
       >
         <KeyRound className="size-4" />
         {showInput ? 'Ocultar' : '¿Tienes un código de invitación?'}
       </button>
 
       {showInput && (
-        <div className="mb-6 rounded-lg border border-slate-800 bg-slate-900/50 p-4">
+        <div className="mb-6 rounded-lg border border-border bg-muted/50 p-4">
           <div className="flex gap-2">
             <input
               type="text"
@@ -42,7 +42,7 @@ export function JoinByCodeSection({ onJoin, loading, error, onClearError }: Join
               }}
               placeholder="Ej: ABC123DEF0"
               maxLength={10}
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-800/50 px-3 py-2 text-sm text-slate-50 placeholder-slate-600 focus:border-[#22C55E]/50 focus:outline-none uppercase tracking-widest"
+              className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-[#22C55E]/50 focus:outline-none uppercase tracking-widest"
             />
             <button
               type="button"

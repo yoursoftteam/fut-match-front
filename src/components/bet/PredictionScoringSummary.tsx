@@ -38,8 +38,8 @@ export function PredictionScoringSummary() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-50">Solo marcadores</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-xl font-bold text-foreground">Solo marcadores</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Esta modalidad no pide campeon, subcampeon ni premios. Todo se gana partido a partido.
         </p>
       </div>
@@ -49,12 +49,12 @@ export function PredictionScoringSummary() {
           Marcador exacto
         </p>
         <div className="mt-2 flex items-end gap-2">
-          <span className="font-mono text-4xl font-bold tabular-nums text-slate-50">
+          <span className="font-mono text-4xl font-bold tabular-nums text-foreground">
             {exactScoreTotal}
           </span>
-          <span className="pb-1 text-sm font-medium text-slate-300">pts</span>
+          <span className="pb-1 text-sm font-medium text-muted-foreground">pts</span>
         </div>
-        <p className="mt-2 text-xs text-slate-400">
+        <p className="mt-2 text-xs text-muted-foreground">
           5 por resultado, 2 por cada equipo con goles correctos y 1 por diferencia.
         </p>
       </div>
@@ -63,16 +63,16 @@ export function PredictionScoringSummary() {
         {RULES.map(({ label, value, suffix = "pts", helper, Icon }) => (
           <div
             key={label}
-            className="flex items-center gap-3 rounded-lg border border-slate-800 bg-slate-900/70 p-3"
+            className="flex items-center gap-3 rounded-lg border border-border bg-muted/50 p-3"
           >
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-slate-950 text-[#22C55E]">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-[#22C55E]">
               <Icon className="size-4" aria-hidden="true" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-sm font-medium text-slate-100">{label}</p>
-              <p className="text-xs text-slate-500">{helper}</p>
+              <p className="text-sm font-medium text-foreground">{label}</p>
+              <p className="text-xs text-muted-foreground">{helper}</p>
             </div>
-            <div className="font-mono text-sm font-bold tabular-nums text-slate-50">
+            <div className="font-mono text-sm font-bold tabular-nums text-foreground">
               {value} {suffix}
             </div>
           </div>

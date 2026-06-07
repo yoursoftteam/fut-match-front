@@ -105,28 +105,28 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
   return (
     <section
       aria-labelledby="tournament-predictions-heading"
-      className="mb-6 rounded-lg border border-slate-800 bg-slate-950"
+      className="mb-6 rounded-lg border border-border bg-card"
     >
       <button
         type="button"
         onClick={() => setCollapsed(!collapsed)}
-        className="flex w-full items-center gap-3 border-b border-slate-800 bg-slate-900/70 px-4 py-3 text-left transition-colors hover:bg-slate-900"
+        className="flex w-full items-center gap-3 border-b border-border bg-muted px-4 py-3 text-left transition-colors hover:bg-muted"
         aria-expanded={!collapsed}
         aria-controls="tournament-predictions-content"
       >
         <Globe className="size-5 text-emerald-400" aria-hidden="true" />
-        <h2 id="tournament-predictions-heading" className="text-sm font-semibold text-slate-200">
+        <h2 id="tournament-predictions-heading" className="text-sm font-semibold text-foreground">
           Predicciones de torneo
         </h2>
         {saving && (
-          <span className="flex items-center gap-1.5 text-xs text-slate-400">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Loader2 className="size-3 animate-spin" aria-hidden="true" />
             Guardando…
           </span>
         )}
         <ChevronDown
           className={cn(
-            'ml-auto size-4 text-slate-500 transition-transform duration-200',
+            'ml-auto size-4 text-muted-foreground transition-transform duration-200',
             collapsed && '-rotate-90'
           )}
           aria-hidden="true"
@@ -146,7 +146,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
 
           <div className="px-4 py-6">
         {loading ? (
-          <div className="flex items-center justify-center gap-3 py-8 text-sm text-slate-400">
+          <div className="flex items-center justify-center gap-3 py-8 text-sm text-muted-foreground">
             <Loader2 className="size-5 animate-spin text-emerald-400" />
             Cargando…
           </div>
@@ -164,21 +164,21 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                     'flex flex-col rounded-lg border p-4 transition-all',
                     podiumY,
                     podiumWidth,
-                    current
-                      ? `${borderColor} bg-emerald-500/5`
-                      : 'border-slate-800 bg-slate-900/50'
+                      current
+                        ? `${borderColor} bg-emerald-500/5`
+                        : 'border-border bg-muted/50'
                   )}
                 >
                   <div className="mb-2 flex items-center gap-2">
                     <Icon className={cn('size-4', color)} aria-hidden="true" />
-                    <span className="text-sm font-semibold text-slate-100">
+                    <span className="text-sm font-semibold text-foreground">
                       {label}
                     </span>
                     {savedCategory === key && (
                       <CheckCircle2 className="ml-auto size-3.5 text-emerald-400" />
                     )}
                   </div>
-                  <p className="mb-3 text-[0.6875rem] text-slate-500">
+                  <p className="mb-3 text-[0.6875rem] text-muted-foreground">
                     {description}
                   </p>
 
@@ -191,8 +191,8 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                       className={cn(
                         'w-full border text-sm',
                         current
-                          ? 'border-emerald-500/30 bg-slate-800'
-                          : 'border-slate-700 bg-slate-800'
+                          ? 'border-emerald-500/30 bg-card'
+                          : 'border-border bg-card'
                       )}
                       aria-label={`Seleccionar ${label.toLowerCase()}`}
                     >
@@ -206,7 +206,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                                 className="size-5 rounded-sm object-cover"
                               />
                             ) : (
-                              <span className="size-5 rounded-sm border border-slate-600 bg-slate-700" />
+                              <span className="size-5 rounded-sm border border-border bg-muted" />
                             )}
                             <span>{current.team.name}</span>
                           </span>
@@ -231,7 +231,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                                 className="size-5 rounded-sm object-cover"
                               />
                             ) : (
-                              <span className="size-5 rounded-sm border border-slate-600 bg-slate-700" />
+                              <span className="size-5 rounded-sm border border-border bg-muted" />
                             )}
                             {team.name}
                           </SelectItem>
