@@ -12,7 +12,8 @@ const csp = [
   "frame-ancestors 'none'",
   // Scripts: unsafe-inline necesario en prod porque Next.js inyecta scripts inline de bootstrap.
   // unsafe-eval solo en dev (Fast Refresh / webpack).
-  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+  // static.cloudflareinsights.com necesario para Cloudflare Pages Analytics beacon.
+  `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   // Styles: unsafe-inline requerido por Tailwind en producción (no usa nonces por defecto).
   "style-src 'self' 'unsafe-inline'",
   // Fuentes embebidas en CSS (data: URI) usadas por next/font.
