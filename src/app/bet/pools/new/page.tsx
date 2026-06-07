@@ -9,7 +9,7 @@ async function getActiveTournament() {
   const { data, error } = await supabase
     .from("bet_tournaments")
     .select("id, name, slug, status")
-    .eq("status", "active")
+    .in("status", ["active", "draft"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

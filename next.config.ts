@@ -20,7 +20,8 @@ const csp = [
   // Imágenes: self + data URIs (favicons, avatares inline) + HTTPS genérico.
   "img-src 'self' data: blob: https:",
   // Conexiones: self + Supabase REST/auth + WebSocket de Supabase Realtime.
-  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS}`,
+  // En dev se agrega el Supabase local (http://127.0.0.1:54321).
+  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS}${process.env.NODE_ENV === "development" ? " http://127.0.0.1:54321 ws://127.0.0.1:54321" : ""}`,
   // Evitar iframes de contenido externo.
   "frame-src 'none'",
   // Fuerza HTTPS en recursos mixtos.
