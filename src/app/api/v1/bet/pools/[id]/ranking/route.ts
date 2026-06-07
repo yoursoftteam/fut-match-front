@@ -123,7 +123,6 @@ export async function GET(
     }
 
     const entries: RankingEntry[] = userIds
-      .filter((uid) => (scoreMap.get(uid) ?? 0) > 0 || (totalPredMap.get(uid) ?? 0) > 0)
       .map((uid) => {
         const meta = userMetaMap.get(uid) ?? { email: 'Unknown', fullName: null }
         let name: string

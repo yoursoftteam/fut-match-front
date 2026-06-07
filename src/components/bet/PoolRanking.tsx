@@ -138,8 +138,8 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
       ) : empty ? (
         <div className="flex flex-col items-center gap-2 px-4 py-12 text-center">
           <Users className="size-8 text-muted-foreground" aria-hidden="true" />
-          <p className="text-sm text-muted-foreground">Aún no hay participantes con puntaje</p>
-          <p className="text-xs text-muted-foreground">Los resultados aparecerán cuando haya partidos finalizados</p>
+          <p className="text-sm text-muted-foreground">Aún no hay participantes en esta polla</p>
+          <p className="text-xs text-muted-foreground">Comparte el enlace de invitación para agregar participantes</p>
         </div>
       ) : (
         <div className="overflow-x-auto">
