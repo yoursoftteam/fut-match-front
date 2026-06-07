@@ -1,21 +1,15 @@
-import { createClient } from "@supabase/supabase-js";
+import { getAnonClient } from "@/lib/supabase-admin";
 import { PoolCreationWizard } from "@/components/bet/PoolCreationWizard";
 import { redirect } from "next/navigation";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
 async function getActiveTournament() {
-  if (!supabaseUrl || !supabaseServiceKey) {
-    return null;
-  }
-
-  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const supabase = getAnonClient();
+  if (!supabase) return null;
 
   const { data, error } = await supabase
     .from("bet_tournaments")
     .select("id, name, slug, status")
-    .eq("status", "active")
+    .in("status", ["active", "draft"])
     .order("created_at", { ascending: false })
     .limit(1)
     .maybeSingle();

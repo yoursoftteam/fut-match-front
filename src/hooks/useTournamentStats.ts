@@ -35,15 +35,25 @@ export function useTournamentStats(
         `/api/v1/bet/tournaments/${encodeURIComponent(slug)}/stats`
       )
 
+      interface ErrorBody { error?: { message?: string; code?: string }; success?: boolean; data?: { stats: TournamentStats } }
+      let errorBody: ErrorBody | null = null
+      try {
+        errorBody = await response.json()
+      } catch { /* ignore parse error */ }
+
       if (!response.ok) {
-        throw new Error('Failed to fetch tournament stats')
+        const apiMsg = errorBody?.error?.message
+        throw new Error(
+          apiMsg
+            ? `Tournament stats error (${response.status}): ${apiMsg}`
+            : `Failed to fetch tournament stats (${response.status})`
+        )
       }
 
-      const result = await response.json()
-      if (result.success) {
-        setStats(result.data.stats)
+      if (errorBody?.success) {
+        setStats(errorBody.data!.stats)
       } else {
-        throw new Error(result.error?.message || 'Unknown error')
+        throw new Error(errorBody?.error?.message || 'Unknown error')
       }
     } catch (err) {
       const errorMessage =
