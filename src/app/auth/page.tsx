@@ -67,7 +67,7 @@ function AuthForm() {
   const isSignUp = mode === "signup";
   const isForgotMode = mode === "forgot";
   const isResetMode = mode === "reset";
-  const redirectTo = searchParams.get("redirect_to") || "/dashboard";
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   useEffect(() => {
     setMode(getModeFromSearchParams(searchParams.get("mode")));
@@ -143,13 +143,13 @@ function AuthForm() {
     }
 
     try {
-      const redirectTo = pendingInvite
+      const googleRedirect = pendingInvite
         ? buildRedirectUrl(`/join/${pendingInvite}`)
-        : buildRedirectUrl("/dashboard");
+        : buildRedirectUrl(redirectTo);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo,
+          redirectTo: googleRedirect,
           queryParams: {
             prompt: "select_account",
           },
