@@ -1,0 +1,2 @@
+-- Stub: migration already applied remotely via SQL editor.
+-- Contents unknown; kept empty to reconcile migration history.
