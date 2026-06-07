@@ -593,8 +593,11 @@ export async function POST(
       .select()
       .single()
 
-    if (configError || !config) {
+    if (configError) {
       throw configError
+    }
+    if (!config) {
+      throw new Error('Pool config insert returned null without error — possible RLS violation or missing return')
     }
 
     // Build the invite URL (absolute canonical URL)
@@ -616,13 +619,25 @@ export async function POST(
       { status: 201 }
     )
   } catch (error) {
-    console.error('Pool creation error:', error)
+    const errorDetails = {
+      type: typeof error,
+      isNull: error === null,
+      message: error instanceof Error ? error.message : String(error),
+      ...(error && typeof error === 'object'
+        ? {
+            code: (error as Record<string, unknown>).code,
+            details: (error as Record<string, unknown>).details,
+            hint: (error as Record<string, unknown>).hint,
+          }
+        : {}),
+    }
+    console.error('Pool creation error:', JSON.stringify(errorDetails, null, 2))
     return NextResponse.json(
       {
         success: false,
         error: {
           code: 'INTERNAL_ERROR',
-          message: 'Failed to create pool',
+          message: `Failed to create pool: ${errorDetails.message}`,
         },
       } as ErrorResponse,
       { status: 500 }
