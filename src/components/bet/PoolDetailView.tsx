@@ -100,10 +100,12 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
 
   const isOwner = userId === pool.owner_id
 
+  const isPredictions = pool.competition_type === 'predictions'
+
   const tabs: { id: Tab; label: string; icon: typeof Trophy }[] = [
     { id: 'ranking', label: 'Ranking', icon: Trophy },
     { id: 'matches', label: 'Partidos', icon: ClipboardList },
-    { id: 'tournament', label: 'Predicciones', icon: Globe },
+    ...(isPredictions ? [] : [{ id: 'tournament' as const, label: 'Predicciones' as const, icon: Globe as typeof Trophy }]),
   ]
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
