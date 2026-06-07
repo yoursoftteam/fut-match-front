@@ -44,6 +44,8 @@
  *   - 500: Internal server error
  */
 
+export const runtime = "edge";
+
 import { NextRequest, NextResponse } from 'next/server'
 import { getAuthenticatedClient } from '@/lib/supabase-admin'
 import {

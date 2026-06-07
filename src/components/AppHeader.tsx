@@ -26,7 +26,7 @@ export function AppHeader() {
     ...(!isLoggedIn ? [
       { href: "/", label: "Inicio" },
       { href: "/create", label: "Armar partido" },
-      { href: "/auth", label: "Crear Predicciones" },
+      { href: "/auth?redirectTo=/bet/predictions/new", label: "Crear Predicciones" },
     ] : [
       { href: "/dashboard", label: "Mi Dashboard" },
       { href: "/matches", label: "Mis Partidos" },

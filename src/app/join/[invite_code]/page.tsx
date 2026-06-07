@@ -1,5 +1,7 @@
 import { JoinInviteGate } from "@/components/bet/JoinInviteGate";
 
+export const runtime = "edge";
+
 export default async function JoinPage({
   params,
 }: {
