@@ -142,23 +142,23 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
           <p className="text-xs text-muted-foreground">Comparte el enlace de invitación para agregar participantes</p>
         </div>
       ) : (
-        <div className="overflow-x-auto">
-          <table className="w-full min-w-[400px] text-sm">
+        <div className="-mx-4 sm:mx-0 overflow-x-auto">
+          <table className="w-full min-w-[320px] sm:min-w-[400px] text-sm">
             <caption className="sr-only">Ranking de participantes ordenados por puntaje</caption>
             <colgroup>
-              <col className="w-14" />
+              <col className="w-12 sm:w-14" />
               <col />
-              <col className="w-20" />
-              <col className="w-24" />
-              {isOwner && <col className="w-12" />}
+              <col className="w-16 sm:w-20" />
+              <col className="w-20 sm:w-24" />
+              {isOwner && <col className="w-10 sm:w-12" />}
             </colgroup>
             <thead className="border-b border-border bg-muted/50 text-left text-[0.6875rem] uppercase text-muted-foreground">
               <tr>
-                <th scope="col" className="px-3 py-2 font-semibold">#</th>
-                <th scope="col" className="px-3 py-2 font-semibold">Participante</th>
-                <th scope="col" className="px-3 py-2 text-right font-semibold">Pts</th>
-                <th scope="col" className="px-3 py-2 text-right font-semibold">Exactas</th>
-                {isOwner && <th scope="col" className="px-3 py-2 text-right font-semibold sr-only">Acción</th>}
+                <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">#</th>
+                <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">Participante</th>
+                <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold">Pts</th>
+                <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold">Exactas</th>
+                {isOwner && <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold sr-only">Acción</th>}
               </tr>
             </thead>
             <tbody>
@@ -174,44 +174,44 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
                       isPodium && style.bg
                     )}
                   >
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 sm:px-3 py-2 sm:py-2.5">
                       <div
                         className={cn(
-                          'flex size-7 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums',
+                          'flex size-6 sm:size-7 items-center justify-center rounded-md font-mono text-xs font-bold tabular-nums',
                           isPodium
                             ? `${style.border} ${style.text} border`
                             : 'text-muted-foreground'
                         )}
                       >
                         {entry.rank <= 3 ? (
-                          <span className="text-base leading-none">{MEDAL_EMOJI[entry.rank - 1]}</span>
+                          <span className="text-sm sm:text-base leading-none">{MEDAL_EMOJI[entry.rank - 1]}</span>
                         ) : (
                           entry.rank
                         )}
                       </div>
                     </td>
-                    <td className="max-w-[200px] truncate px-3 py-2.5 font-medium text-foreground">
+                    <td className="max-w-[140px] sm:max-w-[200px] truncate px-2 sm:px-3 py-2 sm:py-2.5 font-medium text-foreground">
                       {entry.name}
                     </td>
-                    <td className={cn('px-3 py-2.5 text-right font-mono text-sm font-bold tabular-nums', isPodium ? style.text : 'text-foreground')}>
+                    <td className={cn('px-2 sm:px-3 py-2 sm:py-2.5 text-right font-mono text-sm font-bold tabular-nums', isPodium ? style.text : 'text-foreground')}>
                       {entry.points_total}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
+                    <td className="px-2 sm:px-3 py-2 sm:py-2.5 text-right font-mono text-xs tabular-nums text-muted-foreground">
                       {entry.exact_predictions}
                     </td>
                     {isOwner && (
-                      <td className="px-1 py-2.5 text-right">
+                      <td className="px-1 py-2 sm:py-2.5 text-right">
                         <button
                           type="button"
                           onClick={() => setPendingRemove({ userId: entry.user_id, name: entry.name })}
                           disabled={removingUserId === entry.user_id}
-                          className="rounded p-1 text-red-400 transition hover:bg-red-900/30 hover:text-red-300 disabled:opacity-40"
+                          className="rounded p-1.5 sm:p-1 text-red-400 transition hover:bg-red-900/30 hover:text-red-300 disabled:opacity-40 min-w-[2.75rem] min-h-[2.75rem] sm:min-w-0 sm:min-h-0 flex items-center justify-center"
                           aria-label={`Eliminar a ${entry.name} de la polla`}
                         >
                           {removingUserId === entry.user_id ? (
-                            <span className="inline-block size-3.5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
+                            <span className="inline-block size-4 sm:size-3.5 animate-spin rounded-full border-2 border-red-400 border-t-transparent" />
                           ) : (
-                            <Trash2 size={14} aria-hidden />
+                            <Trash2 size={16} aria-hidden />
                           )}
                         </button>
                       </td>

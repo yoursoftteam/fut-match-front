@@ -27,10 +27,7 @@ const RULE_LABELS: Record<string, string> = {
   pts_subchampion: "Subcampeon",
   pts_third_place: "Tercer puesto",
   pts_top_scorer: "Goleador",
-  pts_top_assistant: "Mayor asistidor",
   pts_mvp: "MVP",
-  pts_best_goalkeeper: "Mejor arquero",
-  pts_least_conceded: "Valla menos vencida",
 };
 
 function getPredictionRules(config: Record<string, number>) {

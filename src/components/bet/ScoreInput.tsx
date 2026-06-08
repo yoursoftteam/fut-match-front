@@ -163,7 +163,7 @@ export function ScoreInput({
     ? 'border-red-500/50 focus-within:border-red-500'
     : 'border-emerald-500/50 focus-within:border-emerald-500'
 
-  // Compact version: inline score inputs without buttons
+  // Compact version: slightly larger inputs for easier interaction
   if (compact) {
     return (
       <div className="flex items-center gap-1">
@@ -177,7 +177,7 @@ export function ScoreInput({
           disabled={locked || disabled}
           aria-label={`Home team score for match ${matchId}`}
           className={cn(
-            'w-7 h-7 border rounded text-center text-sm font-bold text-slate-50 outline-none bg-slate-800 border-slate-700',
+            'w-9 h-9 sm:w-8 sm:h-8 border rounded text-center text-sm font-bold text-slate-50 outline-none bg-slate-800 border-slate-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
             borderColor,
             locked && 'cursor-not-allowed opacity-50'
           )}
@@ -193,7 +193,7 @@ export function ScoreInput({
           disabled={locked || disabled}
           aria-label={`Away team score for match ${matchId}`}
           className={cn(
-            'w-7 h-7 border rounded text-center text-sm font-bold text-slate-50 outline-none bg-slate-800 border-slate-700',
+            'w-9 h-9 sm:w-8 sm:h-8 border rounded text-center text-sm font-bold text-slate-50 outline-none bg-slate-800 border-slate-700 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
             borderColor,
             locked && 'cursor-not-allowed opacity-50'
           )}
@@ -223,7 +223,7 @@ export function ScoreInput({
             disabled={locked || disabled}
             aria-label={`Home team score for match ${matchId}`}
             className={cn(
-              'w-12 border-0 bg-transparent text-center text-2xl font-bold text-slate-50 outline-none md:w-14',
+              'w-12 border-0 bg-transparent text-center text-2xl font-bold text-slate-50 outline-none md:w-14 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
               locked && 'cursor-not-allowed'
             )}
           />
@@ -270,7 +270,7 @@ export function ScoreInput({
             disabled={locked || disabled}
             aria-label={`Away team score for match ${matchId}`}
             className={cn(
-              'w-12 border-0 bg-transparent text-center text-2xl font-bold text-slate-50 outline-none md:w-14',
+              'w-12 border-0 bg-transparent text-center text-2xl font-bold text-slate-50 outline-none md:w-14 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none',
               locked && 'cursor-not-allowed'
             )}
           />

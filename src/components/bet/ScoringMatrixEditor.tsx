@@ -37,10 +37,7 @@ const RULE_GROUPS = [
       { key: "pts_subchampion", label: "Subcampeón" },
       { key: "pts_third_place", label: "Tercer puesto" },
       { key: "pts_top_scorer", label: "Goleador" },
-      { key: "pts_top_assistant", label: "Mayor asistidor" },
       { key: "pts_mvp", label: "MVP" },
-      { key: "pts_best_goalkeeper", label: "Mejor arquero" },
-      { key: "pts_least_conceded", label: "Valla menos vencida" },
     ],
   },
   {

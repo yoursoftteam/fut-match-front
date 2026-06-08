@@ -23,10 +23,7 @@ const DEFAULT_POOL_CONFIG = {
   pts_subchampion: 15,
   pts_third_place: 12,
   pts_top_scorer: 12,
-  pts_top_assistant: 12,
   pts_mvp: 12,
-  pts_best_goalkeeper: 12,
-  pts_least_conceded: 10,
 };
 
 type Step = 1 | 2 | 3;
