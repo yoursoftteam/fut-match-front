@@ -22,8 +22,6 @@ const DEFAULT_POOL_CONFIG = {
   pts_champion: 18,
   pts_subchampion: 15,
   pts_third_place: 12,
-  pts_top_scorer: 12,
-  pts_mvp: 12,
 };
 
 type Step = 1 | 2 | 3;

@@ -36,8 +36,6 @@ const RULE_GROUPS = [
       { key: "pts_champion", label: "Campeón" },
       { key: "pts_subchampion", label: "Subcampeón" },
       { key: "pts_third_place", label: "Tercer puesto" },
-      { key: "pts_top_scorer", label: "Goleador" },
-      { key: "pts_mvp", label: "MVP" },
     ],
   },
   {

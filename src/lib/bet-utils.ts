@@ -486,8 +486,6 @@ export function validatePoolConfig(
     'pts_champion',
     'pts_subchampion',
     'pts_third_place',
-    'pts_top_scorer',
-    'pts_mvp',
   ] as const;
 
   for (const field of fields) {

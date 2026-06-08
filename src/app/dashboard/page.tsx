@@ -5,8 +5,9 @@ import { useMatches, type Match } from '@/hooks/useMatches'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Trash2, Plus, Trophy, MapPin, Users, Calendar, Zap, ChevronRight, BarChart2 } from 'lucide-react'
+import { Trash2, Plus, Trophy, MapPin, Users, Calendar, Zap, ChevronRight, Target } from 'lucide-react'
 import FrecuentesSection from '@/components/FrecuentesSection'
+import MisPrediccionesSection from '@/components/MisPrediccionesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
@@ -273,7 +274,7 @@ export default function DashboardPage() {
       <main className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
         {/* Welcome */}
-        <section className="mb-10">
+        <section className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
@@ -283,55 +284,64 @@ export default function DashboardPage() {
                 Hola, <span className="text-primary">{userName}</span>
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Gestiona tus partidos y demuestra tu nivel.
+                Gestiona tus partidos, predicciones y demuestra tu nivel.
               </p>
             </div>
-            <Link
-              href="/create"
-              className="inline-flex items-center gap-2 btn-primary-fm neon-glow px-5 py-3 rounded-xl font-bold text-sm shrink-0 cursor-pointer"
-            >
-              <Zap className="w-4 h-4" />
-              Armar partido
-            </Link>
           </div>
         </section>
 
-        {/* Quick Actions — desktop only */}
-        <section className="hidden md:block mb-12">
+        {/* Quick Actions */}
+        <section className="mb-12">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
             Acciones rápidas
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="flex flex-col gap-2">
             <Link
               href="/create"
-              className="card match-card p-6 text-center group cursor-pointer"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-primary/40 group cursor-pointer"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
-                <Plus className="w-6 h-6 text-primary" />
+              <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Plus className="size-4 text-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-card-foreground mb-1 group-hover:text-primary transition-colors">
+              <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
                 Armar partido
-              </h3>
-              <p className="text-xs text-muted-foreground">Nuevo en 2 minutos</p>
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Nuevo en 2 min</span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 -ml-1" />
             </Link>
 
-            <div className="card p-6 text-center opacity-40 cursor-not-allowed select-none">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                <Trophy className="w-6 h-6 text-muted-foreground" />
+            <Link
+              href="/bet/predictions/new"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-primary/40 group cursor-pointer"
+            >
+              <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Target className="size-4 text-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-card-foreground mb-1">Crear Torneo</h3>
-              <p className="text-xs text-muted-foreground">Próximamente</p>
-            </div>
+              <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
+                Crear Predicciones
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Solo marcadores</span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 -ml-1" />
+            </Link>
 
-            <div className="card p-6 text-center opacity-40 cursor-not-allowed select-none">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                <MapPin className="w-6 h-6 text-muted-foreground" />
+            <Link
+              href="/bet/pools/new"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-accent/40 group cursor-pointer"
+            >
+              <div className="size-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
+                <Trophy className="size-4 text-accent" />
               </div>
-              <h3 className="text-sm font-semibold text-card-foreground mb-1">Buscar Canchas</h3>
-              <p className="text-xs text-muted-foreground">Próximamente</p>
-            </div>
+              <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-accent transition-colors leading-none">
+                Crear Polla
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Apuesta con amigos</span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-accent transition-colors shrink-0 -ml-1" />
+            </Link>
           </div>
         </section>
+
+        {/* Mis Predicciones */}
+        <MisPrediccionesSection />
 
         {/* Partidos Frecuentes */}
         <FrecuentesSection />
@@ -581,28 +591,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Coming soon — mobile quick access */}
-        <section className="md:hidden mt-10">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-            Próximamente
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { icon: Trophy, label: 'Torneos' },
-              { icon: BarChart2, label: 'Estadísticas' },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="card p-5 flex flex-col items-center gap-3 opacity-40 cursor-not-allowed select-none"
-              >
-                <div className="w-10 h-10 rounded-xl bg-muted border border-border flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+
       </main>
 
       <ConfirmDialog
