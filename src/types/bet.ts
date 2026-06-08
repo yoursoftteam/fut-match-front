@@ -141,9 +141,6 @@ export interface PoolConfigVersion {
   pts_subchampion: number;
   pts_third_place: number;
   
-  // Individual achievements
-  pts_top_scorer: number;
-  pts_mvp: number;
   
   is_frozen: boolean;
   frozen_at?: string;
@@ -296,8 +293,6 @@ export interface UpdatePoolConfigRequest {
   pts_champion?: number;
   pts_subchampion?: number;
   pts_third_place?: number;
-  pts_top_scorer?: number;
-  pts_mvp?: number;
 }
 
 export interface CreatePredictionRequest {
@@ -506,8 +501,6 @@ export const DEFAULT_POOL_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool_id' | 'cr
   pts_champion: 18,
   pts_subchampion: 15,
   pts_third_place: 12,
-  pts_top_scorer: 12,
-  pts_mvp: 12,
 };
 
 export const PREDICTION_COMPETITION_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool_id' | 'created_at' | 'is_frozen' | 'frozen_at'> = {
@@ -520,8 +513,6 @@ export const PREDICTION_COMPETITION_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool
   pts_champion: 0,
   pts_subchampion: 0,
   pts_third_place: 0,
-  pts_top_scorer: 0,
-  pts_mvp: 0,
 };
 
 export const STAGE_ORDER: Record<MatchStage, number> = {

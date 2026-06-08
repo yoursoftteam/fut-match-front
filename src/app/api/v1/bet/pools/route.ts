@@ -18,8 +18,6 @@
  *       pts_champion?: number (default 18),
  *       pts_subchampion?: number (default 15),
  *       pts_third_place?: number (default 12),
- *       pts_top_scorer?: number (default 12),
- *       pts_mvp?: number (default 12),
  *     }
  *     client_request_id?: string (for idempotency)
  *   }
@@ -64,8 +62,6 @@ const DEFAULT_POOL_CREATE_CONFIG = {
   pts_champion: 18,
   pts_subchampion: 15,
   pts_third_place: 12,
-  pts_top_scorer: 12,
-  pts_mvp: 12,
 }
 
 const COMPETITION_TYPES: PoolCompetitionType[] = ['pool', 'predictions']
@@ -577,8 +573,6 @@ export async function POST(
         pts_champion: mergedConfig.pts_champion,
         pts_subchampion: mergedConfig.pts_subchampion,
         pts_third_place: mergedConfig.pts_third_place,
-        pts_top_scorer: mergedConfig.pts_top_scorer,
-        pts_mvp: mergedConfig.pts_mvp,
         is_frozen: false,
       })
       .select()
