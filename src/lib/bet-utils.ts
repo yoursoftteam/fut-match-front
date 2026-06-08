@@ -487,10 +487,7 @@ export function validatePoolConfig(
     'pts_subchampion',
     'pts_third_place',
     'pts_top_scorer',
-    'pts_top_assistant',
     'pts_mvp',
-    'pts_best_goalkeeper',
-    'pts_least_conceded',
   ] as const;
 
   for (const field of fields) {

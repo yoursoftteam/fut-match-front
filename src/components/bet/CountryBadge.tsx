@@ -56,12 +56,19 @@ export function CountryBadge({
       )}
       {...props}
     >
-      <img
-        src={flag_svg_url}
-        alt={`${name} flag`}
-        className={cn('flex-shrink-0 rounded-sm', variants.flag)}
-        aria-hidden="true"
-      />
+      {flag_svg_url ? (
+        <img
+          src={flag_svg_url}
+          alt={`${name} flag`}
+          className={cn('flex-shrink-0 rounded-sm', variants.flag)}
+          aria-hidden="true"
+        />
+      ) : (
+        <span
+          aria-hidden="true"
+          className={cn('flex-shrink-0 rounded-sm border border-slate-700 bg-slate-800', variants.flag)}
+        />
+      )}
 
       <div className="flex min-w-0 flex-col gap-0.5">
         <div

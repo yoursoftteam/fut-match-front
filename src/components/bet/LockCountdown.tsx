@@ -55,10 +55,13 @@ export function LockCountdown({
     )
   }
 
-  return (
-    <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
-      {showTimer && <span>Edit closes in {timeLeft}</span>}
-      {!showTimer && <span>Editable</span>}
-    </div>
-  )
+  if (showTimer) {
+    return (
+      <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
+        <span>Edit closes in {timeLeft}</span>
+      </div>
+    )
+  }
+
+  return null
 }

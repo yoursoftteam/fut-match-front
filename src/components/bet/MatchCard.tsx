@@ -46,49 +46,47 @@ export function MatchCard({
     hour: '2-digit',
     minute: '2-digit',
   })
+  const kickoffDate = new Date(match.kickoff_at).toLocaleDateString('es-CO', {
+    day: '2-digit',
+    month: 'short',
+  }).replace(' de ', ' ')
 
-  // Compact version: single line
+  // Compact version: stacked on mobile, single row on desktop
   if (compact) {
     return (
       <div
         className={cn(
-          'rounded border px-3 py-2 flex items-center justify-between gap-2 transition-all duration-200 text-xs',
+          'rounded border px-3 py-2 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-1 sm:gap-2 transition-all duration-200 text-xs',
           borderColor,
           bgColor,
           className
         )}
       >
-        {/* Time + Teams in a row */}
-        <div className="flex items-center gap-1 flex-1 min-w-0">
-          {/* Time */}
-          <span className="text-muted-foreground font-mono whitespace-nowrap">{kickoffTime}</span>
-          
-          {/* Home Team */}
-          <div className="flex-1 min-w-0">
-            <CountryBadge
-              name={match.home_team.name}
-              fifa_code={match.home_team.fifa_code}
-              flag_svg_url={match.home_team.flag_svg_url}
-              size="xs"
-            />
-          </div>
+        {/* Date + Time */}
+        <div className="text-center sm:text-start text-muted-foreground font-mono text-xs">
+          <span className="text-[0.625rem] uppercase tracking-wider">{kickoffDate}</span>
+          <span className="ml-1">{kickoffTime}</span>
+        </div>
 
-          {/* vs separator + score */}
-          <div className="text-muted-foreground font-bold mx-1">vs</div>
-
-          {/* Away Team */}
-          <div className="flex-1 min-w-0">
-            <CountryBadge
-              name={match.away_team.name}
-              fifa_code={match.away_team.fifa_code}
-              flag_svg_url={match.away_team.flag_svg_url}
-              size="xs"
-            />
-          </div>
+        {/* Teams */}
+        <div className="flex items-center justify-center gap-1.5 sm:flex-1 sm:min-w-0">
+          <CountryBadge
+            name={match.home_team.name}
+            fifa_code={match.home_team.fifa_code}
+            flag_svg_url={match.home_team.flag_svg_url}
+            size="xs"
+          />
+          <span className="text-muted-foreground font-bold">vs</span>
+          <CountryBadge
+            name={match.away_team.name}
+            fifa_code={match.away_team.fifa_code}
+            flag_svg_url={match.away_team.flag_svg_url}
+            size="xs"
+          />
         </div>
 
         {/* Score Input or Display */}
-        <div className="flex items-center gap-2 whitespace-nowrap">
+        <div className="flex items-center justify-center sm:justify-end gap-1.5 sm:shrink-0 whitespace-nowrap">
           {canEdit && !isLocked && (
             <ScoreInput
               homeScore={prediction?.home_score_predicted ?? 0}
@@ -103,9 +101,9 @@ export function MatchCard({
 
           {(isLocked || !canEdit) && prediction && (
             <div className="flex items-center gap-1">
-              <span className="font-bold text-foreground">{prediction.home_score_predicted}</span>
+              <span className="font-bold text-foreground min-w-[1.5rem] text-center">{prediction.home_score_predicted}</span>
               <span className="text-muted-foreground">-</span>
-              <span className="font-bold text-foreground">{prediction.away_score_predicted}</span>
+              <span className="font-bold text-foreground min-w-[1.5rem] text-center">{prediction.away_score_predicted}</span>
             </div>
           )}
 

@@ -143,10 +143,7 @@ export interface PoolConfigVersion {
   
   // Individual achievements
   pts_top_scorer: number;
-  pts_top_assistant: number;
   pts_mvp: number;
-  pts_best_goalkeeper: number;
-  pts_least_conceded: number;
   
   is_frozen: boolean;
   frozen_at?: string;
@@ -300,10 +297,7 @@ export interface UpdatePoolConfigRequest {
   pts_subchampion?: number;
   pts_third_place?: number;
   pts_top_scorer?: number;
-  pts_top_assistant?: number;
   pts_mvp?: number;
-  pts_best_goalkeeper?: number;
-  pts_least_conceded?: number;
 }
 
 export interface CreatePredictionRequest {
@@ -513,10 +507,7 @@ export const DEFAULT_POOL_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool_id' | 'cr
   pts_subchampion: 15,
   pts_third_place: 12,
   pts_top_scorer: 12,
-  pts_top_assistant: 12,
   pts_mvp: 12,
-  pts_best_goalkeeper: 12,
-  pts_least_conceded: 10,
 };
 
 export const PREDICTION_COMPETITION_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool_id' | 'created_at' | 'is_frozen' | 'frozen_at'> = {
@@ -530,10 +521,7 @@ export const PREDICTION_COMPETITION_CONFIG: Omit<PoolConfigVersion, 'id' | 'pool
   pts_subchampion: 0,
   pts_third_place: 0,
   pts_top_scorer: 0,
-  pts_top_assistant: 0,
   pts_mvp: 0,
-  pts_best_goalkeeper: 0,
-  pts_least_conceded: 0,
 };
 
 export const STAGE_ORDER: Record<MatchStage, number> = {

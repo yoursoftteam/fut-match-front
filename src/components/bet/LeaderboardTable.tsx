@@ -57,25 +57,25 @@ export function LeaderboardTable({
           <thead>
             <tr className="border-b border-slate-700 bg-slate-800/50">
               <th
-                className="cursor-pointer px-3 py-3 text-left font-semibold text-slate-300 hover:text-emerald-400 md:px-4"
+                className="cursor-pointer px-2 sm:px-3 py-3 text-left font-semibold text-slate-300 hover:text-emerald-400 md:px-4 text-xs sm:text-sm"
                 onClick={() => handleSort('rank')}
               >
-                Rank {sortBy === 'rank' && (sortAsc ? '↑' : '↓')}
+                # {sortBy === 'rank' && (sortAsc ? '↑' : '↓')}
               </th>
               <th
-                className="cursor-pointer px-3 py-3 text-left font-semibold text-slate-300 hover:text-emerald-400 md:px-4"
+                className="cursor-pointer px-2 sm:px-3 py-3 text-left font-semibold text-slate-300 hover:text-emerald-400 md:px-4 text-xs sm:text-sm"
                 onClick={() => handleSort('name')}
               >
-                Name {sortBy === 'name' && (sortAsc ? '↑' : '↓')}
+                Nombre {sortBy === 'name' && (sortAsc ? '↑' : '↓')}
               </th>
               <th
-                className="cursor-pointer px-3 py-3 text-right font-semibold text-slate-300 hover:text-emerald-400 md:px-4"
+                className="cursor-pointer px-2 sm:px-3 py-3 text-right font-semibold text-slate-300 hover:text-emerald-400 md:px-4 text-xs sm:text-sm"
                 onClick={() => handleSort('points_total')}
               >
-                Points {sortBy === 'points_total' && (sortAsc ? '↑' : '↓')}
+                Pts {sortBy === 'points_total' && (sortAsc ? '↑' : '↓')}
               </th>
-              <th className="hidden px-3 py-3 text-right font-semibold text-slate-300 md:px-4 lg:table-cell">
-                Completion %
+              <th className="hidden px-2 sm:px-3 py-3 text-right font-semibold text-slate-300 md:px-4 lg:table-cell text-xs sm:text-sm">
+                % Complet.
               </th>
             </tr>
           </thead>
@@ -90,12 +90,12 @@ export function LeaderboardTable({
                   onRowClick && 'cursor-pointer hover:bg-slate-800/50'
                 )}
               >
-                <td className="px-3 py-3 font-bold text-slate-50 md:px-4">{row.rank}</td>
-                <td className="px-3 py-3 text-slate-50 md:px-4">{row.name}</td>
-                <td className="px-3 py-3 text-right font-semibold text-emerald-400 md:px-4">
+                <td className="px-2 sm:px-3 py-3 font-bold text-slate-50 md:px-4 text-sm">{row.rank}</td>
+                <td className="px-2 sm:px-3 py-3 text-slate-50 md:px-4 text-sm truncate max-w-[140px] sm:max-w-none">{row.name}</td>
+                <td className="px-2 sm:px-3 py-3 text-right font-semibold text-emerald-400 md:px-4 text-sm">
                   {row.points_total}
                 </td>
-                <td className="hidden px-3 py-3 text-right text-slate-400 md:px-4 lg:table-cell">
+                <td className="hidden px-2 sm:px-3 py-3 text-right text-slate-400 md:px-4 lg:table-cell text-sm">
                   {row.completion_percent}%
                 </td>
               </tr>
@@ -105,23 +105,23 @@ export function LeaderboardTable({
       </div>
 
       {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           <button
             onClick={() => setPage(Math.max(0, page - 1))}
             disabled={page === 0}
-            className="rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-slate-50 hover:bg-slate-700 disabled:opacity-50 md:px-4"
+            className="rounded-md bg-slate-800 px-4 sm:px-3 py-2.5 sm:py-2 text-sm font-medium text-slate-50 hover:bg-slate-700 disabled:opacity-50 min-w-[5rem] sm:min-w-0"
           >
-            Prev
+            Anterior
           </button>
-          <span className="text-sm text-slate-400">
-            Page {page + 1} of {totalPages}
+          <span className="text-xs sm:text-sm text-slate-400">
+            Pág. {page + 1} de {totalPages}
           </span>
           <button
             onClick={() => setPage(Math.min(totalPages - 1, page + 1))}
             disabled={page === totalPages - 1}
-            className="rounded-md bg-slate-800 px-3 py-2 text-sm font-medium text-slate-50 hover:bg-slate-700 disabled:opacity-50 md:px-4"
+            className="rounded-md bg-slate-800 px-4 sm:px-3 py-2.5 sm:py-2 text-sm font-medium text-slate-50 hover:bg-slate-700 disabled:opacity-50 min-w-[5rem] sm:min-w-0"
           >
-            Next
+            Siguiente
           </button>
         </div>
       )}
