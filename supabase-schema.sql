@@ -178,7 +178,7 @@ BEGIN
     auth.uid(),
     v_trimmed_name,
     p_is_goalkeeper,
-    encode(digest(p_self_token, 'sha256'), 'hex')
+    encode(extensions.digest(p_self_token, 'sha256'), 'hex')
   )
   RETURNING match_registrations.id INTO v_registration_id;
 
@@ -218,7 +218,7 @@ BEGIN
   DELETE FROM match_registrations r
   WHERE r.id = p_registration_id
     AND r.self_unreg_token_hash IS NOT NULL
-    AND r.self_unreg_token_hash = encode(digest(p_self_token, 'sha256'), 'hex');
+    AND r.self_unreg_token_hash = encode(extensions.digest(p_self_token, 'sha256'), 'hex');
 
   GET DIAGNOSTICS v_deleted_count = ROW_COUNT;
 
@@ -291,6 +291,112 @@ CREATE TRIGGER trg_validate_match_registration
 BEFORE INSERT ON match_registrations
 FOR EACH ROW
 EXECUTE FUNCTION validate_match_registration();
+
+-- Automatic push notification dispatch to Cloudflare when a player registers.
+CREATE EXTENSION IF NOT EXISTS pg_net;
+CREATE EXTENSION IF NOT EXISTS vault;
+
+CREATE OR REPLACE FUNCTION notify_registration_cloudflare()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+DECLARE
+  v_webhook_url TEXT := NULLIF(current_setting('app.settings.cloudflare_push_webhook_url', true), '');
+  v_webhook_secret_name TEXT := COALESCE(
+    NULLIF(current_setting('app.settings.cloudflare_push_webhook_secret_name', true), ''),
+    'cloudflare_push_webhook_secret'
+  );
+  v_webhook_secret TEXT;
+  v_match RECORD;
+  v_headers JSONB;
+  v_payload JSONB;
+BEGIN
+  IF TG_OP <> 'INSERT' THEN
+    RETURN NEW;
+  END IF;
+
+  IF NEW.name ILIKE 'Arquero Alquilado%' THEN
+    RETURN NEW;
+  END IF;
+
+  IF v_webhook_url IS NULL THEN
+    RETURN NEW;
+  END IF;
+
+  IF v_webhook_url !~ '^https://' THEN
+    RAISE LOG 'notify_registration_cloudflare skipped non-https webhook url';
+    RETURN NEW;
+  END IF;
+
+  SELECT ds.decrypted_secret
+  INTO v_webhook_secret
+  FROM vault.decrypted_secrets ds
+  WHERE ds.name = v_webhook_secret_name
+  ORDER BY ds.created_at DESC
+  LIMIT 1;
+
+  SELECT
+    m.id,
+    m.title,
+    m.location,
+    m.date,
+    m.created_by
+  INTO v_match
+  FROM matches m
+  WHERE m.id = NEW.match_id;
+
+  IF NOT FOUND THEN
+    RETURN NEW;
+  END IF;
+
+  v_headers := jsonb_build_object('Content-Type', 'application/json');
+
+  IF v_webhook_secret IS NOT NULL THEN
+    v_headers := v_headers || jsonb_build_object('x-parti2-webhook-secret', v_webhook_secret);
+  END IF;
+
+  v_payload := jsonb_build_object(
+    'event', 'match_registration_created',
+    'registration', jsonb_build_object(
+      'id', NEW.id,
+      'match_id', NEW.match_id,
+      'user_id', NEW.user_id,
+      'name', NEW.name,
+      'is_goalkeeper', NEW.is_goalkeeper,
+      'registered_at', NEW.registered_at
+    ),
+    'match', jsonb_build_object(
+      'id', v_match.id,
+      'title', v_match.title,
+      'location', v_match.location,
+      'date', v_match.date,
+      'created_by', v_match.created_by
+    )
+  );
+
+  PERFORM net.http_post(
+    url := v_webhook_url,
+    headers := v_headers,
+    body := v_payload
+  );
+
+  RETURN NEW;
+EXCEPTION WHEN OTHERS THEN
+  RAISE LOG 'notify_registration_cloudflare failed: %', SQLERRM;
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_notify_registration_cloudflare ON match_registrations;
+
+CREATE TRIGGER trg_notify_registration_cloudflare
+AFTER INSERT ON match_registrations
+FOR EACH ROW
+EXECUTE FUNCTION notify_registration_cloudflare();
+
+DROP TABLE IF EXISTS app_runtime_config;
 
 -- Realtime: include table in publication for postgres_changes
 DO $$
