@@ -47,6 +47,11 @@ function getGameFixtureId(game: WcGame): string | null {
   return id.length > 0 ? id : null;
 }
 
+function getGameLegacyId(game: WcGame): string | null {
+  const id = String(game.id ?? "").trim();
+  return id.length > 0 ? id : null;
+}
+
 async function fetchWithRetry(url: string, maxRetries = 3) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
@@ -155,6 +160,10 @@ serve(async (req) => {
       const gameId = getGameFixtureId(game);
       if (gameId) {
         gameById.set(gameId, game);
+      }
+      const legacyId = getGameLegacyId(game);
+      if (legacyId) {
+        gameById.set(legacyId, game);
       }
     }
 
