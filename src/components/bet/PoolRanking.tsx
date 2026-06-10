@@ -104,7 +104,7 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
   const empty = entries.length === 0
 
   return (
-    <div className="rounded-lg border border-border bg-card">
+    <div className="rounded-lg border border-border bg-card overflow-hidden">
       <div className="border-b border-border bg-muted px-4 py-3">
         <div className="flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -142,23 +142,16 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
           <p className="text-xs text-muted-foreground">Comparte el enlace de invitación para agregar participantes</p>
         </div>
       ) : (
-        <div className="-mx-4 sm:mx-0 overflow-x-auto">
-          <table className="w-full min-w-[320px] sm:min-w-[400px] text-sm">
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700">
+          <table className="w-full min-w-[360px] text-sm">
             <caption className="sr-only">Ranking de participantes ordenados por puntaje</caption>
-            <colgroup>
-              <col className="w-12 sm:w-14" />
-              <col />
-              <col className="w-16 sm:w-20" />
-              <col className="w-20 sm:w-24" />
-              {isOwner && <col className="w-10 sm:w-12" />}
-            </colgroup>
             <thead className="border-b border-border bg-muted/50 text-left text-[0.6875rem] uppercase text-muted-foreground">
               <tr>
-                <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">#</th>
-                <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">Participante</th>
-                <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold">Pts</th>
-                <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold">Exactas</th>
-                {isOwner && <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold sr-only">Acción</th>}
+                <th scope="col" className="px-3 py-2 font-semibold w-10">#</th>
+                <th scope="col" className="px-3 py-2 font-semibold">Participante</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold w-14">Pts</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold w-16">Exactas</th>
+                {isOwner && <th scope="col" className="px-2 py-2 text-right font-semibold w-10 sr-only">Acción</th>}
               </tr>
             </thead>
             <tbody>
