@@ -146,8 +146,6 @@ function PredictionCell({
         }
         locked={locked}
         disabled={saving}
-        matchId={match.id}
-        compact
       />
     )
   }
