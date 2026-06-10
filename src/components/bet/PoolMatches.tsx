@@ -420,7 +420,7 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
 
       {grouped.length === 0 && searchQuery.trim() && (
         <p className="py-12 text-center text-sm text-slate-500">
-          No hay partidos que coincidan con "{searchQuery.trim()}"
+          No hay partidos que coincidan con &ldquo;{searchQuery.trim()}&rdquo;
         </p>
       )}
 
