@@ -9,6 +9,7 @@
     "preview": "npm run build:cf-pages && wrangler pages dev .vercel/output/static",
     "deploy": "npm run build:cf-pages && wrangler pages deploy .vercel/output/static --project-name=parti2",
     "start": "next start",
+    "hydrate:api-fixtures": "node scripts/hydrate-api-fixture-ids.mjs",
     "typecheck": "tsc --noEmit",
     "lint": "eslint"
   },
