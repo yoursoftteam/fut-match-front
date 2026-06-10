@@ -141,6 +141,7 @@ function StageSection({
                     away_team: awayTeam,
                     kickoff_at: match.kickoff_at,
                     stage: match.stage,
+                    group_name: match.group_name,
                     status: match.status,
                   }}
                   prediction={prediction ?? undefined}

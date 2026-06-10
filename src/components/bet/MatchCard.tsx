@@ -23,6 +23,7 @@ export interface MatchCardProps {
     away_team: { name: string; fifa_code: string; flag_svg_url: string }
     kickoff_at: string
     stage: string
+    group_name?: string
     status: 'scheduled' | 'live' | 'finished'
   }
   prediction?: { home_score_predicted: number; away_score_predicted: number }
@@ -100,7 +101,9 @@ export function MatchCard({
 
   const isEditable = canEdit && !isLocked
 
-  const stageLabel = STAGE_LABELS[match.stage] ?? match.stage
+  const stageLabel = match.group_name
+    ? `${STAGE_LABELS[match.stage] ?? match.stage} ${match.group_name}`
+    : STAGE_LABELS[match.stage] ?? match.stage
 
   const kickoffTime = new Date(match.kickoff_at).toLocaleTimeString('es-CO', {
     hour: '2-digit',
