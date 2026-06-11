@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MatchCard } from './MatchCard'
+import { MatchPredictionsModal } from './MatchPredictionsModal'
 import { AlertCircle, ArrowDown, ChevronDown, Loader2, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Match, STAGE_ORDER, MatchStage } from '@/types/bet'
@@ -59,12 +60,14 @@ function StageSection({
   matches,
   predictions,
   onUpdatePrediction,
+  onSelectMatch,
   defaultOpen,
 }: {
   stage: string
   matches: Match[]
   predictions: Map<string, Prediction>
   onUpdatePrediction: (matchId: string, home: number, away: number) => void
+  onSelectMatch: (matchId: string) => void
   defaultOpen: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -134,21 +137,24 @@ function StageSection({
 
             return (
               <div key={match.id} className="px-3 py-2" data-match-id={match.id}>
-                <MatchCard
-                  match={{
-                    id: match.id,
-                    home_team: homeTeam,
-                    away_team: awayTeam,
-                    kickoff_at: match.kickoff_at,
-                    stage: match.stage,
-                    group_name: match.group_name,
-                    status: match.status,
-                  }}
-                  prediction={prediction ?? undefined}
-                  canEdit={match.status === 'scheduled'}
-                  onUpdatePrediction={(home, away) => onUpdatePrediction(match.id, home, away)}
-                  compact
-                />
+              <MatchCard
+                match={{
+                  id: match.id,
+                  home_team: homeTeam,
+                  away_team: awayTeam,
+                  kickoff_at: match.kickoff_at,
+                  stage: match.stage,
+                  group_name: match.group_name,
+                  status: match.status,
+                  home_score_official: match.home_score_official,
+                  away_score_official: match.away_score_official,
+                }}
+                prediction={prediction ?? undefined}
+                canEdit={match.status === 'scheduled'}
+                onUpdatePrediction={(home, away) => onUpdatePrediction(match.id, home, away)}
+                onClick={match.status !== 'scheduled' ? () => onSelectMatch(match.id) : undefined}
+                compact
+              />
               </div>
             )
           })}
@@ -164,6 +170,7 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
@@ -432,6 +439,7 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
           matches={stageMatches}
           predictions={predictionsMap}
           onUpdatePrediction={handleUpdatePrediction}
+          onSelectMatch={setSelectedMatchId}
           defaultOpen={index < 2}
         />
       ))}
@@ -446,6 +454,13 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
           Siguiente pendiente
         </button>
       )}
+
+      <MatchPredictionsModal
+        matchId={selectedMatchId ?? ''}
+        poolId={poolId}
+        open={!!selectedMatchId}
+        onClose={() => setSelectedMatchId(null)}
+      />
     </div>
   )
 }

@@ -25,10 +25,17 @@ export interface MatchCardProps {
     stage: string
     group_name?: string
     status: 'scheduled' | 'live' | 'finished'
+    home_score_official?: number | null
+    away_score_official?: number | null
   }
-  prediction?: { home_score_predicted: number; away_score_predicted: number }
+  prediction?: {
+    home_score_predicted: number
+    away_score_predicted: number
+    points_earned?: number | null
+  }
   canEdit: boolean
   onUpdatePrediction?: (homeScore: number, awayScore: number) => void
+  onClick?: () => void
   className?: string
   compact?: boolean
 }
@@ -82,11 +89,51 @@ function ScoreReadonly({ home, away }: { home: number; away: number }) {
   )
 }
 
+import { evaluatePrediction, ACCURACY_THEMES } from '@/lib/bet-result-utils'
+
+function MatchResultDisplay({
+  prediction,
+  officialHome,
+  officialAway,
+  pointsEarned,
+}: {
+  prediction: { home: number; away: number }
+  officialHome: number | null | undefined
+  officialAway: number | null | undefined
+  pointsEarned?: number | null
+}) {
+  const hasOfficial = officialHome !== null && officialHome !== undefined && officialAway !== null && officialAway !== undefined
+  const evaluation = hasOfficial ? evaluatePrediction(prediction, { home: officialHome!, away: officialAway! }) : null
+  const theme = evaluation ? ACCURACY_THEMES[evaluation.accuracy] : null
+
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <ScoreReadonly home={prediction.home} away={prediction.away} />
+
+      {hasOfficial && (
+        <div className="flex flex-col items-center gap-0.5">
+          <span className="text-[9px] sm:text-[10px] text-slate-500">Marcador final</span>
+          <span className="text-[11px] sm:text-xs font-semibold tabular-nums text-slate-200">
+            {officialHome} – {officialAway}
+          </span>
+        </div>
+      )}
+
+      {pointsEarned !== null && pointsEarned !== undefined && (
+        <span className={cn('text-[11px] font-semibold', theme?.points ?? 'text-emerald-400')}>
+          +{pointsEarned} pts
+        </span>
+      )}
+    </div>
+  )
+}
+
 export function MatchCard({
   match,
   prediction,
   canEdit,
   onUpdatePrediction,
+  onClick,
   className,
   compact = false,
 }: MatchCardProps) {
@@ -120,14 +167,21 @@ export function MatchCard({
     ? 'border-red-500/15'
     : 'border-slate-700/40'
 
+  const isClickable = match.status !== 'scheduled' && !!onClick
+
   if (compact) {
     return (
       <div
         className={cn(
           'rounded-xl border bg-slate-900/40 px-3 py-2 fade-in-up',
           stateBorder,
+          isClickable && 'cursor-pointer transition-colors hover:bg-slate-800/50',
           className
         )}
+        onClick={isClickable ? onClick : undefined}
+        role={isClickable ? 'button' : undefined}
+        tabIndex={isClickable ? 0 : undefined}
+        onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } } : undefined}
       >
         <div className="mb-2 flex items-center justify-between">
           <div className="flex items-center gap-1.5">
@@ -153,7 +207,14 @@ export function MatchCard({
           </div>
 
           <div className="flex-shrink-0">
-            {isEditable ? (
+            {match.status === 'finished' && prediction ? (
+              <MatchResultDisplay
+                prediction={{ home: prediction.home_score_predicted, away: prediction.away_score_predicted }}
+                officialHome={match.home_score_official}
+                officialAway={match.away_score_official}
+                pointsEarned={prediction.points_earned}
+              />
+            ) : isEditable ? (
               <ScoreInput
                 homeScore={prediction?.home_score_predicted ?? 0}
                 awayScore={prediction?.away_score_predicted ?? 0}
@@ -193,8 +254,13 @@ export function MatchCard({
         'rounded border p-3 md:p-4 fade-in-up',
         borderColorDesktop,
         bgColor,
+        isClickable && 'cursor-pointer transition-colors hover:bg-slate-800/50',
         className
       )}
+      onClick={isClickable ? onClick : undefined}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } } : undefined}
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
@@ -214,7 +280,16 @@ export function MatchCard({
           />
         </div>
 
-        {isEditable && (
+        {match.status === 'finished' && prediction ? (
+          <div className="flex justify-center py-1">
+            <MatchResultDisplay
+              prediction={{ home: prediction.home_score_predicted, away: prediction.away_score_predicted }}
+              officialHome={match.home_score_official}
+              officialAway={match.away_score_official}
+              pointsEarned={prediction.points_earned}
+            />
+          </div>
+        ) : isEditable ? (
           <div className="flex justify-center py-1">
             <ScoreInput
               homeScore={prediction?.home_score_predicted ?? 0}
@@ -224,13 +299,11 @@ export function MatchCard({
               locked={isLocked}
             />
           </div>
-        )}
-
-        {(isLocked || !canEdit) && prediction && (
+        ) : prediction ? (
           <div className="flex justify-center py-1">
             <ScoreReadonly home={prediction.home_score_predicted} away={prediction.away_score_predicted} />
           </div>
-        )}
+        ) : null}
 
         <div className="flex items-center justify-center">
           <TeamFlag
