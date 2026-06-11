@@ -25,7 +25,7 @@ type BetMatch = {
   away_team_id: string | null;
 };
 
-const BASE_URL = Deno.env.get("WC26_API_BASE_URL") ?? "https://worldcup26.ir";
+const BASE_URL = Deno.env.get("WC26_API_BASE_URL") ?? "http://worldcup26.ir:3050";
 const FIFA_CODE_ALIASES = new Map<string, string>([["KSA", "SAU"], ["HAI", "HTI"]]);
 
 function sleep(ms: number) {
@@ -41,18 +41,7 @@ function normalizeFifaCode(code: string | null | undefined): string {
   return FIFA_CODE_ALIASES.get(normalized) ?? normalized;
 }
 
-function getGameFixtureId(game: WcGame): string | null {
-  const raw = game._id ?? game.id;
-  const id = String(raw ?? "").trim();
-  return id.length > 0 ? id : null;
-}
-
-function getGameLegacyId(game: WcGame): string | null {
-  const id = String(game.id ?? "").trim();
-  return id.length > 0 ? id : null;
-}
-
-async function fetchWithRetry(url: string, maxRetries = 3): Promise<{ body: string; json: unknown }> {
+async function fetchText(url: string, maxRetries = 3): Promise<string> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(url);
@@ -70,11 +59,10 @@ async function fetchWithRetry(url: string, maxRetries = 3): Promise<{ body: stri
           await sleep(1000 * attempt);
           continue;
         }
-        throw new Error(`WorldCup26 request failed with status ${response.status}`);
+        throw new Error(`WorldCup26 request failed with status ${response.status} for ${url}`);
       }
 
-      const body = await response.text();
-      return { body, json: JSON.parse(body) };
+      return await response.text();
     } catch (error) {
       if (attempt === maxRetries) {
         throw error;
@@ -141,40 +129,15 @@ serve(async (req) => {
       );
     }
 
-    const [gamesResult, teamsResult] = await Promise.all([
-      fetchWithRetry(`${BASE_URL}/get/games`, 3),
-      fetchWithRetry(`${BASE_URL}/get/teams`, 3),
-    ]);
+    // Fetch teams mapping once (needed for all games)
+    console.log("[API] fetching /get/teams...");
+    const teamsBody = await fetchText(`${BASE_URL}/get/teams`, 3);
+    console.log("[API] /get/teams raw body:", teamsBody.slice(0, 5000));
 
-    console.log("[API] /get/games raw body:", gamesResult.body.slice(0, 5000));
-    console.log("[API] /get/teams raw body:", teamsResult.body.slice(0, 5000));
-
-    const gamesPayload = gamesResult.json as { games?: WcGame[] };
-    const teamsPayload = teamsResult.json as { teams?: WcTeam[] };
-    const games = (gamesPayload?.games ?? []) as WcGame[];
+    const teamsPayload = JSON.parse(teamsBody) as { teams?: WcTeam[] };
     const wcTeams = (teamsPayload?.teams ?? []) as WcTeam[];
 
-    console.log("[API] games parsed:", games.length, "| teams parsed:", wcTeams.length);
-
-    const matchByFixtureId = new Map<string, BetMatch>();
-    const gameById = new Map<string, WcGame>();
     const worldcupCodeByTeamId = new Map<string, string>();
-
-    for (const match of matches) {
-      matchByFixtureId.set(match.api_fixture_id, match);
-    }
-
-    for (const game of games) {
-      const gameId = getGameFixtureId(game);
-      if (gameId) {
-        gameById.set(gameId, game);
-      }
-      const legacyId = getGameLegacyId(game);
-      if (legacyId) {
-        gameById.set(legacyId, game);
-      }
-    }
-
     for (const team of wcTeams) {
       const teamId = String(team.id ?? "").trim();
       const code = normalizeFifaCode(team.fifa_code);
@@ -182,6 +145,8 @@ serve(async (req) => {
         worldcupCodeByTeamId.set(teamId, code);
       }
     }
+
+    console.log("[API] teams parsed:", wcTeams.length);
 
     const { data: teamsData, error: teamsError } = await supabase
       .from("bet_teams")
@@ -199,23 +164,44 @@ serve(async (req) => {
       }
     }
 
+    // Fetch each game individually by api_fixture_id
     let updatedFinished = 0;
     let updatedTeams = 0;
     let skippedOutOfRange = 0;
+    let apiCalls = 1; // teams already fetched
 
-    for (const [fixtureId, localMatch] of matchByFixtureId.entries()) {
-      const game = gameById.get(fixtureId);
-      if (!game) {
-        console.log(`[MATCH] ${localMatch.id} | fixture ${fixtureId} | NOT FOUND in API`);
+    for (const match of matches) {
+      const fixtureId = match.api_fixture_id;
+      const gameUrl = `${BASE_URL}/get/game/${fixtureId}`;
+
+      console.log(`[API] fetching /get/game/${fixtureId} for match ${match.id}...`);
+
+      let gameBody: string;
+      try {
+        gameBody = await fetchText(gameUrl, 3);
+        apiCalls++;
+      } catch (err) {
+        console.error(`[MATCH] ${match.id} | fixture ${fixtureId} | FETCH ERROR: ${err instanceof Error ? err.message : err}`);
+        continue;
+      }
+
+      console.log(`[API] /get/game/${fixtureId} raw body:`, gameBody.slice(0, 5000));
+
+      let game: WcGame;
+      try {
+        game = JSON.parse(gameBody) as WcGame;
+      } catch {
+        console.error(`[MATCH] ${match.id} | fixture ${fixtureId} | INVALID JSON`);
         continue;
       }
 
       console.log(
-        `[MATCH] ${localMatch.id} | fixture ${fixtureId} | ` +
+        `[MATCH] ${match.id} | fixture ${fixtureId} | ` +
         `api_finished=${game.finished} | api_score=${game.home_score ?? "?"}-${game.away_score ?? "?"} | ` +
-        `db_status=${localMatch.status}`
+        `db_status=${match.status}`
       );
 
+      // Update team references if needed
       const apiHomeCode = normalizeFifaCode(worldcupCodeByTeamId.get(String(game.home_team_id ?? "")));
       const apiAwayCode = normalizeFifaCode(worldcupCodeByTeamId.get(String(game.away_team_id ?? "")));
       const mappedHomeTeamId = apiHomeCode ? teamIdByCode.get(apiHomeCode) ?? null : null;
@@ -223,10 +209,10 @@ serve(async (req) => {
 
       const teamPatch: { home_team_id?: string; away_team_id?: string } = {};
 
-      if (mappedHomeTeamId && mappedHomeTeamId !== localMatch.home_team_id) {
+      if (mappedHomeTeamId && mappedHomeTeamId !== match.home_team_id) {
         teamPatch.home_team_id = mappedHomeTeamId;
       }
-      if (mappedAwayTeamId && mappedAwayTeamId !== localMatch.away_team_id) {
+      if (mappedAwayTeamId && mappedAwayTeamId !== match.away_team_id) {
         teamPatch.away_team_id = mappedAwayTeamId;
       }
 
@@ -237,16 +223,17 @@ serve(async (req) => {
         const { error: teamUpdateError } = await supabase
           .from("bet_matches")
           .update(teamPatch)
-          .eq("id", localMatch.id);
+          .eq("id", match.id);
 
         if (!teamUpdateError) {
           updatedTeams++;
         }
       }
 
+      // Check if finished
       const isFinished = String(game.finished ?? "").toUpperCase() === "TRUE";
       if (!isFinished) {
-        console.log(`[MATCH] ${localMatch.id} | SKIPPED — still live`);
+        console.log(`[MATCH] ${match.id} | SKIPPED — still live`);
         continue;
       }
 
@@ -254,25 +241,25 @@ serve(async (req) => {
       const awayScore = Number(game.away_score);
 
       if (!isValidScore(homeScore) || !isValidScore(awayScore)) {
-        console.log(`[MATCH] ${localMatch.id} | SKIPPED — invalid scores: ${game.home_score}-${game.away_score}`);
+        console.log(`[MATCH] ${match.id} | SKIPPED — invalid scores: ${game.home_score}-${game.away_score}`);
         skippedOutOfRange++;
         continue;
       }
 
       const { data: rpcResponse, error: rpcError } = await supabase.rpc("fn_update_match_result", {
-        p_match_id: localMatch.id,
+        p_match_id: match.id,
         p_home_score: homeScore,
         p_away_score: awayScore,
       });
 
       if (rpcError) {
-        console.error("[MATCH]", localMatch.id, "| RPC error:", rpcError.message);
+        console.error("[MATCH]", match.id, "| RPC error:", rpcError.message);
         continue;
       }
 
       const row = Array.isArray(rpcResponse) ? rpcResponse[0] : rpcResponse;
       if (row?.success === true) {
-        console.log(`[MATCH] ${localMatch.id} | UPDATED — ${homeScore}-${awayScore} | ${row.message}`);
+        console.log(`[MATCH] ${match.id} | UPDATED — ${homeScore}-${awayScore} | ${row.message}`);
         updatedFinished++;
       }
     }
@@ -285,7 +272,7 @@ serve(async (req) => {
         updated_teams: updatedTeams,
         skipped_out_of_range_scores: skippedOutOfRange,
         checked_before: threshold,
-        api_calls: 2,
+        api_calls: apiCalls,
       }),
       { status: 200, headers: { "Content-Type": "application/json" } },
     );
