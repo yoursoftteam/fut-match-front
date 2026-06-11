@@ -189,7 +189,9 @@ serve(async (req) => {
 
       let game: WcGame;
       try {
-        game = JSON.parse(gameBody) as WcGame;
+        const parsed = JSON.parse(gameBody);
+        // /get/game/{id} wraps result in {"game": {...}}
+        game = (parsed && typeof parsed === "object" && "game" in parsed ? parsed.game : parsed) as WcGame;
       } catch {
         console.error(`[MATCH] ${match.id} | fixture ${fixtureId} | INVALID JSON`);
         continue;
