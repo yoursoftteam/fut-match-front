@@ -113,7 +113,7 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const now = new Date();
-    const threshold = new Date(now.getTime() - 110 * 60 * 1000).toISOString();
+    const threshold = new Date(now.getTime() - 125 * 60 * 1000).toISOString();
 
     const { data: activeMatches, error: activeMatchesError } = await supabase
       .from("bet_matches")
@@ -147,6 +147,11 @@ serve(async (req) => {
 
     const games = (gamesPayload?.games ?? []) as WcGame[];
     const wcTeams = (teamsPayload?.teams ?? []) as WcTeam[];
+
+    console.log("[API] games fetched:", games.length, "| teams fetched:", wcTeams.length);
+    if (games.length > 0) {
+      console.log("[API] sample game:", JSON.stringify(games[0], null, 2));
+    }
 
     const matchByFixtureId = new Map<string, BetMatch>();
     const gameById = new Map<string, WcGame>();
@@ -198,8 +203,15 @@ serve(async (req) => {
     for (const [fixtureId, localMatch] of matchByFixtureId.entries()) {
       const game = gameById.get(fixtureId);
       if (!game) {
+        console.log(`[MATCH] ${localMatch.id} | fixture ${fixtureId} | NOT FOUND in API`);
         continue;
       }
+
+      console.log(
+        `[MATCH] ${localMatch.id} | fixture ${fixtureId} | ` +
+        `api_finished=${game.finished} | api_score=${game.home_score ?? "?"}-${game.away_score ?? "?"} | ` +
+        `db_status=${localMatch.status}`
+      );
 
       const apiHomeCode = normalizeFifaCode(worldcupCodeByTeamId.get(String(game.home_team_id ?? "")));
       const apiAwayCode = normalizeFifaCode(worldcupCodeByTeamId.get(String(game.away_team_id ?? "")));
@@ -231,6 +243,7 @@ serve(async (req) => {
 
       const isFinished = String(game.finished ?? "").toUpperCase() === "TRUE";
       if (!isFinished) {
+        console.log(`[MATCH] ${localMatch.id} | SKIPPED — still live`);
         continue;
       }
 
@@ -238,6 +251,7 @@ serve(async (req) => {
       const awayScore = Number(game.away_score);
 
       if (!isValidScore(homeScore) || !isValidScore(awayScore)) {
+        console.log(`[MATCH] ${localMatch.id} | SKIPPED — invalid scores: ${game.home_score}-${game.away_score}`);
         skippedOutOfRange++;
         continue;
       }
@@ -249,12 +263,13 @@ serve(async (req) => {
       });
 
       if (rpcError) {
-        console.error("fn_update_match_result error", { matchId: localMatch.id, rpcError });
+        console.error("[MATCH]", localMatch.id, "| RPC error:", rpcError.message);
         continue;
       }
 
       const row = Array.isArray(rpcResponse) ? rpcResponse[0] : rpcResponse;
       if (row?.success === true) {
+        console.log(`[MATCH] ${localMatch.id} | UPDATED — ${homeScore}-${awayScore} | ${row.message}`);
         updatedFinished++;
       }
     }
