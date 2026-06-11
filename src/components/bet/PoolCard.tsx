@@ -21,8 +21,8 @@ export function PoolCard({ pool, onClick, children }: PoolCardProps) {
           <h3 className="text-sm font-semibold text-foreground truncate">
             {pool.name}
           </h3>
-          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1">
+          <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground flex-nowrap">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               {pool.visibility === 'public' ? (
                 <Globe className="size-3" />
               ) : (
@@ -30,9 +30,10 @@ export function PoolCard({ pool, onClick, children }: PoolCardProps) {
               )}
               {pool.visibility === 'public' ? 'Pública' : 'Privada'}
             </span>
-            <span className="flex items-center gap-1">
+            <span className="flex items-center gap-1 whitespace-nowrap">
               <Users className="size-3" />
-              {pool.member_count} miembro{pool.member_count !== 1 ? 's' : ''}
+              <span>{pool.member_count}</span>
+              <span>miembro{pool.member_count !== 1 ? 's' : ''}</span>
             </span>
           </div>
         </div>
