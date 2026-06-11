@@ -224,21 +224,20 @@ export async function GET(
         .eq('pool_id', poolId)
 
       if (membersList) {
-        // Fetch user emails for members
-        const userIds = membersList.map((m) => m.user_id)
-        const { data: users } = await supabase.auth.admin.listUsers()
-
-        const emailMap = users?.users.reduce(
-          (acc, u) => {
-            acc[u.id] = u.email || 'Unknown'
-            return acc
-          },
-          {} as Record<string, string>
+        const memberUserIds = membersList.map((m) => m.user_id)
+        const emailMap = new Map<string, string>()
+        await Promise.all(
+          memberUserIds.map((uid) =>
+            supabase.auth.admin.getUserById(uid)
+              .then(({ data: { user: u } }) => {
+                if (u) emailMap.set(u.id, u.email ?? 'Unknown')
+              })
+          )
         )
 
         members = membersList.map((m) => ({
           id: m.user_id,
-          email: emailMap?.[m.user_id] || 'Unknown',
+          email: emailMap.get(m.user_id) ?? 'Unknown',
           joined_at: m.joined_at,
         }))
       }
