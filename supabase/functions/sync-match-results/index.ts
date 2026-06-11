@@ -52,7 +52,7 @@ function getGameLegacyId(game: WcGame): string | null {
   return id.length > 0 ? id : null;
 }
 
-async function fetchWithRetry(url: string, maxRetries = 3) {
+async function fetchWithRetry(url: string, maxRetries = 3): Promise<{ body: string; json: unknown }> {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const response = await fetch(url);
@@ -73,7 +73,8 @@ async function fetchWithRetry(url: string, maxRetries = 3) {
         throw new Error(`WorldCup26 request failed with status ${response.status}`);
       }
 
-      return await response.json();
+      const body = await response.text();
+      return { body, json: JSON.parse(body) };
     } catch (error) {
       if (attempt === maxRetries) {
         throw error;
@@ -140,18 +141,20 @@ serve(async (req) => {
       );
     }
 
-    const [gamesPayload, teamsPayload] = await Promise.all([
+    const [gamesResult, teamsResult] = await Promise.all([
       fetchWithRetry(`${BASE_URL}/get/games`, 3),
       fetchWithRetry(`${BASE_URL}/get/teams`, 3),
     ]);
 
+    console.log("[API] /get/games raw body:", gamesResult.body.slice(0, 5000));
+    console.log("[API] /get/teams raw body:", teamsResult.body.slice(0, 5000));
+
+    const gamesPayload = gamesResult.json as { games?: WcGame[] };
+    const teamsPayload = teamsResult.json as { teams?: WcTeam[] };
     const games = (gamesPayload?.games ?? []) as WcGame[];
     const wcTeams = (teamsPayload?.teams ?? []) as WcTeam[];
 
-    console.log("[API] games fetched:", games.length, "| teams fetched:", wcTeams.length);
-    if (games.length > 0) {
-      console.log("[API] sample game:", JSON.stringify(games[0], null, 2));
-    }
+    console.log("[API] games parsed:", games.length, "| teams parsed:", wcTeams.length);
 
     const matchByFixtureId = new Map<string, BetMatch>();
     const gameById = new Map<string, WcGame>();
