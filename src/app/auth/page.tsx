@@ -46,6 +46,7 @@ function buildRedirectUrl(pathWithQuery: string): string | undefined {
 function AuthForm() {
   const { user, loading: authLoading } = useAuth();
   const [fullName, setFullName] = useState("");
+  const [alias, setAlias] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -122,6 +123,7 @@ function AuthForm() {
     setMode(nextMode);
     setMessage("");
     setFullName("");
+    setAlias("");
     setPassword("");
     setConfirmPassword("");
     const newUrl =
@@ -192,6 +194,13 @@ function AuthForm() {
       return;
     }
 
+    if (isSignUp && alias.trim().length < 2) {
+      setMessage("Ingresa el alias con el que te identificas.");
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
     if (
       (mode === "signin" || mode === "signup" || mode === "reset") &&
       !password
@@ -220,15 +229,17 @@ function AuthForm() {
       if (isSignUp) {
         const redirectTo = buildRedirectUrl("/dashboard");
         const normalizedFullName = fullName.trim();
+        const normalizedAlias = alias.trim();
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: redirectTo,
-            data: {
-              full_name: normalizedFullName,
-              name: normalizedFullName,
-            },
+              data: {
+                full_name: normalizedFullName,
+                alias: normalizedAlias,
+                name: normalizedAlias,
+              },
           },
         });
         if (error) throw error;
@@ -448,18 +459,35 @@ function AuthForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-card-foreground">Nombre completo</label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Tu nombre"
-                    className="h-12"
-                    autoComplete="name"
-                    required
-                  />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-card-foreground">Nombre completo</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Tu nombre completo"
+                      className="h-12"
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-card-foreground">¿Cómo quieres que te llamen?</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={alias}
+                      onChange={(e) => setAlias(e.target.value)}
+                      placeholder="Tu alias"
+                      className="h-12"
+                      autoComplete="nickname"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             )}

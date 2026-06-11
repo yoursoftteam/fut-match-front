@@ -24,6 +24,25 @@ export function useMatchCreation(): UseMatchCreationReturn {
   const { createMatch: apiCreateMatch, registerRentedGoalkeepers } = useMatches();
   const router = useRouter();
 
+  const getErrorMessage = (err: unknown): string => {
+    if (err instanceof Error) return err.message;
+
+    const candidate = err as {
+      message?: string;
+      details?: string;
+      hint?: string;
+      error_description?: string;
+    } | null;
+
+    return (
+      candidate?.message ||
+      candidate?.details ||
+      candidate?.hint ||
+      candidate?.error_description ||
+      "Error al crear el partido"
+    );
+  };
+
   const createMatch = useCallback(async (
     data: MatchFormSubmitData,
     participantsToRegister?: { name: string; is_goalkeeper: boolean }[],
@@ -98,7 +117,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
       return newMatch.id;
 
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al crear el partido");
+      setError(getErrorMessage(err));
       return null;
     } finally {
       setLoading(false);

@@ -29,6 +29,7 @@ export function AppHeader() {
       { href: "/auth?redirectTo=/bet/predictions/new", label: "Crear Predicciones" },
     ] : [
       { href: "/dashboard", label: "Mi Dashboard" },
+      { href: "/profile", label: "Mi Perfil" },
       { href: "/matches", label: "Mis Partidos" },
       { href: "/bet", label: "Predicciones" },
     ]),
@@ -109,6 +110,13 @@ export function AppHeader() {
                 >
                   {user.email}
                 </span>
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Perfil
+                </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -169,6 +177,13 @@ export function AppHeader() {
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                     </div>
+                    <Link
+                      href="/profile"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      Mi Perfil
+                    </Link>
                     <button
                       type="button"
                       onClick={handleSignOut}
