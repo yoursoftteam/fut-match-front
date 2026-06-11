@@ -197,45 +197,45 @@ function MatchRow({
         locked && 'bg-red-950/10'
       )}
     >
-      <td className="whitespace-nowrap px-2 sm:px-3 py-2 text-xs text-slate-400">
+      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs text-slate-400">
         <div className="flex items-center gap-1 sm:gap-2">
-          <CalendarDays className="size-3 sm:size-3.5 text-slate-500" aria-hidden="true" />
+          <CalendarDays className="size-2.5 sm:size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
           <span>{dateFormatter.format(kickoffDate)}</span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-2 sm:px-3 py-2 text-xs font-mono tabular-nums text-slate-300">
+      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs font-mono tabular-nums text-slate-300">
         <div className="flex items-center gap-1 sm:gap-2">
-          <Clock3 className="size-3 sm:size-3.5 text-slate-500" aria-hidden="true" />
+          <Clock3 className="size-2.5 sm:size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
           <span>{timeFormatter.format(kickoffDate)}</span>
         </div>
       </td>
-      <td className="max-w-[10rem] sm:max-w-[12rem] px-2 sm:px-3 py-2">
+      <td className="max-w-[7rem] sm:max-w-[12rem] px-1.5 sm:px-3 py-2">
         <TeamCell team={match.home_team} placeholder={match.home_placeholder} />
       </td>
-      <td className="whitespace-nowrap px-1 sm:px-2 py-2 text-center text-xs font-bold text-slate-500">
+      <td className="whitespace-nowrap px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-500">
         vs
       </td>
-      <td className="max-w-[10rem] sm:max-w-[12rem] px-2 sm:px-3 py-2">
+      <td className="max-w-[7rem] sm:max-w-[12rem] px-1.5 sm:px-3 py-2">
         <TeamCell
           team={match.away_team}
           placeholder={match.away_placeholder}
           align="right"
         />
       </td>
-      <td className="whitespace-nowrap px-2 sm:px-3 py-2 text-xs text-slate-400">
-        <div className="flex items-center gap-1 sm:gap-2">
+      <td className="hidden sm:table-cell whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs text-slate-400">
+        <div className="flex items-center gap-1">
           {match.fifa_match_number && (
-            <span className="hidden sm:inline font-mono tabular-nums text-slate-500">
+            <span className="hidden lg:inline font-mono tabular-nums text-slate-500">
               P{match.fifa_match_number}
             </span>
           )}
           <span>{stageLabel}</span>
         </div>
       </td>
-      <td className="hidden sm:table-cell max-w-[11rem] truncate px-3 py-2 text-xs text-slate-400" title={match.venue ?? undefined}>
+      <td className="hidden md:table-cell max-w-[11rem] truncate px-3 py-2 text-xs text-slate-400" title={match.venue ?? undefined}>
         {match.venue ?? 'Por definir'}
       </td>
-      <td className="hidden sm:table-cell whitespace-nowrap px-3 py-2 text-center">
+      <td className="hidden md:table-cell whitespace-nowrap px-3 py-2 text-center">
         {match.stage === MatchStage.GROUP_STAGE && match.group_name && onShowGroup ? (
           <button
             type="button"
@@ -248,7 +248,7 @@ function MatchRow({
           <span className="text-[0.625rem] text-slate-600">–</span>
         )}
       </td>
-      <td className="whitespace-nowrap px-2 sm:px-3 py-2 text-right">
+      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-right">
         <PredictionCell
           match={match}
           prediction={prediction}
@@ -258,7 +258,7 @@ function MatchRow({
           onUpdatePrediction={onUpdatePrediction}
         />
       </td>
-      <td className="whitespace-nowrap px-2 sm:px-3 py-2 text-center">
+      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-center">
         {match.status === 'finished' && prediction?.points_earned != null ? (
           <span
             className={cn(
@@ -648,52 +648,52 @@ function BetMatchesContent() {
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[680px] sm:min-w-[980px] table-fixed text-sm">
+              <table className="min-w-[480px] w-full text-sm">
                 <caption className="sr-only">
                   Partidos FIFA 2026 con fecha, equipos, estado y predicción.
                 </caption>
                 <colgroup>
-                  <col className="w-24 sm:w-28" />
-                  <col className="w-20 sm:w-24" />
+                  <col className="w-20 sm:w-28" />
+                  <col className="w-16 sm:w-24" />
                   <col />
-                  <col className="w-10 sm:w-12" />
+                  <col className="w-8 sm:w-12" />
                   <col />
+                  <col className="hidden sm:table-cell w-24 sm:w-28" />
+                  <col className="hidden md:table-cell w-36" />
+                  <col className="hidden md:table-cell w-24" />
                   <col className="w-24 sm:w-28" />
-                  <col className="hidden sm:table-cell w-36" />
-                  <col className="hidden sm:table-cell w-24" />
-                  <col className="w-28" />
-                  <col className="w-12 sm:w-14" />
+                  <col className="w-10 sm:w-14" />
                 </colgroup>
-                <thead className="bg-slate-900 text-left text-[0.6875rem] uppercase text-slate-500">
+                <thead className="bg-slate-900 text-left text-[0.625rem] sm:text-[0.6875rem] uppercase text-slate-500">
                   <tr>
-                    <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">
+                    <th scope="col" className="px-1.5 sm:px-3 py-2 font-semibold">
                       Fecha
                     </th>
-                    <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">
+                    <th scope="col" className="px-1.5 sm:px-3 py-2 font-semibold">
                       Hora
                     </th>
-                    <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">
+                    <th scope="col" className="px-1.5 sm:px-3 py-2 font-semibold">
                       Local
                     </th>
                     <th scope="col" className="px-1 sm:px-2 py-2 text-center font-semibold">
                       VS
                     </th>
-                    <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold">
-                      Visitante
+                    <th scope="col" className="px-1.5 sm:px-3 py-2 text-right font-semibold">
+                      Visit.
                     </th>
-                    <th scope="col" className="px-2 sm:px-3 py-2 font-semibold">
+                    <th scope="col" className="hidden sm:table-cell px-1.5 sm:px-3 py-2 font-semibold">
                       Fase
                     </th>
-                    <th scope="col" className="hidden sm:table-cell px-3 py-2 font-semibold">
+                    <th scope="col" className="hidden md:table-cell px-3 py-2 font-semibold">
                       Sede
                     </th>
-                    <th scope="col" className="hidden sm:table-cell px-3 py-2 text-center font-semibold">
+                    <th scope="col" className="hidden md:table-cell px-3 py-2 text-center font-semibold">
                       Grupo
                     </th>
-                    <th scope="col" className="px-2 sm:px-3 py-2 text-right font-semibold">
+                    <th scope="col" className="px-1.5 sm:px-3 py-2 text-right font-semibold">
                       Pick
                     </th>
-                    <th scope="col" className="px-2 sm:px-3 py-2 text-center font-semibold">
+                    <th scope="col" className="px-1.5 sm:px-3 py-2 text-center font-semibold">
                       Pts
                     </th>
                   </tr>

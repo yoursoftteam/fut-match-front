@@ -110,7 +110,7 @@ export function MatchPredictionsModal({
     <Dialog.Root open={open} onOpenChange={(v) => { if (!v) onClose() }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm" />
-        <Dialog.Popup className="fixed z-50 flex h-fit max-h-[80vh] w-[calc(100%-16px)] max-w-lg flex-col rounded-2xl border border-slate-700/50 bg-slate-900 p-0 shadow-2xl transition-all duration-150 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+        <Dialog.Popup className="fixed z-50 flex h-fit max-h-[80vh] w-[calc(100%-16px)] max-w-lg flex-col overflow-hidden rounded-2xl border border-slate-700/50 bg-slate-900 p-0 shadow-2xl transition-all duration-150 left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
           <div className="flex items-center justify-between border-b border-slate-800 px-3 py-3 sm:px-4">
             <div className="min-w-0 flex-1">
               {match ? (
@@ -140,7 +140,7 @@ export function MatchPredictionsModal({
             </div>
           )}
 
-          <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4">
+          <div className="flex-1 overflow-y-auto px-3 py-3 sm:px-4 min-h-0">
             {loading ? (
               <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
                 <Loader2 className="size-4 animate-spin text-emerald-400" />
