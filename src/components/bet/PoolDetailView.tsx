@@ -124,21 +124,8 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
             {listLabel}
           </button>
 
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0 flex-1">
-              <h1 className="truncate text-2xl font-bold">{pool.name}</h1>
-              <div className="mt-1 flex items-center gap-3 text-xs text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  {pool.visibility === 'public' ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
-                  {pool.visibility === 'public' ? 'Pública' : 'Privada'}
-                </span>
-                <span className="flex items-center gap-1">
-                  <Users className="size-3.5" />
-                  {pool.total_participants} participante{pool.total_participants !== 1 ? 's' : ''}
-                </span>
-              </div>
-            </div>
-
+          <div className="space-y-2">
+            <h1 className="truncate text-2xl font-bold">{pool.name}</h1>
             <ShareActions
               copyText={inviteUrl}
               copyTooltip="Copiar invitación"
@@ -152,6 +139,17 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
                 url: inviteUrl,
               }}
             />
+            <div className="flex items-center gap-3 text-xs text-muted-foreground flex-nowrap">
+              <span className="flex items-center gap-1 whitespace-nowrap">
+                {pool.visibility === 'public' ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
+                {pool.visibility === 'public' ? 'Pública' : 'Privada'}
+              </span>
+              <span className="flex items-center gap-1 whitespace-nowrap">
+                <Users className="size-3.5" />
+                <span>{pool.total_participants}</span>
+                <span>participante{pool.total_participants !== 1 ? 's' : ''}</span>
+              </span>
+            </div>
           </div>
         </div>
 
