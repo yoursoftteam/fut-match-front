@@ -79,7 +79,8 @@ export async function GET(
       }
 
       const team = pred.team as unknown as { id: string; name: string; fifa_code: string; flag_svg_url: string | null } | null
-      if (team && pred.category in ['champion', 'subchampion', 'third_place']) {
+      const VALID_CATEGORIES = ['champion', 'subchampion', 'third_place'] as const
+      if (team && VALID_CATEGORIES.includes(pred.category as typeof VALID_CATEGORIES[number])) {
         const entry = predictionsByUser.get(pred.user_id)!
         entry.predictions[pred.category as 'champion' | 'subchampion' | 'third_place'] = {
           team_id: team.id,
