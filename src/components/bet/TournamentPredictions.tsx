@@ -6,6 +6,7 @@ import {
   ChevronDown,
   Globe,
   Loader2,
+  Lock,
   Medal,
   Shield,
   Star,
@@ -73,6 +74,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
     loading: predsLoading,
     saving,
     error,
+    locked,
     predictions,
     fetchPredictions,
     savePrediction,
@@ -144,6 +146,13 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
             </div>
           )}
 
+          {locked && (
+            <div className="mx-4 mt-3 flex items-center gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-300">
+              <Lock className="size-3.5 shrink-0" aria-hidden="true" />
+              <span>Predicciones bloqueadas — el torneo ya comenzó</span>
+            </div>
+          )}
+
           <div className="px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center gap-3 py-8 text-sm text-muted-foreground">
@@ -185,7 +194,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                   <Select
                     value={current?.team_id ?? ''}
                     onValueChange={(v) => v && handleSelect(key, v)}
-                    disabled={savingCategory === key}
+                    disabled={savingCategory === key || locked}
                   >
                     <SelectTrigger
                       className={cn(

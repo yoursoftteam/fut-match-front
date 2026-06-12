@@ -4,10 +4,9 @@ import * as React from 'react'
 import { LockCountdown } from './LockCountdown'
 import { ScoreInput } from './ScoreInput'
 import { cn } from '@/lib/utils'
-import { Clock, Lock } from 'lucide-react'
 
 const STAGE_LABELS: Record<string, string> = {
-  group_stage: 'Grupos',
+  group_stage: 'Grupo',
   round_of_32: '32avos',
   round_of_16: '16avos',
   quarter_finals: 'Cuartos',
@@ -36,6 +35,8 @@ export interface MatchCardProps {
   canEdit: boolean
   onUpdatePrediction?: (homeScore: number, awayScore: number) => void
   onClick?: () => void
+  onShowGroup?: () => void
+  showGroupTable?: boolean
   className?: string
   compact?: boolean
 }
@@ -134,6 +135,8 @@ export function MatchCard({
   canEdit,
   onUpdatePrediction,
   onClick,
+  onShowGroup,
+  showGroupTable = true,
   className,
   compact = false,
 }: MatchCardProps) {
@@ -183,18 +186,28 @@ export function MatchCard({
         tabIndex={isClickable ? 0 : undefined}
         onKeyDown={isClickable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onClick?.() } } : undefined}
       >
-        <div className="mb-2 flex items-center justify-between">
-          <div className="flex items-center gap-1.5">
-            <span className="rounded-md bg-slate-800 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider text-slate-400">
-              {stageLabel}
-            </span>
+        <div className="mb-2 grid grid-cols-3 items-center gap-2">
+          <span
+            className={cn(
+              'rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider justify-self-start',
+              onShowGroup && showGroupTable
+                ? 'cursor-pointer bg-emerald-500/15 text-emerald-400 transition-colors hover:bg-emerald-500/25'
+                : 'bg-slate-800 text-slate-400'
+            )}
+            onClick={onShowGroup && showGroupTable ? (e) => { e.stopPropagation(); onShowGroup() } : undefined}
+            role={onShowGroup && showGroupTable ? 'button' : undefined}
+            tabIndex={onShowGroup && showGroupTable ? 0 : undefined}
+            onKeyDown={onShowGroup && showGroupTable ? (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onShowGroup() } } : undefined}
+          >
+            {onShowGroup && showGroupTable ? `Ver Tabla Grupo ${match.group_name}` : stageLabel}
+          </span>
+          <div className="flex justify-center">
+            <LockCountdown kickoffAt={match.kickoff_at} status={match.status} showTimer={false} />
           </div>
-          <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+          <span className="flex items-center gap-1.5 justify-end text-[10px] text-slate-500">
             <span>{kickoffDate}</span>
             <span className="font-mono">{kickoffTime}</span>
-            {!isEditable && match.status === 'scheduled' && <Lock className="size-2.5 text-red-400/70" />}
-            {isEditable && <Clock className="size-2.5 text-emerald-400/70" />}
-          </div>
+          </span>
         </div>
 
         <div className="flex items-center justify-center gap-4">
@@ -237,10 +250,6 @@ export function MatchCard({
             />
           </div>
         </div>
-
-        <div className="mt-1 flex justify-center">
-          <LockCountdown kickoffAt={match.kickoff_at} showTimer={false} />
-        </div>
       </div>
     )
   }
@@ -268,7 +277,7 @@ export function MatchCard({
             {kickoffTime}
           </span>
         </div>
-        <LockCountdown kickoffAt={match.kickoff_at} showTimer={true} />
+        <LockCountdown kickoffAt={match.kickoff_at} status={match.status} showTimer={true} />
       </div>
 
       <div className="space-y-2">

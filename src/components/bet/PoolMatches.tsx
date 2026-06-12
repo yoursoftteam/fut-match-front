@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import { MatchCard } from './MatchCard'
 import { MatchPredictionsModal } from './MatchPredictionsModal'
+import { GroupStandingsModal } from './GroupStandingsModal'
 import { AlertCircle, ArrowDown, ChevronDown, Loader2, Search, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Match, STAGE_ORDER, MatchStage } from '@/types/bet'
@@ -19,6 +20,7 @@ interface Prediction {
 interface PoolMatchesProps {
   poolId: string
   tournamentId: string
+  showGroupTable?: boolean
 }
 
 const STAGE_LABELS: Record<string, string> = {
@@ -30,6 +32,22 @@ const STAGE_LABELS: Record<string, string> = {
   third_place: 'Tercer puesto',
   final: 'Final',
 }
+
+const FILTER_LABELS: Record<string, string> = {
+  round_of_32: '16avos',
+  round_of_16: '8avos',
+  quarter_finals: 'Cuartos',
+  semi_finals: 'Semi',
+  final: 'Final',
+}
+
+const STAGE_FILTER_ORDER = [
+  MatchStage.ROUND_OF_32,
+  MatchStage.ROUND_OF_16,
+  MatchStage.QUARTER_FINALS,
+  MatchStage.SEMI_FINALS,
+  MatchStage.FINAL,
+]
 
 function groupMatchesByStage(matches: Match[]): [string, Match[]][] {
   const groups = new Map<string, Match[]>()
@@ -61,6 +79,8 @@ function StageSection({
   predictions,
   onUpdatePrediction,
   onSelectMatch,
+  onShowGroup,
+  showGroupTable,
   defaultOpen,
 }: {
   stage: string
@@ -68,6 +88,8 @@ function StageSection({
   predictions: Map<string, Prediction>
   onUpdatePrediction: (matchId: string, home: number, away: number) => void
   onSelectMatch: (matchId: string) => void
+  onShowGroup: (groupName: string) => void
+  showGroupTable: boolean
   defaultOpen: boolean
 }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -153,6 +175,8 @@ function StageSection({
                 canEdit={match.status === 'scheduled'}
                 onUpdatePrediction={(home, away) => onUpdatePrediction(match.id, home, away)}
                 onClick={match.status !== 'scheduled' ? () => onSelectMatch(match.id) : undefined}
+                showGroupTable={showGroupTable}
+                onShowGroup={match.stage === MatchStage.GROUP_STAGE && match.group_name && showGroupTable ? () => onShowGroup(match.group_name!) : undefined}
                 compact
               />
               </div>
@@ -164,13 +188,15 @@ function StageSection({
   )
 }
 
-export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
+export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: PoolMatchesProps) {
   const [matches, setMatches] = useState<Match[]>([])
   const [predictions, setPredictions] = useState<Prediction[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [searchQuery, setSearchQuery] = useState('')
+  const [activeFilter, setActiveFilter] = useState<string | null>(null)
   const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
   const searchRef = useRef<HTMLInputElement>(null)
   const saveTimeouts = useRef<Record<string, ReturnType<typeof setTimeout>>>({})
 
@@ -272,6 +298,28 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
     [predictions]
   )
 
+  const filterOptions = useMemo(() => {
+    const groups = new Set<string>()
+    const stages = new Set<string>()
+    for (const m of matches) {
+      if (m.stage === MatchStage.GROUP_STAGE && m.group_name) {
+        groups.add(m.group_name)
+      } else if (m.stage && m.stage !== MatchStage.GROUP_STAGE && m.stage !== MatchStage.THIRD_PLACE) {
+        stages.add(m.stage)
+      }
+    }
+    const items: { key: string; label: string }[] = []
+    for (const name of Array.from(groups).sort()) {
+      items.push({ key: `group:${name}`, label: name })
+    }
+    for (const stage of STAGE_FILTER_ORDER) {
+      if (stages.has(stage)) {
+        items.push({ key: `stage:${stage}`, label: FILTER_LABELS[stage] ?? STAGE_LABELS[stage] })
+      }
+    }
+    return items
+  }, [matches])
+
   const handleUpdatePrediction = useCallback(
     (matchId: string, homeScore: number, awayScore: number) => {
       setPredictions((prev) => {
@@ -314,14 +362,28 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
   }, [matches, predictionsMap])
 
   const filteredMatches = useMemo(() => {
-    if (!searchQuery.trim()) return matches
-    const q = searchQuery.toLowerCase().trim()
-    return matches.filter(
-      (m) =>
-        (m.home_team?.name?.toLowerCase() ?? m.home_placeholder ?? '').includes(q) ||
-        (m.away_team?.name?.toLowerCase() ?? m.away_placeholder ?? '').includes(q)
-    )
-  }, [matches, searchQuery])
+    let result = matches
+    if (activeFilter) {
+      if (activeFilter.startsWith('group:')) {
+        const groupName = activeFilter.slice(6)
+        result = result.filter(
+          (m) => m.stage === MatchStage.GROUP_STAGE && m.group_name === groupName
+        )
+      } else if (activeFilter.startsWith('stage:')) {
+        const stage = activeFilter.slice(6)
+        result = result.filter((m) => m.stage === stage)
+      }
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim()
+      result = result.filter(
+        (m) =>
+          (m.home_team?.name?.toLowerCase() ?? m.home_placeholder ?? '').includes(q) ||
+          (m.away_team?.name?.toLowerCase() ?? m.away_placeholder ?? '').includes(q)
+      )
+    }
+    return result
+  }, [matches, searchQuery, activeFilter])
 
   const grouped = useMemo(() => groupMatchesByStage(filteredMatches), [filteredMatches])
 
@@ -396,14 +458,14 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
 
   return (
     <div className="space-y-3">
-      {filteredMatches.length !== matches.length && (
+      {(filteredMatches.length !== matches.length || activeFilter) && (
         <p className="text-xs text-slate-500 text-center">
           {filteredMatches.length} de {matches.length} partidos
         </p>
       )}
 
-      <div className="sticky top-0 z-10 -mx-4 mb-3 border-b border-slate-800 bg-slate-950/95 px-4 py-2 backdrop-blur-sm">
-        <div className="relative">
+      <div className="sticky top-0 z-10 -mx-4 border-b border-slate-800 bg-slate-950/95 px-4 py-2 backdrop-blur-sm">
+        <div className="relative mb-2">
           <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
           <input
             ref={searchRef}
@@ -424,6 +486,37 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
             </button>
           )}
         </div>
+        {filterOptions.length > 0 && (
+          <div className="flex flex-wrap gap-1.5 pb-1" role="group" aria-label="Filtrar por grupo o fase">
+            <button
+              type="button"
+              onClick={() => setActiveFilter(null)}
+              className={cn(
+                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                activeFilter === null
+                  ? 'bg-emerald-500/20 text-emerald-400'
+                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
+              )}
+            >
+              Todos
+            </button>
+            {filterOptions.map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                className={cn(
+                  'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                  activeFilter === key
+                    ? 'bg-emerald-500/20 text-emerald-400'
+                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {grouped.length === 0 && searchQuery.trim() && (
@@ -440,6 +533,8 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
           predictions={predictionsMap}
           onUpdatePrediction={handleUpdatePrediction}
           onSelectMatch={setSelectedMatchId}
+          onShowGroup={setSelectedGroup}
+          showGroupTable={showGroupTable}
           defaultOpen={index < 2}
         />
       ))}
@@ -461,6 +556,15 @@ export function PoolMatches({ poolId, tournamentId }: PoolMatchesProps) {
         open={!!selectedMatchId}
         onClose={() => setSelectedMatchId(null)}
       />
+
+      {selectedGroup && (
+        <GroupStandingsModal
+          groupName={selectedGroup}
+          matches={matches}
+          getPrediction={(matchId) => predictionsMap.get(matchId)}
+          onClose={() => setSelectedGroup(null)}
+        />
+      )}
     </div>
   )
 }

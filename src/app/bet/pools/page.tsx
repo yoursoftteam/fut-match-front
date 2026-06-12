@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabase";
 import { usePools } from "@/hooks/usePools";
 import { JoinByCodeSection, PoolCard, PublicPoolsModal } from "@/components/bet";
 import { Plus, ArrowLeft, Compass } from "lucide-react";
@@ -13,6 +14,95 @@ export default function PoolsPage() {
     joinByCode, joinLoading, joinError, clearJoinError,
   } = usePools();
   const [showPublicModal, setShowPublicModal] = useState(false);
+  interface PoolExtra {
+    kickoffAt: string
+    rank: number
+    totalMembers: number
+    predicted: boolean
+  }
+  const [poolExtras, setPoolExtras] = useState<Record<string, PoolExtra>>({});
+
+  const poolIds = useMemo(() => pools.map((p) => p.id), [pools]);
+  const uniqueTournamentIds = useMemo(
+    () => [...new Set(pools.map((p) => p.tournament_id))],
+    [pools]
+  );
+
+  useEffect(() => {
+    if (poolIds.length === 0 || uniqueTournamentIds.length === 0) return
+    let cancelled = false
+    ;(async () => {
+      const { data: authData } = await supabase.auth.getSession()
+      const userId = authData.session?.user.id
+      if (!userId) return
+
+      const [{ data: matches }, { data: allScores }] = await Promise.all([
+        supabase
+          .from('bet_matches')
+          .select('id, tournament_id, kickoff_at')
+          .in('tournament_id', uniqueTournamentIds)
+          .eq('status', 'scheduled')
+          .order('kickoff_at', { ascending: true }),
+        supabase
+          .from('bet_scores_aggregate')
+          .select('pool_id, user_id, points_total')
+          .in('pool_id', poolIds)
+          .eq('mode', 'pool'),
+      ])
+      if (cancelled) return
+
+      // Next match per tournament
+      const tournamentNext: Record<string, { id: string; kickoff_at: string }> = {}
+      for (const row of matches ?? []) {
+        if (!tournamentNext[row.tournament_id]) {
+          tournamentNext[row.tournament_id] = row
+        }
+      }
+      const nextMatchIds = Object.values(tournamentNext).map((m) => m.id)
+
+      // Check predictions for next matches
+      let predictedSet = new Set<string>()
+      if (nextMatchIds.length > 0) {
+        const { data: preds } = await supabase
+          .from('bet_match_predictions')
+          .select('match_id, pool_id')
+          .in('match_id', nextMatchIds)
+          .in('pool_id', poolIds)
+          .eq('user_id', userId)
+          .eq('mode', 'pool')
+        if (cancelled) return
+        predictedSet = new Set((preds ?? []).map((p) => `${p.pool_id}:${p.match_id}`))
+      }
+
+      // Calculate ranks per pool
+      const poolScoresMap: Record<string, { user_id: string; points_total: number }[]> = {}
+      for (const s of allScores ?? []) {
+        if (!poolScoresMap[s.pool_id]) poolScoresMap[s.pool_id] = []
+        poolScoresMap[s.pool_id].push(s)
+      }
+      const ranks: Record<string, number> = {}
+      const totals: Record<string, number> = {}
+      for (const [pid, scores] of Object.entries(poolScoresMap)) {
+        scores.sort((a, b) => b.points_total - a.points_total)
+        totals[pid] = scores.length
+        const idx = scores.findIndex((s) => s.user_id === userId)
+        ranks[pid] = idx >= 0 ? idx + 1 : totals[pid] + 1
+      }
+
+      const extras: Record<string, PoolExtra> = {}
+      for (const pool of pools) {
+        const nextMatch = tournamentNext[pool.tournament_id]
+        extras[pool.id] = {
+          kickoffAt: nextMatch?.kickoff_at ?? '',
+          rank: ranks[pool.id] ?? 1,
+          totalMembers: totals[pool.id] ?? pool.member_count,
+          predicted: nextMatch ? predictedSet.has(`${pool.id}:${nextMatch.id}`) : true,
+        }
+      }
+      setPoolExtras(extras)
+    })()
+    return () => { cancelled = true }
+  }, [poolIds, uniqueTournamentIds, pools])
 
   if (loading) {
     return (
@@ -85,15 +175,22 @@ export default function PoolsPage() {
           </div>
         ) : (
           <div className="space-y-3">
-            {pools.map((pool) => (
-              <PoolCard
-                key={pool.id}
-                pool={pool}
-                onClick={() => router.push(`/bet/pools/${pool.id}`)}
-              >
-                <span className="text-xs text-slate-500">→</span>
-              </PoolCard>
-            ))}
+            {pools.map((pool) => {
+              const extra = poolExtras[pool.id]
+              return (
+                <PoolCard
+                  key={pool.id}
+                  pool={pool}
+                  onClick={() => router.push(`/bet/pools/${pool.id}`)}
+                  nextMatchKickoffAt={extra?.kickoffAt}
+                  rank={extra?.rank ?? 0}
+                  totalMembers={extra?.totalMembers ?? pool.member_count}
+                  predicted={extra?.predicted}
+                >
+                  <span className="text-xs text-slate-500">→</span>
+                </PoolCard>
+              )
+            })}
             {hasMore && (
               <button
                 type="button"
