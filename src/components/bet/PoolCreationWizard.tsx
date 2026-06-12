@@ -172,7 +172,7 @@ export function PoolCreationWizard({
   const closePath = isPredictions ? "/bet/predictions" : "/bet/pools";
 
   return (
-    <div className="min-h-dvh bg-[#0F172A] text-slate-50">
+    <div className="min-h-dvh bg-muted text-foreground">
       <div className="mx-auto max-w-lg px-4 py-8">
         <div className="mb-8 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -180,11 +180,11 @@ export function PoolCreationWizard({
               <div
                 key={s}
                 className={`flex size-8 items-center justify-center rounded-full text-xs font-bold transition-colors ${
-                  s === step
-                    ? "bg-[#22C55E] text-slate-950"
+                   s === step
+                    ? "bg-emerald-500 text-white"
                     : s < step
-                    ? "bg-[#22C55E]/20 text-[#22C55E]"
-                    : "bg-slate-800 text-slate-500"
+                    ? "bg-emerald-500/20 text-emerald-500"
+                    : "bg-muted text-muted-foreground"
                 }`}
               >
                 {s}
@@ -196,7 +196,7 @@ export function PoolCreationWizard({
             onClick={() => {
               router.push(closePath);
             }}
-            className="text-sm text-slate-400 transition-colors hover:text-slate-300"
+            className="text-sm text-muted-foreground transition-colors hover:text-foreground"
           >
             Cancelar
           </button>
@@ -246,7 +246,7 @@ export function PoolCreationWizard({
             <button
               type="button"
               onClick={() => setStep((s) => (s - 1) as Step)}
-              className="flex-1 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2.5 text-sm font-medium text-slate-300 transition-colors hover:border-[#22C55E]/50 hover:text-slate-50"
+              className="flex-1 rounded-lg border border-border bg-card px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-emerald-500/50 hover:text-foreground"
               disabled={creationStatus === "submitting"}
             >
               Atras
@@ -256,7 +256,7 @@ export function PoolCreationWizard({
             <button
               type="button"
               onClick={advanceStep}
-              className="flex-1 rounded-lg bg-[#22C55E] px-4 py-2.5 text-sm font-semibold text-slate-950 transition-colors hover:bg-emerald-400 focus-visible:ring-2 focus-visible:ring-[#22C55E]/70"
+              className="flex-1 rounded-lg bg-emerald-500 px-4 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-400 focus-visible:ring-2 focus-visible:ring-emerald-500/70"
             >
               Siguiente
             </button>

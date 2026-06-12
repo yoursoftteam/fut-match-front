@@ -48,10 +48,10 @@ const CATEGORY_META: Record<TournamentCategory, {
     label: 'Subcampeón',
     Icon: Medal,
     description: 'Equipo que pierde la final',
-    color: 'text-slate-300',
+    color: 'text-foreground',
     podiumY: '-translate-y-2',
     podiumWidth: 'w-full sm:w-56',
-    borderColor: 'border-slate-500/30',
+    borderColor: 'border-border',
   },
   third_place: {
     label: 'Tercer puesto',
@@ -119,7 +119,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
         aria-expanded={!collapsed}
         aria-controls="tournament-predictions-content"
       >
-        <Globe className="size-5 text-emerald-400" aria-hidden="true" />
+        <Globe className="size-5 text-emerald-600 dark:text-emerald-400" aria-hidden="true" />
         <h2 id="tournament-predictions-heading" className="text-sm font-semibold text-foreground">
           Predicciones de torneo
         </h2>
@@ -166,7 +166,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
           <div className="px-4 py-6">
         {loading ? (
           <div className="flex items-center justify-center gap-3 py-8 text-sm text-muted-foreground">
-            <Loader2 className="size-5 animate-spin text-emerald-400" />
+            <Loader2 className="size-5 animate-spin text-emerald-600 dark:text-emerald-400" />
             Cargando…
           </div>
         ) : (
@@ -194,7 +194,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                       {label}
                     </span>
                     {savedCategory === key && (
-                      <CheckCircle2 className="ml-auto size-3.5 text-emerald-400" />
+                      <CheckCircle2 className="ml-auto size-3.5 text-emerald-600 dark:text-emerald-400" />
                     )}
                   </div>
                   <p className="mb-3 text-[0.6875rem] text-muted-foreground">
@@ -269,7 +269,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                     <button
                       type="button"
                       onClick={() => setCompareCategory(key)}
-                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/25 active:bg-emerald-500/35"
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-600 dark:text-emerald-400 transition-colors hover:bg-emerald-500/25 active:bg-emerald-500/35"
                     >
                       <Users className="size-3.5" aria-hidden="true" />
                       Comparar

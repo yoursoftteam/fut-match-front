@@ -50,7 +50,7 @@ export function CountryBadge({
   return (
     <div
       className={cn(
-        'inline-flex items-center rounded-md bg-slate-900 px-2 py-1 md:px-3 md:py-1.5',
+        'inline-flex items-center rounded-md bg-card border border-border shadow-sm px-2 py-1 md:px-3 md:py-1.5',
         variants.container,
         className
       )}
@@ -66,19 +66,19 @@ export function CountryBadge({
       ) : (
         <span
           aria-hidden="true"
-          className={cn('flex-shrink-0 rounded-sm border border-slate-700 bg-slate-800', variants.flag)}
+          className={cn('flex-shrink-0 rounded-sm border border-border bg-muted', variants.flag)}
         />
       )}
 
       <div className="flex min-w-0 flex-col gap-0.5">
         <div
-          className={cn('truncate font-medium text-slate-50', variants.name)}
+          className={cn('truncate font-medium text-foreground', variants.name)}
           title={name}
         >
           {name}
         </div>
         <div
-          className={cn('text-slate-400', variants.code)}
+          className={cn('text-muted-foreground', variants.code)}
           aria-label={`FIFA code: ${fifa_code}`}
         >
           {fifa_code}

@@ -97,18 +97,18 @@ function TeamCell({
         <span
           aria-hidden="true"
           className={cn(
-            'size-6 shrink-0 rounded-sm border border-slate-700 bg-slate-800',
+            'size-6 shrink-0 rounded-sm border border-border bg-muted',
             align === 'right' && 'order-2'
           )}
         />
       )}
 
-      <span className="min-w-0 truncate font-medium text-slate-100" title={teamName}>
+      <span className="min-w-0 truncate font-medium text-foreground" title={teamName}>
         {teamName}
       </span>
       {fifaCode && (
         <span
-          className="hidden shrink-0 rounded border border-slate-700 bg-slate-900 px-1.5 py-0.5 font-mono text-[0.625rem] text-slate-400 sm:inline"
+          className="hidden shrink-0 rounded border border-border bg-slate-900 px-1.5 py-0.5 font-mono text-[0.625rem] text-muted-foreground sm:inline"
           translate="no"
         >
           {fifaCode}
@@ -153,15 +153,15 @@ function PredictionCell({
 
   if (prediction) {
     return (
-      <div className="inline-flex items-center gap-1 font-mono text-sm font-bold tabular-nums text-slate-50">
+      <div className="inline-flex items-center gap-1 font-mono text-sm font-bold tabular-nums text-foreground">
         <span>{prediction.home_score_predicted}</span>
-        <span className="text-slate-500">-</span>
+        <span className="text-muted-foreground">-</span>
         <span>{prediction.away_score_predicted}</span>
       </div>
     )
   }
 
-  return <span className="text-xs text-slate-500">Sin pick</span>
+  return <span className="text-xs text-muted-foreground">Sin pick</span>
 }
 
 function MatchRow({
@@ -194,26 +194,26 @@ function MatchRow({
   return (
     <tr
       className={cn(
-        'border-b border-slate-800/80 transition-colors hover:bg-slate-900/80',
+        'border-b border-border/80 transition-colors hover:bg-slate-900/80',
         locked && 'bg-red-950/10'
       )}
     >
-      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs text-slate-400">
+      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs text-muted-foreground">
         <div className="flex items-center gap-1 sm:gap-2">
-          <CalendarDays className="size-2.5 sm:size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+          <CalendarDays className="size-2.5 sm:size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span>{dateFormatter.format(kickoffDate)}</span>
         </div>
       </td>
-      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs font-mono tabular-nums text-slate-300">
+      <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs font-mono tabular-nums text-foreground">
         <div className="flex items-center gap-1 sm:gap-2">
-          <Clock3 className="size-2.5 sm:size-3.5 shrink-0 text-slate-500" aria-hidden="true" />
+          <Clock3 className="size-2.5 sm:size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
           <span>{timeFormatter.format(kickoffDate)}</span>
         </div>
       </td>
       <td className="max-w-[7rem] sm:max-w-[12rem] px-1.5 sm:px-3 py-2">
         <TeamCell team={match.home_team} placeholder={match.home_placeholder} />
       </td>
-      <td className="whitespace-nowrap px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-slate-500">
+      <td className="whitespace-nowrap px-1 sm:px-2 py-2 text-center text-[10px] sm:text-xs font-bold text-muted-foreground">
         vs
       </td>
       <td className="max-w-[7rem] sm:max-w-[12rem] px-1.5 sm:px-3 py-2">
@@ -223,17 +223,17 @@ function MatchRow({
           align="right"
         />
       </td>
-      <td className="hidden sm:table-cell whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs text-slate-400">
+      <td className="hidden sm:table-cell whitespace-nowrap px-1.5 sm:px-3 py-2 text-[10px] sm:text-xs text-muted-foreground">
         <div className="flex items-center gap-1">
           {match.fifa_match_number && (
-            <span className="hidden lg:inline font-mono tabular-nums text-slate-500">
+            <span className="hidden lg:inline font-mono tabular-nums text-muted-foreground">
               P{match.fifa_match_number}
             </span>
           )}
           <span>{stageLabel}</span>
         </div>
       </td>
-      <td className="hidden md:table-cell max-w-[11rem] truncate px-3 py-2 text-xs text-slate-400" title={match.venue ?? undefined}>
+      <td className="hidden md:table-cell max-w-[11rem] truncate px-3 py-2 text-xs text-muted-foreground" title={match.venue ?? undefined}>
         {match.venue ?? 'Por definir'}
       </td>
       <td className="hidden md:table-cell whitespace-nowrap px-3 py-2 text-center">
@@ -241,12 +241,12 @@ function MatchRow({
           <button
             type="button"
             onClick={() => onShowGroup(match.group_name!)}
-            className="rounded border border-slate-700 bg-slate-800 px-2 py-1 text-[0.625rem] font-medium text-emerald-400 transition-colors hover:bg-slate-700"
+            className="rounded border border-border bg-muted px-2 py-1 text-[0.625rem] font-medium text-emerald-600 dark:text-emerald-400 transition-colors hover:bg-muted"
           >
             Ver grupo
           </button>
         ) : (
-          <span className="text-[0.625rem] text-slate-600">–</span>
+          <span className="text-[0.625rem] text-muted-foreground">–</span>
         )}
       </td>
       <td className="whitespace-nowrap px-1.5 sm:px-3 py-2 text-right">
@@ -265,14 +265,14 @@ function MatchRow({
             className={cn(
               'inline-flex items-center justify-center font-mono text-xs font-bold tabular-nums',
               prediction.points_earned > 0
-                ? 'text-emerald-400'
-                : 'text-slate-600'
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-muted-foreground'
             )}
           >
             {prediction.points_earned}
           </span>
         ) : (
-          <span className="text-[0.6875rem] text-slate-600">–</span>
+          <span className="text-[0.6875rem] text-muted-foreground">–</span>
         )}
       </td>
     </tr>
@@ -281,10 +281,10 @@ function MatchRow({
 
 function LoadingState() {
   return (
-    <div className="flex min-h-screen items-center justify-center bg-slate-950">
+    <div className="flex min-h-screen items-center justify-center bg-background">
       <div className="text-center">
-        <Loader2 className="mx-auto mb-4 size-10 animate-spin text-emerald-400" />
-        <p className="text-sm text-slate-400">Cargando…</p>
+        <Loader2 className="mx-auto mb-4 size-10 animate-spin text-emerald-600 dark:text-emerald-400" />
+        <p className="text-sm text-muted-foreground">Cargando…</p>
       </div>
     </div>
   )
@@ -492,9 +492,9 @@ function BetMatchesContent() {
 
   if (!user) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-        <Card className="w-full max-w-md border-slate-800 bg-slate-900 p-6">
-          <p className="mb-4 text-center text-sm text-slate-300">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md border-border bg-slate-900 p-6">
+          <p className="mb-4 text-center text-sm text-foreground">
             Debes iniciar sesión para ver y hacer predicciones.
           </p>
           <Link
@@ -510,15 +510,15 @@ function BetMatchesContent() {
 
   if (poolId && membershipStatus === 'not-member') {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-slate-950 px-4">
-        <Card className="w-full max-w-md border-slate-800 bg-slate-900 p-6 text-center">
+      <div className="flex min-h-screen items-center justify-center bg-background px-4">
+        <Card className="w-full max-w-md border-border bg-slate-900 p-6 text-center">
           <div className="mb-4 inline-flex size-12 items-center justify-center rounded-full bg-red-500/10">
             <AlertCircle className="size-6 text-red-400" aria-hidden="true" />
           </div>
-          <h2 className="mb-2 text-lg font-semibold text-slate-100">
+          <h2 className="mb-2 text-lg font-semibold text-foreground">
             No estás convocado
           </h2>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             No estás convocado para este torneo, valida con el profe y únete por el link de inscripción
           </p>
         </Card>
@@ -531,60 +531,60 @@ function BetMatchesContent() {
   }
 
   return (
-    <main className="min-h-screen bg-slate-950 px-4 py-6 md:px-6 md:py-8">
+    <main className="min-h-screen bg-background px-4 py-6 md:px-6 md:py-8">
       <div className="mx-auto max-w-6xl">
         <header className="mb-5 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
           <div>
-            <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-300">
+            <div className="mb-2 inline-flex items-center gap-2 rounded-md border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-500 dark:text-emerald-300">
               <Trophy className="size-3.5" aria-hidden="true" />
               FIFA 2026
             </div>
             <div className="flex items-center gap-3">
-              <h1 className="text-2xl font-bold text-balance text-slate-50 md:text-3xl">
+              <h1 className="text-2xl font-bold text-balance text-foreground md:text-3xl">
                 Predicciones
               </h1>
               {poolId && (
-                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-300">
+                <span className="inline-flex items-center gap-1 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-medium text-emerald-600 dark:text-emerald-500 dark:text-emerald-300">
                   <Users className="size-3.5" aria-hidden="true" />
                   Polla activa
                 </span>
               )}
             </div>
-            <p className="mt-1 text-sm text-slate-400">
+            <p className="mt-1 text-sm text-muted-foreground">
               {sortedMatches.length} partidos · cierre 10 min antes del kickoff.
               {poolId
                 ? ' · picks guardados en la polla · puntuación configurada'
                 : ` · puntuación por defecto (${DEFAULT_POOL_CONFIG.pts_winner_selection}/${DEFAULT_POOL_CONFIG.pts_exact_score}/${DEFAULT_POOL_CONFIG.pts_team_goals}/${DEFAULT_POOL_CONFIG.pts_goal_difference})`}
             </p>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-xs text-muted-foreground">
               Los marcadores no tienen en cuenta tiempo extra, solo resultado oficial de los 90 minutos del partido.
             </p>
           </div>
 
           <div className="grid grid-cols-2 gap-2 text-xs sm:min-w-64">
-            <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
-              <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
+            <div className="rounded-md border border-border bg-slate-900 px-3 py-2">
+              <div className="font-mono text-base font-bold tabular-nums text-emerald-500 dark:text-emerald-300">
                 {poolConfig ? `${poolConfig.pts_exact_score} pts` : `${DEFAULT_POOL_CONFIG.pts_exact_score} pts`}
               </div>
-              <div className="text-slate-500">Marcador exacto</div>
+              <div className="text-muted-foreground">Marcador exacto</div>
             </div>
-            <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
-              <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
+            <div className="rounded-md border border-border bg-slate-900 px-3 py-2">
+              <div className="font-mono text-base font-bold tabular-nums text-emerald-500 dark:text-emerald-300">
                 {poolConfig ? `${poolConfig.pts_winner_selection} pts` : `${DEFAULT_POOL_CONFIG.pts_winner_selection} pts`}
               </div>
-              <div className="text-slate-500">Ganador o empate</div>
+              <div className="text-muted-foreground">Ganador o empate</div>
             </div>
-            <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
-              <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
+            <div className="rounded-md border border-border bg-slate-900 px-3 py-2">
+              <div className="font-mono text-base font-bold tabular-nums text-emerald-500 dark:text-emerald-300">
                 {poolConfig ? `${poolConfig.pts_team_goals} pts` : `${DEFAULT_POOL_CONFIG.pts_team_goals} pts`}
               </div>
-              <div className="text-slate-500">Gol correcto</div>
+              <div className="text-muted-foreground">Gol correcto</div>
             </div>
-            <div className="rounded-md border border-slate-800 bg-slate-900 px-3 py-2">
-              <div className="font-mono text-base font-bold tabular-nums text-emerald-300">
+            <div className="rounded-md border border-border bg-slate-900 px-3 py-2">
+              <div className="font-mono text-base font-bold tabular-nums text-emerald-500 dark:text-emerald-300">
                 {poolConfig ? `${poolConfig.pts_goal_difference} pts` : `${DEFAULT_POOL_CONFIG.pts_goal_difference} pts`}
               </div>
-              <div className="text-slate-500">Diferencia de goles</div>
+              <div className="text-muted-foreground">Diferencia de goles</div>
             </div>
           </div>
         </header>
@@ -593,7 +593,7 @@ function BetMatchesContent() {
           role="status"
           aria-live="polite"
           className={cn(
-            'mb-3 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300 transition-opacity duration-200',
+            'mb-3 flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-600 dark:text-emerald-500 dark:text-emerald-300 transition-opacity duration-200',
             saveSuccess ? 'opacity-100' : 'opacity-0 pointer-events-none'
           )}
         >
@@ -624,27 +624,27 @@ function BetMatchesContent() {
 
         <section
           aria-labelledby="matches-table-heading"
-          className="overflow-hidden rounded-lg border border-slate-800 bg-slate-950"
+          className="overflow-hidden rounded-lg border border-border bg-background"
         >
-          <div className="flex items-center justify-between gap-3 border-b border-slate-800 bg-slate-900/70 px-3 py-2">
+          <div className="flex items-center justify-between gap-3 border-b border-border bg-slate-900/70 px-3 py-2">
             <h2
               id="matches-table-heading"
-              className="text-sm font-semibold text-slate-200"
+              className="text-sm font-semibold text-foreground"
             >
               Fixture completo
             </h2>
-            <span className="text-xs tabular-nums text-slate-500">
+            <span className="text-xs tabular-nums text-muted-foreground">
               {firstVisibleMatch}-{lastVisibleMatch} de {sortedMatches.length}
             </span>
           </div>
 
           {matchesLoading ? (
-            <div className="flex items-center justify-center gap-3 py-12 text-sm text-slate-400">
-              <Loader2 className="size-5 animate-spin text-emerald-400" />
+            <div className="flex items-center justify-center gap-3 py-12 text-sm text-muted-foreground">
+              <Loader2 className="size-5 animate-spin text-emerald-600 dark:text-emerald-400" />
               Cargando partidos…
             </div>
           ) : paginatedMatches.length === 0 ? (
-            <div className="px-4 py-12 text-center text-sm text-slate-400">
+            <div className="px-4 py-12 text-center text-sm text-muted-foreground">
               No hay partidos disponibles.
             </div>
           ) : (
@@ -665,7 +665,7 @@ function BetMatchesContent() {
                   <col className="w-24 sm:w-28" />
                   <col className="w-10 sm:w-14" />
                 </colgroup>
-                <thead className="bg-slate-900 text-left text-[0.625rem] sm:text-[0.6875rem] uppercase text-slate-500">
+                <thead className="bg-muted/50 text-left text-[0.625rem] sm:text-[0.6875rem] uppercase text-muted-foreground">
                   <tr>
                     <th scope="col" className="px-1.5 sm:px-3 py-2 font-semibold">
                       Fecha
@@ -722,9 +722,9 @@ function BetMatchesContent() {
         {totalPages > 1 && (
           <nav
             aria-label="Paginación de partidos"
-            className="mt-4 flex flex-col gap-3 border-t border-slate-800 pt-4 sm:flex-row sm:items-center sm:justify-between"
+            className="mt-4 flex flex-col gap-3 border-t border-border pt-4 sm:flex-row sm:items-center sm:justify-between"
           >
-            <p className="text-xs tabular-nums text-slate-500">
+            <p className="text-xs tabular-nums text-muted-foreground">
               Página {currentPage} de {totalPages} · máximo {ITEMS_PER_PAGE} por vista
             </p>
             <div className="flex items-center gap-2">
@@ -734,7 +734,7 @@ function BetMatchesContent() {
                 disabled={currentPage === 1}
                 variant="outline"
                 size="default"
-                className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 min-h-[2.75rem] sm:min-h-0"
+                className="border-border bg-slate-900 text-foreground hover:bg-muted min-h-[2.75rem] sm:min-h-0"
               >
                 <ChevronLeft className="size-4" aria-hidden="true" />
                 <span className="hidden sm:inline">Anterior</span>
@@ -746,7 +746,7 @@ function BetMatchesContent() {
                 disabled={currentPage === totalPages}
                 variant="outline"
                 size="default"
-                className="border-slate-700 bg-slate-900 text-slate-200 hover:bg-slate-800 min-h-[2.75rem] sm:min-h-0"
+                className="border-border bg-slate-900 text-foreground hover:bg-muted min-h-[2.75rem] sm:min-h-0"
               >
                 <span className="hidden sm:inline">Siguiente</span>
                 <span className="sm:hidden">Sig.</span>

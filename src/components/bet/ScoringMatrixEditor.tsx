@@ -72,8 +72,8 @@ export function ScoringMatrixEditor({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-slate-50">Reglas claras, pique limpio</h2>
-          <p className="mt-1 text-sm text-slate-400">
+          <h2 className="text-xl font-bold text-foreground">Reglas claras, pique limpio</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
             Usa el modo default o tunea los puntos antes de invitar.
           </p>
         </div>
@@ -81,7 +81,7 @@ export function ScoringMatrixEditor({
           <button
             type="button"
             onClick={onResetDefault}
-            className="flex items-center gap-1.5 rounded-lg border border-slate-700 bg-slate-900 px-3 py-1.5 text-xs font-medium text-slate-300 transition-colors hover:border-[#22C55E]/50 hover:text-[#22C55E] focus-visible:ring-2 focus-visible:ring-[#22C55E]/70"
+            className="flex items-center gap-1.5 rounded-lg border border-border bg-card px-3 py-1.5 text-xs font-medium text-muted-foreground shadow-sm transition-colors hover:border-emerald-500/50 hover:text-emerald-500 focus-visible:ring-2 focus-visible:ring-emerald-500/70"
           >
             <RotateCcw className="size-3" />
             Restaurar default
@@ -93,23 +93,23 @@ export function ScoringMatrixEditor({
         {RULE_GROUPS.map((group) => (
           <div
             key={group.key}
-            className="rounded-lg border border-slate-800 bg-slate-900/70 overflow-hidden"
+            className="rounded-lg border border-border bg-card overflow-hidden shadow-sm"
           >
             <button
               type="button"
               onClick={() => toggleGroup(group.key)}
-              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-slate-300 hover:text-slate-50 transition-colors"
+              className="flex w-full items-center justify-between px-4 py-3 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
             >
               <span>{group.label}</span>
               {expandedGroups[group.key] ? (
-                <ChevronDown className="size-4 text-slate-500" />
+                <ChevronDown className="size-4 text-muted-foreground" />
               ) : (
-                <ChevronRight className="size-4 text-slate-500" />
+                <ChevronRight className="size-4 text-muted-foreground" />
               )}
             </button>
 
             {expandedGroups[group.key] && (
-              <div className="divide-y divide-slate-800/50 border-t border-slate-800/50">
+              <div className="divide-y divide-border/50 border-t border-border/50">
                 {group.rules.map((rule) => {
                   const currentValue = config[rule.key] ?? 0;
                   const defaultValue = defaultConfig[rule.key] ?? 0;
@@ -123,11 +123,11 @@ export function ScoringMatrixEditor({
                       className="flex items-center justify-between gap-4 px-4 py-3"
                     >
                       <div className="flex items-center gap-2 min-w-0">
-                        <span className="text-sm text-slate-400 truncate">
+                        <span className="text-sm text-muted-foreground truncate">
                           {rule.label}
                         </span>
                         {isTuned && (
-                          <span className="shrink-0 rounded-full bg-[#22C55E]/15 px-2 py-0.5 text-[10px] font-medium text-[#22C55E]">
+                          <span className="shrink-0 rounded-full bg-emerald-500/15 px-2 py-0.5 text-[10px] font-medium text-emerald-500">
                             Tuneado
                           </span>
                         )}
@@ -138,7 +138,7 @@ export function ScoringMatrixEditor({
                           onClick={() =>
                             onConfigChange(rule.key, Math.max(min, currentValue - 1))
                           }
-                          className="flex size-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/70 text-slate-400 transition-colors hover:border-[#22C55E]/50 hover:text-[#22C55E] disabled:opacity-50"
+                          className="flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-emerald-500/50 hover:text-emerald-500 disabled:opacity-50"
                           disabled={currentValue <= min}
                           aria-label={`Reducir ${rule.label}`}
                         >
@@ -157,12 +157,12 @@ export function ScoringMatrixEditor({
                             }
                           }}
                           className={cn(
-                            "w-14 rounded-lg border bg-slate-950/70 px-2 py-1.5 text-center text-sm text-slate-50",
-                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E]/70",
+                            "w-14 rounded-lg border bg-card px-2 py-1.5 text-center text-sm text-foreground",
+                            "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70",
                             "[-moz-appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none",
                             isTuned
-                              ? "border-[#22C55E]/40"
-                              : "border-slate-700"
+                              ? "border-emerald-500/40"
+                              : "border-border"
                           )}
                           min={min}
                           max={max}
@@ -173,7 +173,7 @@ export function ScoringMatrixEditor({
                           onClick={() =>
                             onConfigChange(rule.key, Math.min(max, currentValue + 1))
                           }
-                          className="flex size-8 items-center justify-center rounded-lg border border-slate-700 bg-slate-950/70 text-slate-400 transition-colors hover:border-[#22C55E]/50 hover:text-[#22C55E] disabled:opacity-50"
+                          className="flex size-8 items-center justify-center rounded-lg border border-border bg-card text-muted-foreground transition-colors hover:border-emerald-500/50 hover:text-emerald-500 disabled:opacity-50"
                           disabled={currentValue >= max}
                           aria-label={`Aumentar ${rule.label}`}
                         >

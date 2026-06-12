@@ -10,7 +10,7 @@ const MEDAL_EMOJI = ['🥇', '🥈', '🥉']
 
 const RANK_STYLES = {
   1: { bg: 'bg-amber-500/10', border: 'border-amber-500/30', text: 'text-amber-400' },
-  2: { bg: 'bg-slate-300/5', border: 'border-slate-400/30', text: 'text-slate-300' },
+  2: { bg: 'bg-muted/5', border: 'border-border/30', text: 'text-muted-foreground' },
   3: { bg: 'bg-orange-500/10', border: 'border-orange-500/30', text: 'text-orange-400' },
 }
 
@@ -142,7 +142,7 @@ export function PoolRanking({ poolId, poolName, maxEntries, isOwner }: PoolRanki
           <p className="text-xs text-muted-foreground">Comparte el enlace de invitación para agregar participantes</p>
         </div>
       ) : (
-        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-slate-700">
+        <div className="overflow-x-auto [&::-webkit-scrollbar]:h-1 [&::-webkit-scrollbar-thumb]:rounded-full [&::-webkit-scrollbar-thumb]:bg-border">
           <table className="w-full min-w-[360px] text-sm">
             <caption className="sr-only">Ranking de participantes ordenados por puntaje</caption>
             <thead className="border-b border-border bg-muted/50 text-left text-[0.6875rem] uppercase text-muted-foreground">
