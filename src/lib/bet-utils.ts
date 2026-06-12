@@ -108,6 +108,17 @@ function getOutcome(
 // =============================================================================
 
 /**
+ * Check if tournament predictions are locked (after first match kickoff)
+ */
+export function isTournamentPredictionLocked(
+  kickoffInauguralAt: string
+): boolean {
+  const now = new Date();
+  const kickoff = new Date(kickoffInauguralAt);
+  return now >= kickoff;
+}
+
+/**
  * Check if a prediction is locked based on match kickoff time
  */
 export function isPredictionLocked(

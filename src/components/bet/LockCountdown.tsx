@@ -7,12 +7,14 @@ export interface LockCountdownProps {
   kickoffAt: string
   onLocked?: () => void
   showTimer?: boolean
+  status?: 'scheduled' | 'live' | 'finished'
 }
 
 export function LockCountdown({
   kickoffAt,
   onLocked,
   showTimer = true,
+  status,
 }: LockCountdownProps) {
   const [isLocked, setIsLocked] = useState(false)
   const [timeLeft, setTimeLeft] = useState('')
@@ -48,9 +50,23 @@ export function LockCountdown({
   if (!mounted) return null
 
   if (isLocked) {
+    if (status === 'live') {
+      return (
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-400">
+          <span>En juego</span>
+        </div>
+      )
+    }
+    if (status === 'finished') {
+      return (
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
+          <span>Finalizado</span>
+        </div>
+      )
+    }
     return (
       <div className="inline-flex items-center gap-1.5 rounded-md bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400">
-        <span>LOCKED</span>
+        <span>Por iniciar</span>
       </div>
     )
   }

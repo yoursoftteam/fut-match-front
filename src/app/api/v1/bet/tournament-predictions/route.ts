@@ -3,6 +3,7 @@ export const runtime = "edge";
 
 import { getServiceClient } from '@/lib/supabase-admin'
 import { TournamentCategory } from '@/types/bet'
+import { isTournamentPredictionLocked } from '@/lib/bet-utils'
 
 const VALID_CATEGORIES: TournamentCategory[] = ['champion', 'subchampion', 'third_place']
 
@@ -35,12 +36,25 @@ export async function GET(request: NextRequest) {
 
     const { data: pool } = await supabase
       .from('bet_pools')
-      .select('competition_type')
+      .select('competition_type, tournament_id')
       .eq('id', poolId)
       .maybeSingle()
 
     if (pool?.competition_type === 'predictions') {
-      return NextResponse.json({ success: true, data: [], message: 'Tournament predictions are disabled for prediction competitions', error: null }, { status: 200 })
+      return NextResponse.json({ success: true, data: [], locked: false, message: 'Tournament predictions are disabled for prediction competitions', error: null }, { status: 200 })
+    }
+
+    let locked = false
+    if (pool?.tournament_id) {
+      const { data: tournament } = await supabase
+        .from('bet_tournaments')
+        .select('kickoff_inaugural_at')
+        .eq('id', pool.tournament_id)
+        .maybeSingle()
+
+      if (tournament?.kickoff_inaugural_at) {
+        locked = isTournamentPredictionLocked(tournament.kickoff_inaugural_at)
+      }
     }
 
     const { data: predictions, error } = await supabase
@@ -53,7 +67,7 @@ export async function GET(request: NextRequest) {
       throw new Error(`Failed to fetch tournament predictions: ${error.message}`)
     }
 
-    return NextResponse.json({ success: true, data: predictions ?? [], message: 'Tournament predictions fetched', error: null }, { status: 200 })
+    return NextResponse.json({ success: true, data: predictions ?? [], locked, message: 'Tournament predictions fetched', error: null }, { status: 200 })
   } catch (err) {
     console.error('Error in GET /api/v1/bet/tournament-predictions:', err)
     return NextResponse.json({ success: false, data: null, error: { code: 'INTERNAL_SERVER_ERROR', message: 'An unexpected error occurred' } }, { status: 500 })
@@ -94,12 +108,27 @@ export async function POST(request: NextRequest) {
 
     const { data: pool } = await supabase
       .from('bet_pools')
-      .select('competition_type')
+      .select('competition_type, tournament_id')
       .eq('id', pool_id)
       .maybeSingle()
 
     if (pool?.competition_type === 'predictions') {
       return NextResponse.json({ success: false, data: null, error: { code: 'INVALID_POOL_MODE', message: 'Tournament predictions are disabled for prediction competitions' } }, { status: 400 })
+    }
+
+    if (pool?.tournament_id) {
+      const { data: tournament } = await supabase
+        .from('bet_tournaments')
+        .select('kickoff_inaugural_at')
+        .eq('id', pool.tournament_id)
+        .maybeSingle()
+
+      if (tournament?.kickoff_inaugural_at && isTournamentPredictionLocked(tournament.kickoff_inaugural_at)) {
+        return NextResponse.json({
+          success: false, data: null,
+          error: { code: 'PREDICTION_LOCKED', message: 'Tournament predictions are locked after the first match kicks off' },
+        }, { status: 400 })
+      }
     }
 
     const { data: membership } = await supabase

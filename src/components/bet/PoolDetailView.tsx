@@ -7,10 +7,11 @@ import { PoolRanking } from './PoolRanking'
 import { TournamentPredictions } from './TournamentPredictions'
 import { PoolMatches } from './PoolMatches'
 import { ShareActions } from '@/components/ShareLink'
-import { ArrowLeft, ClipboardList, Globe, Lock, Trophy, Users } from 'lucide-react'
+import { PoolRules } from './PoolRules'
+import { ArrowLeft, Calendar, Clock, FileText, Globe, Lock, Trophy, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-type Tab = 'ranking' | 'matches' | 'tournament'
+type Tab = 'ranking' | 'matches' | 'tournament' | 'rules'
 
 interface PoolDetailData {
   id: string
@@ -36,6 +37,8 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [tab, setTab] = useState<Tab>('ranking')
+  const [nextKickoffAt, setNextKickoffAt] = useState<string | null>(null)
+  const [countdown, setCountdown] = useState('')
 
   const fallbackPath = '/bet/pools'
   const [listPath, setListPath] = useState(fallbackPath)
@@ -75,6 +78,49 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     fetchPool()
   }, [fetchPool])
 
+  useEffect(() => {
+    if (!pool) return
+    let cancelled = false
+    ;(async () => {
+      const { data } = await supabase
+        .from('bet_matches')
+        .select('kickoff_at')
+        .eq('tournament_id', pool.tournament_id)
+        .eq('status', 'scheduled')
+        .order('kickoff_at', { ascending: true })
+        .limit(1)
+        .maybeSingle()
+      if (!cancelled && data?.kickoff_at) {
+        const kickoffTime = new Date(data.kickoff_at).getTime()
+        if (kickoffTime > Date.now()) {
+          setNextKickoffAt(data.kickoff_at)
+        }
+      }
+    })()
+    return () => { cancelled = true }
+  }, [pool])
+
+  useEffect(() => {
+    if (!nextKickoffAt) return
+    const tick = () => {
+      const diff = new Date(nextKickoffAt).getTime() - Date.now()
+      if (diff <= 0) { setCountdown(''); setNextKickoffAt(null); return }
+      const days = Math.floor(diff / 86400000)
+      const hours = Math.floor((diff % 86400000) / 3600000)
+      const minutes = Math.floor((diff % 3600000) / 60000)
+      const seconds = Math.floor((diff % 60000) / 1000)
+      const parts: string[] = []
+      if (days > 0) parts.push(`${days}d`)
+      parts.push(`${hours}h`)
+      parts.push(`${minutes}m`)
+      parts.push(`${seconds}s`)
+      setCountdown(parts.join(' '))
+    }
+    tick()
+    const id = setInterval(tick, 1000)
+    return () => clearInterval(id)
+  }, [nextKickoffAt])
+
   if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
@@ -104,8 +150,9 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
 
   const tabs: { id: Tab; label: string; icon: typeof Trophy }[] = [
     { id: 'ranking', label: 'Ranking', icon: Trophy },
-    { id: 'matches', label: 'Partidos', icon: ClipboardList },
+    { id: 'matches', label: 'Partidos', icon: Calendar },
     ...(isPredictions ? [] : [{ id: 'tournament' as const, label: 'Predicciones' as const, icon: Globe as typeof Trophy }]),
+    { id: 'rules', label: 'Reglas', icon: FileText },
   ]
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
@@ -153,6 +200,14 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           </div>
         </div>
 
+        {countdown && (
+          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm">
+            <Clock className="size-4 shrink-0 text-emerald-400" aria-hidden="true" />
+            <span className="text-muted-foreground">Próximo partido:</span>
+            <span className="font-mono font-semibold tabular-nums text-emerald-400">{countdown}</span>
+          </div>
+        )}
+
         <div className="mb-6 flex border-b border-border" role="tablist">
           {tabs.map(({ id: tabId, label, icon: Icon }) => (
             <button
@@ -179,10 +234,12 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
         )}
 
         {tab === 'matches' && (
-          <PoolMatches poolId={pool.id} tournamentId={pool.tournament_id} />
+          <PoolMatches poolId={pool.id} tournamentId={pool.tournament_id} showGroupTable={!isPredictions} />
         )}
 
         {tab === 'tournament' && <TournamentPredictions poolId={pool.id} />}
+
+        {tab === 'rules' && <PoolRules competitionType={pool.competition_type} config={pool.config_active} />}
       </div>
     </div>
   )
