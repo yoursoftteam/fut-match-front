@@ -130,10 +130,20 @@ export function RegistrationPanel() {
   const normalizedAuthName = useMemo(() => {
     if (!user) return null;
 
-    const metadata = user.user_metadata as { full_name?: string; name?: string } | null;
-    const candidate = metadata?.full_name || metadata?.name || user.email?.split("@")[0] || null;
-    const trimmed = candidate?.trim();
-    return trimmed && trimmed.length >= 2 ? trimmed : null;
+    const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null;
+
+    const alias = metadata?.alias?.trim();
+    if (alias && alias.length >= 2) return alias;
+
+    const fullName = metadata?.full_name?.trim();
+    const firstName = fullName?.split(' ')[0]?.trim();
+    if (firstName && firstName.length >= 2) return firstName;
+
+    const fallbackName = metadata?.name?.trim();
+    if (fallbackName && fallbackName.length >= 2) return fallbackName;
+
+    const emailName = user.email?.split("@")[0]?.trim();
+    return emailName && emailName.length >= 2 ? emailName : null;
   }, [user]);
 
   const ownRegistration = useMemo(() => {

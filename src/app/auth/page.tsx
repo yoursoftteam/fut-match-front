@@ -7,6 +7,7 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/hooks/useAuth";
+import { AuthInviteBridge } from "@/components/bet/AuthInviteBridge";
 import { ArrowLeft, Zap, Mail, Lock, Eye, EyeOff } from "lucide-react";
 
 type AuthMode = "signin" | "signup" | "forgot" | "reset";
@@ -45,6 +46,7 @@ function buildRedirectUrl(pathWithQuery: string): string | undefined {
 function AuthForm() {
   const { user, loading: authLoading } = useAuth();
   const [fullName, setFullName] = useState("");
+  const [alias, setAlias] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -60,9 +62,13 @@ function AuthForm() {
     getModeFromSearchParams(searchParams.get("mode"))
   );
 
+  const pendingInvite = searchParams.get("invite") ??
+    (typeof window !== "undefined" ? window.localStorage.getItem("p2:pendingInvite") : null);
+
   const isSignUp = mode === "signup";
   const isForgotMode = mode === "forgot";
   const isResetMode = mode === "reset";
+  const redirectTo = searchParams.get("redirectTo") || "/dashboard";
 
   useEffect(() => {
     setMode(getModeFromSearchParams(searchParams.get("mode")));
@@ -70,14 +76,54 @@ function AuthForm() {
 
   useEffect(() => {
     if (!authLoading && user) {
-      router.replace("/dashboard");
+      const inviteCode =
+        searchParams.get("invite") ??
+        (typeof window !== "undefined"
+          ? window.localStorage.getItem("p2:pendingInvite")
+          : null);
+
+      if (inviteCode) {
+        supabase.auth.getSession().then(({ data: { session } }) => {
+          if (!session) {
+            router.replace("/dashboard");
+            return;
+          }
+
+          fetch("/api/v1/bet/pools/join", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${session.access_token}`,
+            },
+            body: JSON.stringify({ invite_code: inviteCode }),
+          })
+            .then((r) => r.json())
+            .then((payload) => {
+              if (payload.success) {
+                try {
+                  window.localStorage.removeItem("p2:pendingInvite");
+                } catch {
+                  /* ignore */
+                }
+                router.replace(payload.data.next);
+              } else {
+                router.replace("/dashboard");
+              }
+            })
+            .catch(() => router.replace("/dashboard"));
+        });
+        return;
+      }
+
+      router.replace(redirectTo);
     }
-  }, [authLoading, user, router]);
+  }, [authLoading, user, router, redirectTo]);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setMessage("");
     setFullName("");
+    setAlias("");
     setPassword("");
     setConfirmPassword("");
     const newUrl =
@@ -89,7 +135,7 @@ function AuthForm() {
     setMessage("");
     setLoading(true);
 
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       setMessage(
         "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
@@ -99,11 +145,13 @@ function AuthForm() {
     }
 
     try {
-      const redirectTo = buildRedirectUrl("/dashboard");
+      const googleRedirect = pendingInvite
+        ? buildRedirectUrl(`/join/${pendingInvite}`)
+        : buildRedirectUrl(redirectTo);
       const { error } = await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
-          redirectTo,
+          redirectTo: googleRedirect,
           queryParams: {
             prompt: "select_account",
           },
@@ -123,7 +171,7 @@ function AuthForm() {
     setMessage("");
     setLoading(true);
 
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       setMessage(
         "Faltan variables de entorno de Supabase. Configura NEXT_PUBLIC_SUPABASE_URL y NEXT_PUBLIC_SUPABASE_ANON_KEY."
       );
@@ -141,6 +189,13 @@ function AuthForm() {
 
     if (isSignUp && fullName.trim().length < 2) {
       setMessage("Ingresa tu nombre completo para continuar.");
+      setMessageType("error");
+      setLoading(false);
+      return;
+    }
+
+    if (isSignUp && alias.trim().length < 2) {
+      setMessage("Ingresa el alias con el que te identificas.");
       setMessageType("error");
       setLoading(false);
       return;
@@ -174,15 +229,17 @@ function AuthForm() {
       if (isSignUp) {
         const redirectTo = buildRedirectUrl("/dashboard");
         const normalizedFullName = fullName.trim();
+        const normalizedAlias = alias.trim();
         const { error } = await supabase.auth.signUp({
           email,
           password,
           options: {
             emailRedirectTo: redirectTo,
-            data: {
-              full_name: normalizedFullName,
-              name: normalizedFullName,
-            },
+              data: {
+                full_name: normalizedFullName,
+                alias: normalizedAlias,
+                name: normalizedAlias,
+              },
           },
         });
         if (error) throw error;
@@ -217,7 +274,19 @@ function AuthForm() {
         });
         if (error) throw error;
         router.refresh();
-        router.push("/dashboard");
+
+        // Check for pending invite before redirecting
+        const inviteCode =
+          searchParams.get("invite") ??
+          (typeof window !== "undefined"
+            ? window.localStorage.getItem("p2:pendingInvite")
+            : null);
+
+        if (inviteCode) {
+          // Let AuthInviteBridge handle the redirect
+          return;
+        }
+        router.push(redirectTo);
       }
     } catch (error: unknown) {
       const err = error as { message?: string; status?: number };
@@ -284,8 +353,10 @@ function AuthForm() {
   }
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12 relative overflow-hidden">
-      {/* Ambient glow — same as home */}
+    <>
+      <AuthInviteBridge />
+      <div className="min-h-screen bg-background flex items-center justify-center px-4 py-12 relative overflow-hidden">
+        {/* Ambient glow — same as home */}
       <div
         className="pointer-events-none absolute inset-0"
         aria-hidden
@@ -307,6 +378,13 @@ function AuthForm() {
               {subtitleMap[mode]}
             </p>
           </div>
+
+          {/* Pending invite banner */}
+          {pendingInvite && (
+            <div className="mb-6 rounded-lg border border-[#22C55E]/40 bg-[#22C55E]/10 px-4 py-3 text-center text-sm text-[#22C55E]">
+              Estás a un paso de entrar a una polla.
+            </div>
+          )}
 
           {/* Signin / Signup tab switcher */}
           {!isForgotMode && !isResetMode && (
@@ -381,18 +459,35 @@ function AuthForm() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             {isSignUp && (
-              <div className="space-y-2">
-                <label className="text-sm font-semibold text-card-foreground">Nombre completo</label>
-                <div className="relative">
-                  <Input
-                    type="text"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    placeholder="Tu nombre"
-                    className="h-12"
-                    autoComplete="name"
-                    required
-                  />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-card-foreground">Nombre completo</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={fullName}
+                      onChange={(e) => setFullName(e.target.value)}
+                      placeholder="Tu nombre completo"
+                      className="h-12"
+                      autoComplete="name"
+                      required
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-semibold text-card-foreground">¿Cómo quieres que te llamen?</label>
+                  <div className="relative">
+                    <Input
+                      type="text"
+                      value={alias}
+                      onChange={(e) => setAlias(e.target.value)}
+                      placeholder="Tu alias"
+                      className="h-12"
+                      autoComplete="nickname"
+                      required
+                    />
+                  </div>
                 </div>
               </div>
             )}
@@ -602,6 +697,7 @@ function AuthForm() {
         </div>
       </div>
     </div>
+    </>
   );
 }
 

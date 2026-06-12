@@ -8,17 +8,27 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 ```bash
 npm run dev           # Start dev server
-npm run build         # Production build
-npm run lint          # ESLint — only verification step (no tests, no typecheck script)
+<<<<<<< HEAD
+npm run build         # Next.js build (local)
+npm run typecheck     # TypeScript check without build (fast)
+npm run lint          # ESLint — only verification step (no tests)
 npm run preview       # OpenNext Cloudflare preview
-npm run deploy        # Deploy to Cloudflare Pages
+npm run deploy        # OpenNext build + wrangler deploy to Cloudflare Workers
 ```
+
+# CI
+
+`.github/workflows/ci.yml`:
+- On push/PR to `main`: runs `typecheck` + `lint`.
+- On push to `main`: also runs `deploy` job (needs `check`) → `npm run deploy` to Workers.
+
+Requires `CLOUDFLARE_API_TOKEN` repo secret (set in GitHub Settings → Secrets and variables → Actions).
 
 # Architecture
 
 - Next.js 16 App Router + React 19 + TypeScript strict.
 - Tailwind CSS 4 (PostCSS plugin) + shadcn/ui "base-nova" style + tw-animate-css.
-- **Deploy: Cloudflare Pages** via `@opennextjs/cloudflare` (`open-next.config.ts`, `wrangler.jsonc`). Must keep `nodejs_compat` flag.
+- **Deploy: Cloudflare Workers** via `@opennextjs/cloudflare` (`open-next.config.ts`, `wrangler.jsonc`). Must keep `nodejs_compat` flag.
 - `@teispace/next-themes` (not regular next-themes) for dark mode, default is dark.
 - Auth is **browser-only** (no SSR client) — `@supabase/ssr` + PKCE flow via `src/lib/supabase.ts` singleton.
 - `.env` is checked in (contains publishable keys only). Never add secrets.
@@ -34,6 +44,8 @@ npm run deploy        # Deploy to Cloudflare Pages
 | `/create` | Multi-step match creation. |
 | `/dashboard` | Authenticated. "Mis Partidos" shows matches from last 7 days. |
 | `/matches` | Authenticated. All user matches. |
+| `/join/[invite_code]` | **Edge runtime**. Accepts invite code from URL; passes to `JoinInviteGate` client component. |
+| `/j/[code]` | Redirects to `/join/[code]` via `next.config.ts` redirects (no proxy.ts). |
 | `/match/[id]` | **Edge runtime** (`export const runtime = "edge"`). Client component for the heavy work. |
 
 # Database (Supabase)
@@ -49,6 +61,7 @@ Business: `time` is **not a column** — derived from `date` (ISO). Location "Po
 
 # Next.js 16 gotchas
 
+- `proxy.ts` (formerly `middleware.ts`) defaults to Node.js runtime, which **OpenNext Cloudflare doesn't support**. Handle redirects via `next.config.ts` and use Edge runtime on pages directly. There is no `proxy.ts` in this project.
 - For slow client navigations: export `unstable_instant` from the route. Read `node_modules/next/dist/docs/01-app/02-guides/instant-navigation.md` before making changes.
 - `params` in page props is a **Promise** (not a plain object) — must `await` before use.
 
@@ -58,7 +71,21 @@ Business: `time` is **not a column** — derived from `date` (ISO). Location "Po
 - UI primitives in `src/components/ui/` (shadcn generated). Utils: `cn()` in `src/lib/utils.ts`.
 - Currency formatting: `formatCurrency()` in `src/lib/currency.ts` (Intl.NumberFormat("es-CO")).
 - Client-side Supabase proxy in `src/lib/supabase.ts` — always import `supabase` or `getSupabaseClient` from there.
+- Admin/service-role client in `src/lib/supabase-admin.ts` — use `getServiceClient()` (for private routes that bypass RLS) or `getAnonClient()` (for public-read routes). Both return `null` if env vars are missing, so guard with `if (!supabase) return error`. Never create a Supabase client at module level in API routes — lazy-create inside handler only.
 - Realtime: subscribe to `match_registrations` changes via `supabase.channel()` with `postgres_changes`.
 
 ## Brand manual
 - Always use /docs/brand_manual.md as brand manual to UI/UX design
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+When the user types `/graphify`, invoke the `skill` tool with `skill: "graphify"` before doing anything else.
+
+Rules:
+- For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
+- Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
+- If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.
+- Read graphify-out/GRAPH_REPORT.md only for broad architecture review or when query/path/explain do not surface enough context.
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

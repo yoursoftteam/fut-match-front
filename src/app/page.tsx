@@ -10,12 +10,12 @@ import {
   LayoutGrid,
   CreditCard,
   Share2,
-  Trophy,
-  BarChart2,
   Zap,
   ArrowRight,
   CheckCircle2,
 } from "lucide-react";
+import { ServiceCarousel } from "@/components/home/ServiceCarousel";
+import { HeroHeadline } from "@/components/home/HeroHeadline";
 
 
 export default function Home() {
@@ -79,34 +79,7 @@ export default function Home() {
             Menos chat, más juego
           </div>
 
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-heading font-bold leading-tight text-foreground mb-6">
-            Organiza tu partido
-            <br />
-            <span className="text-primary">en 2 minutos.</span>
-          </h1>
-
-          <p className="text-lg sm:text-xl text-muted-foreground max-w-xl mx-auto mb-10 leading-relaxed">
-            Arma equipos, gestiona pagos y comparte un link. Sin grupos de
-            WhatsApp, sin Excel.{" "}
-            <span className="text-foreground font-semibold">Sin excusas.</span>
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Link
-              href="/create"
-              className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-8 py-4 rounded-xl font-bold text-lg transition-all hover:opacity-90 hover:scale-[1.02] neon-glow btn-primary-fm btn-neon-pulse cursor-pointer"
-            >
-              <Zap className="w-5 h-5" />
-              Armar mi partido
-            </Link>
-            <Link
-              href="/auth"
-              className="inline-flex items-center gap-2 border-2 border-primary/40 text-foreground px-8 py-4 rounded-xl font-semibold text-lg hover:border-primary hover:text-primary transition-colors cursor-pointer"
-            >
-              Iniciar sesión
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
+          <HeroHeadline />
 
           {/* Social proof micro-copy */}
           <div className="mt-10 flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 text-sm text-muted-foreground">
@@ -203,99 +176,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* ── Services / Tiers ── */}
-      <section className="py-24 px-4 bg-background">
-        <div className="max-w-6xl mx-auto">
-          <div className="text-center mb-14">
-            <h2 className="text-3xl sm:text-4xl font-heading font-bold text-foreground mb-4">
-              Servicios que ya tienes y{" "}
-              <span className="text-primary">lo que viene</span>
-            </h2>
-            <p className="text-muted-foreground text-lg max-w-xl mx-auto">
-              parti2 crece contigo.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {/* Partido Gratis — disponible */}
-            <div className="card p-7 flex flex-col gap-5 border-primary/30 relative overflow-hidden">
-              <div className="absolute top-0 inset-x-0 h-0.5 bg-primary" />
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center">
-                <Zap className="w-6 h-6 text-primary" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="text-lg font-heading font-bold text-foreground">
-                    Partido Gratis
-                  </h4>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-primary/10 text-primary px-2 py-0.5 rounded-full">
-                    Disponible
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Arma partidos rápidos con tu gente. Define lugar, hora, costo
-                  y cupos. ¡Sin complicaciones!
-                </p>
-              </div>
-              <Link
-                href="/create"
-                className="inline-flex items-center justify-center gap-2 bg-primary text-primary-foreground px-5 py-2.5 rounded-xl font-bold text-sm transition-all hover:opacity-90 btn-primary-fm cursor-pointer"
-              >
-                <Zap className="w-4 h-4" />
-                ¡Armar ahora!
-              </Link>
-            </div>
-
-            {/* Torneos — próximamente */}
-            <div className="card p-7 flex flex-col gap-5 opacity-60">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
-                <Trophy className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="text-lg font-heading font-bold text-foreground">
-                    Torneos Profesionales
-                  </h4>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                    Próximamente
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Crea ligas con tabla de posiciones, fixture automático, fase
-                  de grupos y reglas personalizadas.
-                </p>
-              </div>
-              <span className="inline-flex items-center justify-center gap-2 bg-muted text-muted-foreground px-5 py-2.5 rounded-xl font-bold text-sm cursor-not-allowed">
-                Próximamente
-              </span>
-            </div>
-
-            {/* Estadísticas — próximamente */}
-            <div className="card p-7 flex flex-col gap-5 opacity-60">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center">
-                <BarChart2 className="w-6 h-6 text-muted-foreground" />
-              </div>
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <h4 className="text-lg font-heading font-bold text-foreground">
-                    Estadísticas Completas
-                  </h4>
-                  <span className="text-[10px] font-bold uppercase tracking-wide bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
-                    Próximamente
-                  </span>
-                </div>
-                <p className="text-muted-foreground text-sm leading-relaxed">
-                  Goles, tarjetas, diferencia de gol y más. Lleva el control
-                  total de cada equipo y jugador.
-                </p>
-              </div>
-              <span className="inline-flex items-center justify-center gap-2 bg-muted text-muted-foreground px-5 py-2.5 rounded-xl font-bold text-sm cursor-not-allowed">
-                Próximamente
-              </span>
-            </div>
-          </div>
-        </div>
-      </section>
+      <ServiceCarousel />
 
       {/* ── Final CTA ── */}
       <section className="relative py-28 px-4 overflow-hidden bg-muted/40">

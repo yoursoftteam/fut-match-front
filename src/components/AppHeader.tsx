@@ -20,13 +20,20 @@ export function AppHeader() {
     router.push("/");
   };
 
-  const navLinks = [
-    ...(!isLoggedIn ? [{ href: "/", label: "Inicio" }] : []),
-    { href: "/create", label: "Armar partido" },
-    ...(isLoggedIn ? [{ href: "/dashboard", label: "Mi Dashboard" }, { href: "/matches", label: "Mis Partidos" }] : []),
-  ];
-
   const isActive = (href: string) => pathname === href;
+
+  const navLinks = loading ? [] : [
+    ...(!isLoggedIn ? [
+      { href: "/", label: "Inicio" },
+      { href: "/create", label: "Armar partido" },
+      { href: "/auth?redirectTo=/bet/predictions/new", label: "Crear Predicciones" },
+    ] : [
+      { href: "/dashboard", label: "Mi Dashboard" },
+      { href: "/profile", label: "Mi Perfil" },
+      { href: "/matches", label: "Mis Partidos" },
+      { href: "/bet", label: "Predicciones" },
+    ]),
+  ];
 
   const navItems = (
     <ul className="flex flex-col gap-1">
@@ -103,6 +110,13 @@ export function AppHeader() {
                 >
                   {user.email}
                 </span>
+                <Link
+                  href="/profile"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border px-3 py-2 text-sm text-foreground hover:bg-muted transition-colors"
+                >
+                  <User className="w-3.5 h-3.5" />
+                  Perfil
+                </Link>
                 <button
                   type="button"
                   onClick={handleSignOut}
@@ -144,6 +158,11 @@ export function AppHeader() {
               {/* Nav */}
               <nav aria-label="Navegación móvil" className="flex-1 overflow-y-auto px-4 py-3">
                 {navItems}
+                {!isLoggedIn && !loading && (
+                  <p className="mt-4 px-3 text-xs leading-relaxed text-muted-foreground">
+                    No estás convocado aún, crea tu cuenta y juega con nosotros
+                  </p>
+                )}
               </nav>
 
               {/* User section */}
@@ -158,6 +177,13 @@ export function AppHeader() {
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{user.email}</p>
                     </div>
+                    <Link
+                      href="/profile"
+                      className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-border px-3 py-2.5 text-sm font-medium text-foreground hover:bg-muted transition-colors"
+                    >
+                      <User className="w-4 h-4" />
+                      Mi Perfil
+                    </Link>
                     <button
                       type="button"
                       onClick={handleSignOut}

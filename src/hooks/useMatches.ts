@@ -187,7 +187,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       const { data, error } = await supabase
         .from('matches')
-        .insert([matchData])
+        .insert([{ ...matchData, created_by: user.id }])
         .select('id, title, location, date, max_players, created_by, created_at, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id')
         .single()
 
@@ -196,8 +196,23 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       window.dispatchEvent(new CustomEvent("matches:changed"))
       return { data, error: null }
     } catch (error) {
-      console.error('Error creating match:', error)
-      return { data: null, error }
+      const normalizedError = normalizeError(error, 'No se pudo crear el partido.')
+      const raw = error as {
+        code?: string
+        details?: string
+        hint?: string
+        status?: number
+      } | null
+
+      console.error('Error creating match:', {
+        message: normalizedError.message,
+        code: raw?.code,
+        details: raw?.details,
+        hint: raw?.hint,
+        status: raw?.status,
+      })
+
+      return { data: null, error: normalizedError }
     }
   }
 

@@ -10,8 +10,10 @@ const csp = [
   "object-src 'none'",
   "form-action 'self'",
   "frame-ancestors 'none'",
-  // Scripts: solo el propio origen. Next inyecta scripts internos desde 'self'.
-  "script-src 'self'",
+  // Scripts: unsafe-inline necesario en prod porque Next.js inyecta scripts inline de bootstrap.
+  // unsafe-eval solo en dev (Fast Refresh / webpack).
+  // static.cloudflareinsights.com necesario para Cloudflare Pages Analytics beacon.
+  `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   // Styles: unsafe-inline requerido por Tailwind en producción (no usa nonces por defecto).
   "style-src 'self' 'unsafe-inline'",
   // Fuentes embebidas en CSS (data: URI) usadas por next/font.
@@ -19,7 +21,8 @@ const csp = [
   // Imágenes: self + data URIs (favicons, avatares inline) + HTTPS genérico.
   "img-src 'self' data: blob: https:",
   // Conexiones: self + Supabase REST/auth + WebSocket de Supabase Realtime.
-  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS}`,
+  // En dev se agrega el Supabase local (http://127.0.0.1:54321).
+  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS}${process.env.NODE_ENV === "development" ? " http://127.0.0.1:54321 ws://127.0.0.1:54321" : ""}`,
   // Evitar iframes de contenido externo.
   "frame-src 'none'",
   // Fuerza HTTPS en recursos mixtos.
@@ -49,6 +52,19 @@ const noCacheHeaders = [
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.20.32"],
+  productionBrowserSourceMaps: false,
+  experimental: {
+    serverSourceMaps: false,
+  },
+  async redirects() {
+    return [
+      {
+        source: "/j/:code(\\w{10})",
+        destination: "/join/:code",
+        permanent: false,
+      },
+    ];
+  },
   async headers() {
     return [
       // Seguridad global en todas las rutas.
@@ -66,6 +82,3 @@ const nextConfig: NextConfig = {
 };
 
 export default nextConfig;
-
-import { initOpenNextCloudflareForDev } from "@opennextjs/cloudflare";
-initOpenNextCloudflareForDev();

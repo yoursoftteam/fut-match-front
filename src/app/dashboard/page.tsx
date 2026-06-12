@@ -5,12 +5,15 @@ import { useMatches, type Match } from '@/hooks/useMatches'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Trash2, Plus, Trophy, MapPin, Users, Calendar, Zap, ChevronRight, BarChart2 } from 'lucide-react'
+import { Trash2, Plus, Trophy, MapPin, Users, Calendar, Zap, ChevronRight, Target } from 'lucide-react'
 import FrecuentesSection from '@/components/FrecuentesSection'
+import MisPrediccionesSection from '@/components/MisPrediccionesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { formatLocalTime } from '@/lib/date-utils'
 import { getLocalTimeInputValue } from '@/lib/date-utils'
 import { supabase } from '@/lib/supabase'
@@ -45,6 +48,11 @@ export default function DashboardPage() {
   const [registeredMatchesLoading, setRegisteredMatchesLoading] = useState(true)
   const [unregisteringRegistrationId, setUnregisteringRegistrationId] = useState<string | null>(null)
   const [registeredMatchesMessage, setRegisteredMatchesMessage] = useState<string | null>(null)
+  const [aliasDraft, setAliasDraft] = useState('')
+  const [savedAlias, setSavedAlias] = useState<string | null>(null)
+  const [aliasSaving, setAliasSaving] = useState(false)
+  const [aliasMessage, setAliasMessage] = useState<string | null>(null)
+  const [aliasDismissed, setAliasDismissed] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -65,10 +73,11 @@ export default function DashboardPage() {
       try {
         setRegisteredMatchesLoading(true)
 
-        const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+        const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
         const preferredName = (
-          metadata?.full_name ||
+          metadata?.alias ||
           metadata?.name ||
+          metadata?.full_name ||
           user.email?.split('@')[0] ||
           ''
         ).trim()
@@ -161,6 +170,22 @@ export default function DashboardPage() {
     }
   }, [registeredMatchesMessage])
 
+  useEffect(() => {
+    if (!user) {
+      setAliasDraft('')
+      setSavedAlias(null)
+      setAliasMessage(null)
+      return
+    }
+
+    const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+    const baseAlias = (metadata?.alias || metadata?.name || metadata?.full_name || '').trim()
+
+    setSavedAlias(metadata?.alias?.trim() || null)
+    setAliasDraft(baseAlias)
+    setAliasMessage(null)
+  }, [user])
+
   const handleQuickUnregister = async (registrationId: string, matchId: string) => {
     if (!user) {
       setRegisteredMatchesMessage('Debes iniciar sesión para cancelar la inscripción.')
@@ -174,10 +199,11 @@ export default function DashboardPage() {
       let effectiveRegistrationId = registrationId
 
       if (!isUuid(effectiveRegistrationId)) {
-        const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+        const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
         const preferredName = (
-          metadata?.full_name ||
+          metadata?.alias ||
           metadata?.name ||
+          metadata?.full_name ||
           user.email?.split('@')[0] ||
           ''
         ).trim()
@@ -210,6 +236,41 @@ export default function DashboardPage() {
       setRegisteredMatchesMessage('Te diste de baja del partido correctamente.')
     } finally {
       setUnregisteringRegistrationId(null)
+    }
+  }
+
+  const handleSaveAlias = async () => {
+    if (!user) return
+
+    const nextAlias = aliasDraft.trim()
+    if (nextAlias.length < 2) {
+      setAliasMessage('El alias debe tener al menos 2 caracteres.')
+      return
+    }
+
+    setAliasSaving(true)
+    setAliasMessage(null)
+
+    try {
+      const currentMetadata = (user.user_metadata ?? {}) as Record<string, unknown>
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          alias: nextAlias,
+          name: nextAlias,
+          full_name: (currentMetadata.full_name as string) || nextAlias,
+        },
+      })
+
+      if (error) throw error
+
+      setSavedAlias(nextAlias)
+      setAliasDismissed(true)
+      setAliasMessage('Alias actualizado correctamente.')
+    } catch {
+      setAliasMessage('No pudimos guardar tu alias. Intenta nuevamente.')
+    } finally {
+      setAliasSaving(false)
     }
   }
 
@@ -255,9 +316,13 @@ export default function DashboardPage() {
   const isInitialMatchesLoading = matchesLoading && recentMatches.length === 0
   const isRefreshingMatches = matchesLoading && recentMatches.length > 0
 
-  const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+  const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+  const resolvedAlias = (savedAlias || metadata?.alias || '').trim()
+  const fullName = (metadata?.full_name || '').trim()
+  const needsAlias = !resolvedAlias || (!!fullName && resolvedAlias === fullName)
   const userNameFull = (
-    metadata?.full_name ||
+    fullName ||
+    resolvedAlias ||
     metadata?.name ||
     user.email?.split('@')[0] ||
     'crack'
@@ -272,8 +337,33 @@ export default function DashboardPage() {
     <div className="min-h-screen bg-background">
       <main className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
 
+        {needsAlias && !aliasDismissed && (
+          <section className="mb-6 rounded-2xl border border-primary/35 bg-primary/10 p-4 sm:p-5">
+            <p className="text-sm font-semibold text-foreground">Completa tu alias</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Este nombre es el que verán en tu dashboard y en el juego.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={aliasDraft}
+                onChange={(e) => setAliasDraft(e.target.value)}
+                placeholder="Ejemplo: El 10"
+                autoComplete="nickname"
+                className="sm:max-w-sm"
+                maxLength={30}
+              />
+              <Button type="button" onClick={handleSaveAlias} disabled={aliasSaving}>
+                {aliasSaving ? 'Guardando...' : 'Guardar alias'}
+              </Button>
+            </div>
+            {aliasMessage && (
+              <p className="mt-2 text-xs text-foreground">{aliasMessage}</p>
+            )}
+          </section>
+        )}
+
         {/* Welcome */}
-        <section className="mb-10">
+        <section className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
             <div>
               <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
@@ -283,55 +373,64 @@ export default function DashboardPage() {
                 Hola, <span className="text-primary">{userName}</span>
               </h1>
               <p className="text-muted-foreground mt-1 text-sm">
-                Gestiona tus partidos y demuestra tu nivel.
+                Gestiona tus partidos, predicciones y demuestra tu nivel.
               </p>
             </div>
-            <Link
-              href="/create"
-              className="inline-flex items-center gap-2 btn-primary-fm neon-glow px-5 py-3 rounded-xl font-bold text-sm shrink-0 cursor-pointer"
-            >
-              <Zap className="w-4 h-4" />
-              Armar partido
-            </Link>
           </div>
         </section>
 
-        {/* Quick Actions — desktop only */}
-        <section className="hidden md:block mb-12">
+        {/* Quick Actions */}
+        <section className="mb-12">
           <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
             Acciones rápidas
           </h2>
-          <div className="grid grid-cols-3 gap-4">
+          <div className="flex flex-col gap-2">
             <Link
               href="/create"
-              className="card match-card p-6 text-center group cursor-pointer"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-primary/40 group cursor-pointer"
             >
-              <div className="w-12 h-12 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center mx-auto mb-3 group-hover:bg-primary/20 transition-colors">
-                <Plus className="w-6 h-6 text-primary" />
+              <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Plus className="size-4 text-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-card-foreground mb-1 group-hover:text-primary transition-colors">
+              <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
                 Armar partido
-              </h3>
-              <p className="text-xs text-muted-foreground">Nuevo en 2 minutos</p>
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Nuevo en 2 min</span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 -ml-1" />
             </Link>
 
-            <div className="card p-6 text-center opacity-40 cursor-not-allowed select-none">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                <Trophy className="w-6 h-6 text-muted-foreground" />
+            <Link
+              href="/bet/predictions/new"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-primary/40 group cursor-pointer"
+            >
+              <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                <Target className="size-4 text-primary" />
               </div>
-              <h3 className="text-sm font-semibold text-card-foreground mb-1">Crear Torneo</h3>
-              <p className="text-xs text-muted-foreground">Próximamente</p>
-            </div>
+              <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
+                Crear Predicciones
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Solo marcadores</span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 -ml-1" />
+            </Link>
 
-            <div className="card p-6 text-center opacity-40 cursor-not-allowed select-none">
-              <div className="w-12 h-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                <MapPin className="w-6 h-6 text-muted-foreground" />
+            <Link
+              href="/bet/pools/new"
+              className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-accent/40 group cursor-pointer"
+            >
+              <div className="size-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
+                <Trophy className="size-4 text-accent" />
               </div>
-              <h3 className="text-sm font-semibold text-card-foreground mb-1">Buscar Canchas</h3>
-              <p className="text-xs text-muted-foreground">Próximamente</p>
-            </div>
+              <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-accent transition-colors leading-none">
+                Crear Polla
+              </span>
+              <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Apuesta con amigos</span>
+              <ChevronRight className="size-4 text-muted-foreground group-hover:text-accent transition-colors shrink-0 -ml-1" />
+            </Link>
           </div>
         </section>
+
+        {/* Mis Predicciones */}
+        <MisPrediccionesSection />
 
         {/* Partidos Frecuentes */}
         <FrecuentesSection />
@@ -581,28 +680,7 @@ export default function DashboardPage() {
           )}
         </section>
 
-        {/* Coming soon — mobile quick access */}
-        <section className="md:hidden mt-10">
-          <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-            Próximamente
-          </h2>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { icon: Trophy, label: 'Torneos' },
-              { icon: BarChart2, label: 'Estadísticas' },
-            ].map(({ icon: Icon, label }) => (
-              <div
-                key={label}
-                className="card p-5 flex flex-col items-center gap-3 opacity-40 cursor-not-allowed select-none"
-              >
-                <div className="w-10 h-10 rounded-xl bg-muted border border-border flex items-center justify-center">
-                  <Icon className="w-5 h-5 text-muted-foreground" />
-                </div>
-                <span className="text-xs font-semibold text-muted-foreground">{label}</span>
-              </div>
-            ))}
-          </div>
-        </section>
+
       </main>
 
       <ConfirmDialog

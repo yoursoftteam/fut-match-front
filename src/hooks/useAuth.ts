@@ -9,7 +9,7 @@ export function useAuth() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!hasSupabaseEnv) {
+    if (!hasSupabaseEnv()) {
       const timer = setTimeout(() => {
         setUser(null)
         setLoading(false)
@@ -17,22 +17,31 @@ export function useAuth() {
       return () => clearTimeout(timer)
     }
 
-    const getSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession()
-      setUser(session?.user ?? null)
-      setLoading(false)
+    let mounted = true
+
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (mounted) {
+        setUser(user)
+        setLoading(false)
+      }
     }
 
-    getSession()
+    init()
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setUser(session?.user ?? null)
-        setLoading(false)
+      (event, session) => {
+        if (mounted) {
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
       }
     )
 
-    return () => subscription.unsubscribe()
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
