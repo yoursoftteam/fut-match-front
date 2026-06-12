@@ -8,6 +8,7 @@ interface UseTournamentPredictionsReturn {
   loading: boolean
   saving: boolean
   error: string | null
+  locked: boolean
   predictions: TournamentPrediction[]
   fetchPredictions: (poolId: string) => Promise<void>
   savePrediction: (poolId: string, category: TournamentCategory, teamId: string) => Promise<void>
@@ -19,6 +20,7 @@ export function useTournamentPredictions(): UseTournamentPredictionsReturn {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [locked, setLocked] = useState(false)
   const [predictions, setPredictions] = useState<TournamentPrediction[]>([])
   const activeRequestRef = useRef(0)
 
@@ -47,6 +49,7 @@ export function useTournamentPredictions(): UseTournamentPredictionsReturn {
 
       if (result.success && Array.isArray(result.data)) {
         setPredictions(result.data)
+        setLocked(result.locked === true)
       }
     } catch (err) {
       if (requestId !== activeRequestRef.current) return
@@ -76,6 +79,9 @@ export function useTournamentPredictions(): UseTournamentPredictionsReturn {
 
       if (!response.ok) {
         const errData = await response.json().catch(() => null)
+        if (errData?.error?.code === 'PREDICTION_LOCKED') {
+          setLocked(true)
+        }
         throw new Error(errData?.error?.message || 'Failed to save tournament prediction')
       }
 
@@ -104,6 +110,7 @@ export function useTournamentPredictions(): UseTournamentPredictionsReturn {
     loading,
     saving,
     error,
+    locked,
     predictions,
     fetchPredictions,
     savePrediction,
