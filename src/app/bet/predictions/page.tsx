@@ -48,7 +48,7 @@ export default function PredictionCompetitionsPage() {
           .from('bet_matches')
           .select('id, tournament_id, kickoff_at')
           .in('tournament_id', uniqueTournamentIds)
-          .eq('status', 'scheduled')
+          .gte('kickoff_at', new Date().toISOString())
           .order('kickoff_at', { ascending: true }),
         supabase
           .from('bet_scores_aggregate')

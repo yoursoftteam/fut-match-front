@@ -8,6 +8,7 @@ import { TournamentPredictions } from './TournamentPredictions'
 import { PoolMatches } from './PoolMatches'
 import { ShareActions } from '@/components/ShareLink'
 import { PoolRules } from './PoolRules'
+import { MatchCard } from './MatchCard'
 import { ArrowLeft, Calendar, Clock, FileText, Globe, Lock, Trophy, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -39,6 +40,18 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
   const [tab, setTab] = useState<Tab>('ranking')
   const [nextKickoffAt, setNextKickoffAt] = useState<string | null>(null)
   const [countdown, setCountdown] = useState('')
+  const [nextMatch, setNextMatch] = useState<{
+    id: string
+    home_team: { id: string; name: string; fifa_code: string; flag_svg_url?: string } | null
+    away_team: { id: string; name: string; fifa_code: string; flag_svg_url?: string } | null
+    kickoff_at: string
+    status: string
+    home_score_official?: number | null
+    away_score_official?: number | null
+    stage: string
+    group_name?: string | null
+  } | null>(null)
+  const [nextPrediction, setNextPrediction] = useState<{ home_score_predicted: number; away_score_predicted: number } | null>(null)
 
   const fallbackPath = '/bet/pools'
   const [listPath, setListPath] = useState(fallbackPath)
@@ -82,20 +95,51 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     if (!pool) return
     let cancelled = false
     ;(async () => {
+      const { data: authData } = await supabase.auth.getSession()
+      const uid = authData.session?.user?.id
+
       const { data } = await supabase
         .from('bet_matches')
-        .select('kickoff_at')
+        .select('id, tournament_id, kickoff_at, status, stage, group_name, home_team_id, away_team_id')
         .eq('tournament_id', pool.tournament_id)
-        .eq('status', 'scheduled')
+        .gte('kickoff_at', new Date().toISOString())
         .order('kickoff_at', { ascending: true })
         .limit(1)
         .maybeSingle()
-      if (!cancelled && data?.kickoff_at) {
-        const kickoffTime = new Date(data.kickoff_at).getTime()
-        if (kickoffTime > Date.now()) {
-          setNextKickoffAt(data.kickoff_at)
-        }
+      if (cancelled || !data) return
+
+      setNextKickoffAt(data.kickoff_at)
+
+      // Fetch team info
+      const [{ data: home }, { data: away }] = await Promise.all([
+        supabase.from('bet_teams').select('id, name, fifa_code, flag_svg_url').eq('id', data.home_team_id).maybeSingle(),
+        supabase.from('bet_teams').select('id, name, fifa_code, flag_svg_url').eq('id', data.away_team_id).maybeSingle(),
+      ])
+      if (cancelled) return
+
+      // Fetch user prediction
+      if (uid) {
+        const { data: pred } = await supabase
+          .from('bet_match_predictions')
+          .select('home_score_predicted, away_score_predicted')
+          .eq('match_id', data.id)
+          .eq('pool_id', pool.id)
+          .eq('user_id', uid)
+          .eq('mode', 'pool')
+          .maybeSingle()
+        if (cancelled) return
+        if (pred) setNextPrediction(pred)
       }
+
+      setNextMatch({
+        id: data.id,
+        home_team: home ?? null,
+        away_team: away ?? null,
+        kickoff_at: data.kickoff_at,
+        status: data.status,
+        stage: data.stage ?? '',
+        group_name: data.group_name,
+      })
     })()
     return () => { cancelled = true }
   }, [pool])
@@ -200,11 +244,53 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           </div>
         </div>
 
-        {countdown && (
-          <div className="mb-4 flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm">
-            <Clock className="size-4 shrink-0 text-emerald-400" aria-hidden="true" />
-            <span className="text-muted-foreground">Próximo partido:</span>
-            <span className="font-mono font-semibold tabular-nums text-emerald-400">{countdown}</span>
+        {nextMatch && (
+          <div className="mb-6 space-y-3">
+            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm">
+              <Clock className="size-4 shrink-0 text-emerald-400" aria-hidden="true" />
+              <span className="text-muted-foreground">Próximo partido:</span>
+              <span className="font-mono font-semibold tabular-nums text-emerald-400">{countdown}</span>
+            </div>
+            <MatchCard
+              match={{
+                id: nextMatch.id,
+                home_team: {
+                  name: nextMatch.home_team?.name ?? 'TBD',
+                  fifa_code: nextMatch.home_team?.fifa_code ?? '---',
+                  flag_svg_url: nextMatch.home_team?.flag_svg_url ?? '',
+                },
+                away_team: {
+                  name: nextMatch.away_team?.name ?? 'TBD',
+                  fifa_code: nextMatch.away_team?.fifa_code ?? '---',
+                  flag_svg_url: nextMatch.away_team?.flag_svg_url ?? '',
+                },
+                kickoff_at: nextMatch.kickoff_at,
+                stage: nextMatch.stage,
+                group_name: nextMatch.group_name ?? undefined,
+                status: (nextMatch.status === 'live' || nextMatch.status === 'finished' ? nextMatch.status : 'scheduled') as 'scheduled' | 'live' | 'finished',
+                home_score_official: nextMatch.home_score_official ?? null,
+                away_score_official: nextMatch.away_score_official ?? null,
+              }}
+              prediction={nextPrediction ?? undefined}
+              canEdit={true}
+              onUpdatePrediction={async (home, away) => {
+                setNextPrediction({ home_score_predicted: home, away_score_predicted: away })
+                const { data: authData } = await supabase.auth.getSession()
+                const token = authData.session?.access_token
+                if (!token) return
+                await fetch('/api/v1/bet/predictions', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                  body: JSON.stringify({
+                    match_id: nextMatch.id,
+                    home_score_predicted: home,
+                    away_score_predicted: away,
+                    pool_id: pool.id,
+                  }),
+                })
+              }}
+              compact
+            />
           </div>
         )}
 
