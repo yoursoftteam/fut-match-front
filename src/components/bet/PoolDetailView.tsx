@@ -1,7 +1,7 @@
 'use client'
 
-import { useCallback, useEffect, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import { supabase } from '@/lib/supabase'
 import { PoolRanking } from './PoolRanking'
 import { TournamentPredictions } from './TournamentPredictions'
@@ -37,7 +37,13 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
   const [userId, setUserId] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [tab, setTab] = useState<Tab>('ranking')
+  const searchParams = useSearchParams()
+  const tabRef = useRef<HTMLDivElement>(null)
+  const validTabs: Tab[] = useMemo(() => ['ranking', 'matches', 'tournament', 'rules'], [])
+  const [tab, setTab] = useState<Tab>(() => {
+    const fromUrl = searchParams.get('tab') as Tab | null
+    return fromUrl && validTabs.includes(fromUrl) ? fromUrl : 'ranking'
+  })
   const [nextKickoffAt, setNextKickoffAt] = useState<string | null>(null)
   const [countdown, setCountdown] = useState('')
   const [nextMatch, setNextMatch] = useState<{
@@ -165,6 +171,28 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     return () => clearInterval(id)
   }, [nextKickoffAt])
 
+  const isPredictions = pool?.competition_type === 'predictions'
+
+  const tabs: { id: Tab; label: string; icon: typeof Trophy }[] = useMemo(
+    () => [
+      { id: 'ranking', label: 'Ranking', icon: Trophy },
+      { id: 'matches', label: 'Partidos', icon: Calendar },
+      ...(isPredictions ? [] : [{ id: 'tournament' as const, label: 'Predicciones' as const, icon: Globe as typeof Trophy }]),
+      { id: 'rules', label: 'Reglas', icon: FileText },
+    ],
+    [isPredictions]
+  )
+
+  const switchTab = useCallback(
+    (newTab: Tab) => {
+      setTab(newTab)
+      const params = new URLSearchParams(searchParams.toString())
+      params.set('tab', newTab)
+      router.replace(`?${params.toString()}`, { scroll: false })
+    },
+    [router, searchParams]
+  )
+
   if (loading) {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-background">
@@ -189,15 +217,6 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
   }
 
   const isOwner = userId === pool.owner_id
-
-  const isPredictions = pool.competition_type === 'predictions'
-
-  const tabs: { id: Tab; label: string; icon: typeof Trophy }[] = [
-    { id: 'ranking', label: 'Ranking', icon: Trophy },
-    { id: 'matches', label: 'Partidos', icon: Calendar },
-    ...(isPredictions ? [] : [{ id: 'tournament' as const, label: 'Predicciones' as const, icon: Globe as typeof Trophy }]),
-    { id: 'rules', label: 'Reglas', icon: FileText },
-  ]
 
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : ''
   const inviteUrl = `${baseUrl}/join/${pool.invite_code}`
@@ -294,25 +313,45 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           </div>
         )}
 
-        <div className="mb-6 flex border-b border-border" role="tablist">
-          {tabs.map(({ id: tabId, label, icon: Icon }) => (
-            <button
-              key={tabId}
-              type="button"
-              role="tab"
-              aria-selected={tab === tabId}
-              onClick={() => setTab(tabId)}
-              className={cn(
-                'flex items-center gap-2 border-b-2 px-4 py-3 text-sm font-medium transition-colors',
-                tab === tabId
-                  ? 'border-[#22C55E] text-[#22C55E]'
-                  : 'border-transparent text-muted-foreground hover:text-foreground/80'
-              )}
-            >
-              <Icon className="size-4" />
-              {label}
-            </button>
-          ))}
+        <div
+          ref={tabRef}
+          className="mb-6 overflow-x-auto sm:overflow-visible"
+          role="tablist"
+          aria-orientation="horizontal"
+          onKeyDown={(e) => {
+            if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+            e.preventDefault()
+            const idx = tabs.findIndex((t) => t.id === tab)
+            const next = e.key === 'ArrowRight'
+              ? (idx + 1) % tabs.length
+              : (idx - 1 + tabs.length) % tabs.length
+            switchTab(tabs[next].id)
+            const btn = tabRef.current?.querySelector<HTMLButtonElement>(`[role="tab"]:nth-child(${next + 1})`)
+            btn?.focus()
+          }}
+        >
+          <div className="flex gap-1 border-b border-border min-w-max sm:min-w-0">
+            {tabs.map(({ id: tabId, label, icon: Icon }) => (
+              <button
+                key={tabId}
+                type="button"
+                role="tab"
+                aria-selected={tab === tabId}
+                tabIndex={tab === tabId ? 0 : -1}
+                onClick={() => switchTab(tabId)}
+                className={cn(
+                  'flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors max-sm:px-2.5',
+                  'touch-action-manipulation',
+                  tab === tabId
+                    ? 'border-[#22C55E] text-[#22C55E]'
+                    : 'border-transparent text-muted-foreground hover:text-foreground/80'
+                )}
+              >
+                <Icon className="size-4 shrink-0" aria-hidden="true" />
+                {label}
+              </button>
+            ))}
+          </div>
         </div>
 
         {tab === 'ranking' && (
