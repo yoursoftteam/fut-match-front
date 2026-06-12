@@ -81,6 +81,7 @@ export interface ScoreInputProps {
   onChangeAway: (score: number) => void
   locked: boolean
   disabled?: boolean
+  hasPrediction?: boolean
 }
 
 export function ScoreInput({
@@ -90,10 +91,11 @@ export function ScoreInput({
   onChangeAway,
   locked,
   disabled = false,
+  hasPrediction = false,
 }: ScoreInputProps) {
-  const isDisabled = locked || disabled
-  const [touchedHome, setTouchedHome] = useState(homeScore !== 0)
-  const [touchedAway, setTouchedAway] = useState(awayScore !== 0)
+  const   isDisabled = locked || disabled
+  const [touchedHome, setTouchedHome] = useState(homeScore !== 0 || !!hasPrediction)
+  const [touchedAway, setTouchedAway] = useState(awayScore !== 0 || !!hasPrediction)
 
   const makeHandler = useCallback(
     (setter: (v: number) => void, current: number, delta: 1 | -1, markTouched: () => void) => () => {

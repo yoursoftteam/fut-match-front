@@ -146,6 +146,7 @@ function PredictionCell({
         }
         locked={locked}
         disabled={saving}
+        hasPrediction={!!prediction}
       />
     )
   }
