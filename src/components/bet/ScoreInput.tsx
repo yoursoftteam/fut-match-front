@@ -46,7 +46,7 @@ function StepperButton({
   )
 }
 
-function ScoreDisplay({ value }: { value: number }) {
+function ScoreDisplay({ value, touched }: { value: number; touched: boolean }) {
   const prev = useRef(value)
   const [pop, setPop] = useState(false)
 
@@ -55,16 +55,21 @@ function ScoreDisplay({ value }: { value: number }) {
     if (!pop) setPop(true)
   }
 
+  const showPlaceholder = !touched && value === 0
+
   return (
     <span
       onAnimationEnd={() => setPop(false)}
       className={cn(
-        'flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 font-bold tabular-nums text-slate-50 border border-slate-700',
-        'text-base leading-none',
-        pop && 'animate-[popBounce_250ms_ease-out]'
+        'flex h-9 w-9 items-center justify-center rounded-lg font-bold tabular-nums',
+        'text-base leading-none transition-all duration-200',
+        pop && 'animate-[popBounce_250ms_ease-out]',
+        showPlaceholder
+          ? 'bg-slate-800/50 text-slate-600 border border-dashed border-slate-600/40'
+          : 'bg-slate-800 text-slate-50 border border-slate-700'
       )}
     >
-      {value}
+      {showPlaceholder ? '–' : value}
     </span>
   )
 }
@@ -87,9 +92,12 @@ export function ScoreInput({
   disabled = false,
 }: ScoreInputProps) {
   const isDisabled = locked || disabled
+  const [touchedHome, setTouchedHome] = useState(homeScore !== 0)
+  const [touchedAway, setTouchedAway] = useState(awayScore !== 0)
 
   const makeHandler = useCallback(
-    (setter: (v: number) => void, current: number, delta: 1 | -1) => () => {
+    (setter: (v: number) => void, current: number, delta: 1 | -1, markTouched: () => void) => () => {
+      markTouched()
       const next = Math.max(0, Math.min(99, current + delta))
       setter(next)
     },
@@ -101,14 +109,14 @@ export function ScoreInput({
       <div className="flex flex-col items-center gap-1">
         <StepperButton
           icon={Plus}
-          onClick={makeHandler(onChangeHome, homeScore, 1)}
+          onClick={makeHandler(onChangeHome, homeScore, 1, () => setTouchedHome(true))}
           disabled={isDisabled}
           label="+1 local"
         />
-        <ScoreDisplay value={homeScore} />
+        <ScoreDisplay value={homeScore} touched={touchedHome} />
         <StepperButton
           icon={Minus}
-          onClick={makeHandler(onChangeHome, homeScore, -1)}
+          onClick={makeHandler(onChangeHome, homeScore, -1, () => setTouchedHome(true))}
           disabled={isDisabled}
           label="-1 local"
           variant="danger"
@@ -122,14 +130,14 @@ export function ScoreInput({
       <div className="flex flex-col items-center gap-1">
         <StepperButton
           icon={Plus}
-          onClick={makeHandler(onChangeAway, awayScore, 1)}
+          onClick={makeHandler(onChangeAway, awayScore, 1, () => setTouchedAway(true))}
           disabled={isDisabled}
           label="+1 visitante"
         />
-        <ScoreDisplay value={awayScore} />
+        <ScoreDisplay value={awayScore} touched={touchedAway} />
         <StepperButton
           icon={Minus}
-          onClick={makeHandler(onChangeAway, awayScore, -1)}
+          onClick={makeHandler(onChangeAway, awayScore, -1, () => setTouchedAway(true))}
           disabled={isDisabled}
           label="-1 visitante"
           variant="danger"

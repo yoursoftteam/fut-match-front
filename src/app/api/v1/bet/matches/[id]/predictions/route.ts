@@ -82,18 +82,24 @@ export async function GET(
       )
     }
 
-    const { data: authUsers } = await supabase.auth.admin.listUsers()
+    const safePredictions = predictions ?? []
+    const predictionUserIds = [...new Set(safePredictions.map((p) => p.user_id))]
     const userMetaMap = new Map<string, { name: string }>()
-    if (authUsers?.users) {
-      for (const u of authUsers.users) {
-        const meta = u.user_metadata as Record<string, unknown> | undefined
-        const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim())
-          ? meta.full_name.trim()
-          : null
-        const name = fullName ?? (u.email?.split('@')[0].replace(/[._-]/g, ' ') ?? 'Unknown')
-        userMetaMap.set(u.id, { name })
-      }
-    }
+    await Promise.all(
+      predictionUserIds.map((uid) =>
+        supabase.auth.admin.getUserById(uid)
+          .then(({ data: { user: u } }) => {
+            if (u) {
+              const meta = u.user_metadata as Record<string, unknown> | undefined
+              const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim())
+                ? meta.full_name.trim()
+                : null
+              const name = fullName ?? (u.email?.split('@')[0].replace(/[._-]/g, ' ') ?? 'Unknown')
+              userMetaMap.set(u.id, { name })
+            }
+          })
+      )
+    )
 
     let config: MatchScoringConfig = PREDICTION_COMPETITION_CONFIG
     const { data: poolConfig } = await supabase
@@ -112,7 +118,7 @@ export async function GET(
     const awayScore = match.away_score_official
     const hasResult = homeScore !== null && awayScore !== null && match.status === 'finished'
 
-    const entries: MatchPredictionEntry[] = (predictions ?? []).map((p) => {
+    const entries: MatchPredictionEntry[] = safePredictions.map((p) => {
       const meta = userMetaMap.get(p.user_id) ?? { name: 'Unknown' }
       return {
         user_id: p.user_id,

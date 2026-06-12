@@ -153,18 +153,24 @@ export async function GET(request: NextRequest) {
     }
 
     // Resolve user names from auth metadata
-    const { data: authUsers } = await supabase.auth.admin.listUsers()
+    const leaderboardData = data ?? []
+    const leaderboardUserIds = leaderboardData.map((item: any) => item.user_id)
     const userMetaMap = new Map<string, { email: string; fullName: string | null }>()
-    if (authUsers?.users) {
-      for (const u of authUsers.users) {
-        const meta = u.user_metadata as Record<string, unknown> | undefined
-        const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim()) ? meta.full_name.trim() : null
-        userMetaMap.set(u.id, { email: u.email ?? 'Unknown', fullName })
-      }
-    }
+    await Promise.all(
+      leaderboardUserIds.map((uid: string) =>
+        supabase.auth.admin.getUserById(uid)
+          .then(({ data: { user: u } }) => {
+            if (u) {
+              const meta = u.user_metadata as Record<string, unknown> | undefined
+              const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim()) ? meta.full_name.trim() : null
+              userMetaMap.set(u.id, { email: u.email ?? 'Unknown', fullName })
+            }
+          })
+      )
+    )
 
     // Transform to LeaderboardEntry with rank
-    const entries: LeaderboardEntry[] = (data || []).map((item: any, index: number) => {
+    const entries: LeaderboardEntry[] = leaderboardData.map((item: any, index: number) => {
       const meta = userMetaMap.get(item.user_id) ?? { email: 'Unknown', fullName: null }
       let name: string
       if (meta.fullName) {
