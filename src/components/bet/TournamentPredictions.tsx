@@ -11,7 +11,9 @@ import {
   Shield,
   Star,
   Trophy,
+  Users,
 } from 'lucide-react'
+import { TournamentPredictionsCompareModal } from './TournamentPredictionsCompareModal'
 import {
   Select,
   SelectContent,
@@ -83,6 +85,7 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
   const [savingCategory, setSavingCategory] = useState<TournamentCategory | null>(null)
   const [savedCategory, setSavedCategory] = useState<TournamentCategory | null>(null)
   const [collapsed, setCollapsed] = useState(false)
+  const [compareCategory, setCompareCategory] = useState<TournamentCategory | null>(null)
 
   useEffect(() => {
     if (!poolId) return
@@ -152,6 +155,13 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
               <span>Predicciones bloqueadas — el torneo ya comenzó</span>
             </div>
           )}
+
+          <TournamentPredictionsCompareModal
+            poolId={poolId}
+            category={compareCategory}
+            open={compareCategory !== null}
+            onClose={() => setCompareCategory(null)}
+          />
 
           <div className="px-4 py-6">
         {loading ? (
@@ -253,6 +263,17 @@ export function TournamentPredictions({ poolId }: TournamentPredictionsProps) {
                       <Star className="size-3" aria-hidden="true" />
                       {current.team.name}
                     </p>
+                  )}
+
+                  {locked && (
+                    <button
+                      type="button"
+                      onClick={() => setCompareCategory(key)}
+                      className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-md bg-emerald-500/15 px-3 py-2 text-xs font-semibold text-emerald-400 transition-colors hover:bg-emerald-500/25 active:bg-emerald-500/35"
+                    >
+                      <Users className="size-3.5" aria-hidden="true" />
+                      Comparar
+                    </button>
                   )}
                 </div>
               )
