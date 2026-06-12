@@ -12,6 +12,8 @@ import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { formatLocalTime } from '@/lib/date-utils'
 import { getLocalTimeInputValue } from '@/lib/date-utils'
 import { supabase } from '@/lib/supabase'
@@ -46,6 +48,11 @@ export default function DashboardPage() {
   const [registeredMatchesLoading, setRegisteredMatchesLoading] = useState(true)
   const [unregisteringRegistrationId, setUnregisteringRegistrationId] = useState<string | null>(null)
   const [registeredMatchesMessage, setRegisteredMatchesMessage] = useState<string | null>(null)
+  const [aliasDraft, setAliasDraft] = useState('')
+  const [savedAlias, setSavedAlias] = useState<string | null>(null)
+  const [aliasSaving, setAliasSaving] = useState(false)
+  const [aliasMessage, setAliasMessage] = useState<string | null>(null)
+  const [aliasDismissed, setAliasDismissed] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -66,10 +73,11 @@ export default function DashboardPage() {
       try {
         setRegisteredMatchesLoading(true)
 
-        const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+        const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
         const preferredName = (
-          metadata?.full_name ||
+          metadata?.alias ||
           metadata?.name ||
+          metadata?.full_name ||
           user.email?.split('@')[0] ||
           ''
         ).trim()
@@ -162,6 +170,22 @@ export default function DashboardPage() {
     }
   }, [registeredMatchesMessage])
 
+  useEffect(() => {
+    if (!user) {
+      setAliasDraft('')
+      setSavedAlias(null)
+      setAliasMessage(null)
+      return
+    }
+
+    const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+    const baseAlias = (metadata?.alias || metadata?.name || metadata?.full_name || '').trim()
+
+    setSavedAlias(metadata?.alias?.trim() || null)
+    setAliasDraft(baseAlias)
+    setAliasMessage(null)
+  }, [user])
+
   const handleQuickUnregister = async (registrationId: string, matchId: string) => {
     if (!user) {
       setRegisteredMatchesMessage('Debes iniciar sesión para cancelar la inscripción.')
@@ -175,10 +199,11 @@ export default function DashboardPage() {
       let effectiveRegistrationId = registrationId
 
       if (!isUuid(effectiveRegistrationId)) {
-        const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+        const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
         const preferredName = (
-          metadata?.full_name ||
+          metadata?.alias ||
           metadata?.name ||
+          metadata?.full_name ||
           user.email?.split('@')[0] ||
           ''
         ).trim()
@@ -211,6 +236,41 @@ export default function DashboardPage() {
       setRegisteredMatchesMessage('Te diste de baja del partido correctamente.')
     } finally {
       setUnregisteringRegistrationId(null)
+    }
+  }
+
+  const handleSaveAlias = async () => {
+    if (!user) return
+
+    const nextAlias = aliasDraft.trim()
+    if (nextAlias.length < 2) {
+      setAliasMessage('El alias debe tener al menos 2 caracteres.')
+      return
+    }
+
+    setAliasSaving(true)
+    setAliasMessage(null)
+
+    try {
+      const currentMetadata = (user.user_metadata ?? {}) as Record<string, unknown>
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          ...currentMetadata,
+          alias: nextAlias,
+          name: nextAlias,
+          full_name: (currentMetadata.full_name as string) || nextAlias,
+        },
+      })
+
+      if (error) throw error
+
+      setSavedAlias(nextAlias)
+      setAliasDismissed(true)
+      setAliasMessage('Alias actualizado correctamente.')
+    } catch {
+      setAliasMessage('No pudimos guardar tu alias. Intenta nuevamente.')
+    } finally {
+      setAliasSaving(false)
     }
   }
 
@@ -256,10 +316,14 @@ export default function DashboardPage() {
   const isInitialMatchesLoading = matchesLoading && recentMatches.length === 0
   const isRefreshingMatches = matchesLoading && recentMatches.length > 0
 
-  const metadata = user.user_metadata as { full_name?: string; name?: string } | null
+  const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+  const resolvedAlias = (savedAlias || metadata?.alias || '').trim()
+  const fullName = (metadata?.full_name || '').trim()
+  const needsAlias = !resolvedAlias || (!!fullName && resolvedAlias === fullName)
   const userNameFull = (
+    fullName ||
+    resolvedAlias ||
     metadata?.name ||
-    metadata?.full_name ||
     user.email?.split('@')[0] ||
     'crack'
   ).trim()
@@ -272,6 +336,31 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen bg-background">
       <main className="max-w-6xl mx-auto px-4 py-8 sm:py-10">
+
+        {needsAlias && !aliasDismissed && (
+          <section className="mb-6 rounded-2xl border border-primary/35 bg-primary/10 p-4 sm:p-5">
+            <p className="text-sm font-semibold text-foreground">Completa tu alias</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Este nombre es el que verán en tu dashboard y en el juego.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Input
+                value={aliasDraft}
+                onChange={(e) => setAliasDraft(e.target.value)}
+                placeholder="Ejemplo: El 10"
+                autoComplete="nickname"
+                className="sm:max-w-sm"
+                maxLength={30}
+              />
+              <Button type="button" onClick={handleSaveAlias} disabled={aliasSaving}>
+                {aliasSaving ? 'Guardando...' : 'Guardar alias'}
+              </Button>
+            </div>
+            {aliasMessage && (
+              <p className="mt-2 text-xs text-foreground">{aliasMessage}</p>
+            )}
+          </section>
+        )}
 
         {/* Welcome */}
         <section className="mb-8">
