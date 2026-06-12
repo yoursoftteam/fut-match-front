@@ -65,8 +65,8 @@ function ScoreDisplay({ value, touched }: { value: number; touched: boolean }) {
         'text-base leading-none transition-all duration-200',
         pop && 'animate-[popBounce_250ms_ease-out]',
         showPlaceholder
-          ? 'bg-slate-800/50 text-slate-600 border border-dashed border-slate-600/40'
-          : 'bg-slate-800 text-slate-50 border border-slate-700'
+          ? 'bg-muted/50 text-muted-foreground border border-dashed border-border/40'
+          : 'bg-muted text-foreground border border-border'
       )}
     >
       {showPlaceholder ? '–' : value}
@@ -126,7 +126,7 @@ export function ScoreInput({
       </div>
 
       <div className="flex flex-col items-center gap-1 pt-1">
-        <span className="text-[11px] font-bold text-slate-600 tracking-wider select-none">VS</span>
+        <span className="text-[11px] font-bold text-muted-foreground tracking-wider select-none">VS</span>
       </div>
 
       <div className="flex flex-col items-center gap-1">

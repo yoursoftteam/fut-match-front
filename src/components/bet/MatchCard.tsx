@@ -53,7 +53,7 @@ function TeamFlag({
   return (
     <div className="flex flex-col items-center gap-1.5 w-full">
       <div className={cn(
-        'flex items-center justify-center overflow-hidden rounded-xl bg-slate-800/80 border border-slate-700/50 w-full',
+        'flex items-center justify-center overflow-hidden rounded-xl bg-muted/80 border border-border/50 w-full',
         compact ? 'max-w-[80px] aspect-[4/3]' : 'max-w-[96px] aspect-[4/3]'
       )}>
         {flag_svg_url ? (
@@ -63,11 +63,11 @@ function TeamFlag({
             className="size-full object-cover"
           />
         ) : (
-          <span className="text-[10px] font-bold text-slate-600 uppercase">{name.slice(0, 3)}</span>
+          <span className="text-[10px] font-bold text-muted-foreground uppercase">{name.slice(0, 3)}</span>
         )}
       </div>
       <span className={cn(
-        'font-medium text-slate-300 text-center leading-tight truncate',
+        'font-medium text-foreground text-center leading-tight truncate',
         compact ? 'max-w-[80px] text-[10px]' : 'max-w-[96px] text-xs'
       )}>
         {name}
@@ -79,11 +79,11 @@ function TeamFlag({
 function ScoreReadonly({ home, away }: { home: number; away: number }) {
   return (
     <div className="flex items-center gap-2">
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-base font-bold tabular-nums text-slate-50 border border-slate-700">
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-base font-bold tabular-nums text-foreground border border-border">
         {home}
       </span>
-      <span className="text-[11px] font-bold text-slate-600">VS</span>
-      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-slate-800 text-base font-bold tabular-nums text-slate-50 border border-slate-700">
+      <span className="text-[11px] font-bold text-muted-foreground">VS</span>
+      <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted text-base font-bold tabular-nums text-foreground border border-border">
         {away}
       </span>
     </div>
@@ -113,15 +113,15 @@ function MatchResultDisplay({
 
       {hasOfficial && (
         <div className="flex flex-col items-center gap-0.5">
-          <span className="text-[9px] sm:text-[10px] text-slate-500">Marcador final</span>
-          <span className="text-[11px] sm:text-xs font-semibold tabular-nums text-slate-200">
+          <span className="text-[9px] sm:text-[10px] text-muted-foreground">Marcador final</span>
+          <span className="text-[11px] sm:text-xs font-semibold tabular-nums text-foreground">
             {officialHome} – {officialAway}
           </span>
         </div>
       )}
 
       {pointsEarned !== null && pointsEarned !== undefined && (
-        <span className={cn('text-[11px] font-semibold', theme?.points ?? 'text-emerald-400')}>
+        <span className={cn('text-[11px] font-semibold', theme?.points ?? 'text-emerald-600 dark:text-emerald-400')}>
           +{pointsEarned} pts
         </span>
       )}
@@ -168,7 +168,7 @@ export function MatchCard({
     ? 'border-emerald-500/30'
     : isLocked && match.status === 'scheduled'
     ? 'border-red-500/15'
-    : 'border-slate-700/40'
+    : 'border-border/40'
 
   const isClickable = match.status !== 'scheduled' && !!onClick
 
@@ -176,9 +176,9 @@ export function MatchCard({
     return (
       <div
         className={cn(
-          'rounded-xl border bg-slate-900/40 px-3 py-2 fade-in-up',
+          'rounded-xl border bg-card/40 px-3 py-2 fade-in-up',
           stateBorder,
-          isClickable && 'cursor-pointer transition-colors hover:bg-slate-800/50',
+          isClickable && 'cursor-pointer transition-colors hover:bg-muted/50',
           className
         )}
         onClick={isClickable ? onClick : undefined}
@@ -192,7 +192,7 @@ export function MatchCard({
               'rounded-md px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wider justify-self-start',
               onShowGroup && showGroupTable
                 ? 'cursor-pointer bg-emerald-500/15 text-emerald-400 transition-colors hover:bg-emerald-500/25'
-                : 'bg-slate-800 text-slate-400'
+                : 'bg-muted text-muted-foreground'
             )}
             onClick={onShowGroup && showGroupTable ? (e) => { e.stopPropagation(); onShowGroup() } : undefined}
             role={onShowGroup && showGroupTable ? 'button' : undefined}
@@ -204,7 +204,7 @@ export function MatchCard({
           <div className="flex justify-center">
             <LockCountdown kickoffAt={match.kickoff_at} status={match.status} showTimer={false} />
           </div>
-          <span className="flex items-center gap-1.5 justify-end text-[10px] text-slate-500">
+          <span className="flex items-center gap-1.5 justify-end text-[10px] text-muted-foreground">
             <span>{kickoffDate}</span>
             <span className="font-mono">{kickoffTime}</span>
           </span>
@@ -239,7 +239,7 @@ export function MatchCard({
             ) : prediction ? (
               <ScoreReadonly home={prediction.home_score_predicted} away={prediction.away_score_predicted} />
             ) : (
-              <span className="text-[10px] text-slate-600 italic">—</span>
+              <span className="text-[10px] text-muted-foreground italic">—</span>
             )}
           </div>
 
@@ -264,7 +264,7 @@ export function MatchCard({
         'rounded border p-3 md:p-4 fade-in-up',
         borderColorDesktop,
         bgColor,
-        isClickable && 'cursor-pointer transition-colors hover:bg-slate-800/50',
+        isClickable && 'cursor-pointer transition-colors hover:bg-muted/50',
         className
       )}
       onClick={isClickable ? onClick : undefined}

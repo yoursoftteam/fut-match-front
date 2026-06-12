@@ -42,19 +42,19 @@ export function JoinByCodeSection({ onJoin, loading, error, onClearError }: Join
               }}
               placeholder="Ej: ABC123DEF0"
               maxLength={10}
-              className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-[#22C55E]/50 focus:outline-none uppercase tracking-widest"
+              className="flex-1 rounded-lg border border-border bg-card px-3 py-2 text-sm text-foreground placeholder-muted-foreground focus:border-emerald-500/50 focus:outline-none uppercase tracking-widest"
             />
             <button
               type="button"
               onClick={handleSubmit}
               disabled={loading}
-              className="rounded-lg bg-[#22C55E] px-4 py-2 text-sm font-semibold text-slate-950 hover:bg-emerald-400 transition-colors disabled:opacity-50 shrink-0"
+              className="rounded-lg bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 transition-colors disabled:opacity-50 shrink-0"
             >
               {loading ? '...' : 'Unirse'}
             </button>
           </div>
           {error && (
-            <p className="mt-2 text-xs text-red-400">{error}</p>
+            <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>
           )}
         </div>
       )}

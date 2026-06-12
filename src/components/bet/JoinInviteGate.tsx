@@ -131,10 +131,10 @@ export function JoinInviteGate({ inviteCode }: JoinInviteGateProps) {
 
   if (status === "validating_invite" && !showPoolPreview) {
     return (
-      <div className="min-h-dvh bg-[#0F172A] flex items-center justify-center">
+      <div className="min-h-dvh bg-muted flex items-center justify-center">
         <div className="text-center space-y-4">
-          <div className="size-8 animate-spin rounded-full border-2 border-slate-700 border-t-[#22C55E] mx-auto" />
-          <p className="text-slate-400 text-sm">Chequeando el código...</p>
+          <div className="size-8 animate-spin rounded-full border-2 border-border border-t-emerald-500 mx-auto" />
+          <p className="text-muted-foreground text-sm">Chequeando el código...</p>
         </div>
       </div>
     );
@@ -142,20 +142,20 @@ export function JoinInviteGate({ inviteCode }: JoinInviteGateProps) {
 
   if (status === "invalid_code") {
     return (
-      <div className="min-h-dvh bg-[#0F172A] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm space-y-4">
+      <div className="min-h-dvh bg-muted flex items-center justify-center px-4">
+        <div className="bg-card border border-border shadow-sm rounded-xl p-6 text-center max-w-sm space-y-4">
           <div className="rounded-full bg-red-500/10 p-3 mx-auto w-fit">
             <span className="text-2xl">🔗</span>
           </div>
-          <h1 className="text-xl font-bold text-slate-50">
+          <h1 className="text-xl font-bold text-foreground">
             Ese link no existe o ya murió.
           </h1>
-          <p className="text-sm text-slate-400">
+          <p className="text-sm text-muted-foreground">
             El código de invitación no es válido o la polla ya no está activa.
           </p>
           <a
             href="/bet"
-            className="inline-block rounded-lg bg-[#22C55E] px-6 py-2.5 text-sm font-semibold text-slate-950 hover:bg-emerald-400 transition-colors"
+            className="inline-block rounded-lg bg-emerald-500 px-6 py-2.5 text-sm font-semibold text-white hover:bg-emerald-400 transition-colors"
           >
             Ir a Parti2 Bet
           </a>
@@ -166,14 +166,14 @@ export function JoinInviteGate({ inviteCode }: JoinInviteGateProps) {
 
   if (status === "redirecting") {
     return (
-      <div className="min-h-dvh bg-[#0F172A] flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <div className="rounded-full bg-[#22C55E]/10 p-3 mx-auto w-fit">
-            <svg className="size-6 text-[#22C55E]" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
+      <div className="min-h-dvh bg-muted flex items-center justify-center">
+        <div className="bg-card border border-border shadow-sm rounded-xl p-6 text-center space-y-4">
+          <div className="rounded-full bg-emerald-500/10 p-3 mx-auto w-fit">
+            <svg className="size-6 text-emerald-500" fill="none" viewBox="0 0 24 24" strokeWidth={2} stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5" />
             </svg>
           </div>
-          <p className="text-slate-300 text-sm font-medium">
+          <p className="text-foreground text-sm font-medium">
             Ya estás fichado. Abriendo la tabla...
           </p>
         </div>
@@ -183,17 +183,17 @@ export function JoinInviteGate({ inviteCode }: JoinInviteGateProps) {
 
   if (showPoolPreview) {
     return (
-      <div className="min-h-dvh bg-[#0F172A] flex items-center justify-center px-4">
-        <div className="text-center max-w-sm space-y-4">
-          <h1 className="text-xl font-bold text-slate-50">{poolPreview.pool_name}</h1>
-          <p className="text-sm text-slate-400">
+      <div className="min-h-dvh bg-muted flex items-center justify-center px-4">
+        <div className="bg-card border border-border shadow-sm rounded-xl p-6 text-center max-w-sm space-y-4">
+          <h1 className="text-xl font-bold text-foreground">{poolPreview.pool_name}</h1>
+          <p className="text-sm text-muted-foreground">
             Creada por {poolPreview.owner_name} &middot;{" "}
             {poolPreview.total_members} miembro{poolPreview.total_members !== 1 ? "s" : ""}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-muted-foreground">
             Estás a un paso de entrar a esta polla.
           </p>
-          <div className="size-6 animate-spin rounded-full border-2 border-slate-700 border-t-[#22C55E] mx-auto" />
+          <div className="size-6 animate-spin rounded-full border-2 border-border border-t-emerald-500 mx-auto" />
         </div>
       </div>
     );
@@ -201,8 +201,8 @@ export function JoinInviteGate({ inviteCode }: JoinInviteGateProps) {
 
   // Fallback while loading preview
   return (
-    <div className="min-h-dvh bg-[#0F172A] flex items-center justify-center">
-      <div className="size-8 animate-spin rounded-full border-2 border-slate-700 border-t-[#22C55E]" />
+    <div className="min-h-dvh bg-muted flex items-center justify-center">
+      <div className="size-8 animate-spin rounded-full border-2 border-border border-t-emerald-500" />
     </div>
   );
 }

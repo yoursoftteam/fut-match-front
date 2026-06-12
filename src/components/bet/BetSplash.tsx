@@ -42,7 +42,7 @@ export default function BetSplash({ onFinish }: { onFinish: () => void }) {
       {show && (
         <motion.div
           key="splash-bg"
-          className="fixed inset-0 z-40 bg-[#0F172A]"
+          className="fixed inset-0 z-40 bg-background"
           exit={{ opacity: 0 }}
           transition={{ duration: 0.6, ease: 'easeInOut' }}
         />
