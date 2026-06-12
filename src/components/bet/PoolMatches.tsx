@@ -298,7 +298,7 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
     [predictions]
   )
 
-  const filterOptions = useMemo(() => {
+  const { groupOptions, stageOptions } = useMemo(() => {
     const groups = new Set<string>()
     const stages = new Set<string>()
     for (const m of matches) {
@@ -308,16 +308,17 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
         stages.add(m.stage)
       }
     }
-    const items: { key: string; label: string }[] = []
+    const g: { key: string; label: string }[] = []
     for (const name of Array.from(groups).sort()) {
-      items.push({ key: `group:${name}`, label: name })
+      g.push({ key: `group:${name}`, label: name })
     }
+    const s: { key: string; label: string }[] = []
     for (const stage of STAGE_FILTER_ORDER) {
       if (stages.has(stage)) {
-        items.push({ key: `stage:${stage}`, label: FILTER_LABELS[stage] ?? STAGE_LABELS[stage] })
+        s.push({ key: `stage:${stage}`, label: FILTER_LABELS[stage] ?? STAGE_LABELS[stage] })
       }
     }
-    return items
+    return { groupOptions: g, stageOptions: s }
   }, [matches])
 
   const handleUpdatePrediction = useCallback(
@@ -486,35 +487,57 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
             </button>
           )}
         </div>
-        {filterOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pb-1" role="group" aria-label="Filtrar por grupo o fase">
-            <button
-              type="button"
-              onClick={() => setActiveFilter(null)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                activeFilter === null
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
-              )}
-            >
-              Todos
-            </button>
-            {filterOptions.map(({ key, label }) => (
+        {(groupOptions.length > 0 || stageOptions.length > 0) && (
+          <div className="space-y-1.5 pb-1" role="group" aria-label="Filtrar por grupo o fase">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
-                key={key}
                 type="button"
-                onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                onClick={() => setActiveFilter(null)}
                 className={cn(
                   'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                  activeFilter === key
+                  activeFilter === null
                     ? 'bg-emerald-500/20 text-emerald-400'
                     : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
                 )}
               >
-                {label}
+                Todos
               </button>
-            ))}
+              {groupOptions.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                  className={cn(
+                    'flex size-7 items-center justify-center rounded-full text-xs font-semibold transition-colors',
+                    activeFilter === key
+                      ? 'bg-emerald-500/20 text-emerald-400 ring-1 ring-emerald-500/40'
+                      : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
+                  )}
+                  aria-label={`Grupo ${label}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {stageOptions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {stageOptions.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                    className={cn(
+                      'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                      activeFilter === key
+                        ? 'bg-emerald-500/20 text-emerald-400'
+                        : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
