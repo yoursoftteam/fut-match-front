@@ -343,7 +343,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
                   'flex items-center gap-2 border-b-2 px-3 py-3 text-sm font-medium transition-colors max-sm:px-2.5',
                   'touch-action-manipulation',
                   tab === tabId
-                    ? 'border-[#22C55E] text-[#22C55E]'
+                    ? 'border-emerald-500 text-emerald-500'
                     : 'border-transparent text-muted-foreground hover:text-foreground/80'
                 )}
               >

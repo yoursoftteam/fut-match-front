@@ -37,7 +37,7 @@ const CATEGORY_META: Record<TournamentCategory, {
   color: string
 }> = {
   champion: { label: 'Campeón', Icon: Trophy, color: 'text-amber-400' },
-  subchampion: { label: 'Subcampeón', Icon: Medal, color: 'text-slate-300' },
+  subchampion: { label: 'Subcampeón', Icon: Medal, color: 'text-foreground' },
   third_place: { label: '3er puesto', Icon: Shield, color: 'text-orange-400' },
 }
 
@@ -104,15 +104,15 @@ export function TournamentPredictionsCompareModal({
     <Dialog.Root open={open} onOpenChange={(v) => { if (!v) onClose() }}>
       <Dialog.Portal>
         <Dialog.Backdrop className="fixed inset-0 z-50 bg-black/60 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm" />
-        <Dialog.Popup className="fixed z-50 max-h-[80dvh] w-[calc(100%-16px)] max-w-lg rounded-2xl border border-slate-700/50 bg-slate-900 shadow-2xl left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
+        <Dialog.Popup className="fixed z-50 max-h-[80dvh] w-[calc(100%-16px)] max-w-lg rounded-2xl border border-border bg-card shadow-2xl left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 transition-all duration-150 data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0">
           <div className="flex max-h-[80dvh] flex-col rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between border-b border-slate-800 px-3 py-3 sm:px-4 shrink-0">
-              <span className="flex items-center gap-2 text-sm font-medium text-slate-200">
+            <div className="flex items-center justify-between border-b border-border px-3 py-3 sm:px-4 shrink-0">
+              <span className="flex items-center gap-2 text-sm font-medium text-foreground">
                 {Icon && <Icon className={cn('size-4', meta?.color)} aria-hidden="true" />}
                 {meta ? `${meta.label} — Predicciones` : 'Predicciones del torneo'}
               </span>
               <Dialog.Close
-                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-slate-500 transition-colors hover:bg-slate-800 hover:text-slate-300"
+                className="flex size-7 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
                 aria-label="Cerrar"
               >
                 <XIcon className="size-4" />
@@ -121,8 +121,8 @@ export function TournamentPredictionsCompareModal({
 
             <div className="min-h-0 flex-1 overflow-y-auto px-3 py-3 sm:px-4">
               {loading ? (
-                <div className="flex items-center justify-center gap-2 py-12 text-sm text-slate-500">
-                  <Loader2 className="size-4 animate-spin text-emerald-400" />
+                <div className="flex items-center justify-center gap-2 py-12 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin text-emerald-600 dark:text-emerald-400" />
                   Cargando predicciones…
                 </div>
               ) : error ? (
@@ -131,7 +131,7 @@ export function TournamentPredictionsCompareModal({
                   {error}
                 </div>
               ) : filteredEntries.length === 0 ? (
-                <p className="py-12 text-center text-sm text-slate-500">No hay predicciones de otros participantes.</p>
+                <p className="py-12 text-center text-sm text-muted-foreground">No hay predicciones de otros participantes.</p>
               ) : (
                 <div className="space-y-2">
                   {filteredEntries.map((entry) => {
@@ -139,9 +139,9 @@ export function TournamentPredictionsCompareModal({
                     return (
                       <div
                         key={entry.user_id}
-                        className="flex items-center justify-between gap-3 rounded-lg bg-slate-800/40 px-3 py-2.5"
+                        className="flex items-center justify-between gap-3 rounded-lg bg-muted/40 px-3 py-2.5"
                       >
-                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-slate-200">
+                        <span className="min-w-0 flex-1 truncate text-sm font-medium text-foreground">
                           {entry.name}
                         </span>
                         {pick ? (
@@ -153,14 +153,14 @@ export function TournamentPredictionsCompareModal({
                                 className="size-5 rounded-sm object-cover"
                               />
                             ) : (
-                              <span className="size-5 rounded-sm border border-slate-600 bg-slate-800" />
+                              <span className="size-5 rounded-sm border border-border bg-muted" />
                             )}
                             <span className={cn('text-sm font-semibold', meta?.color)}>
                               {pick.team_name}
                             </span>
                           </div>
                         ) : (
-                          <span className="text-sm text-slate-600">—</span>
+                          <span className="text-sm text-muted-foreground">—</span>
                         )}
                       </div>
                     )
@@ -170,7 +170,7 @@ export function TournamentPredictionsCompareModal({
             </div>
 
             {!loading && !error && filteredEntries.length > 0 && (
-              <div className="border-t border-slate-800 px-3 py-2.5 text-center text-[10px] text-slate-600 sm:px-4 shrink-0">
+              <div className="border-t border-border px-3 py-2.5 text-center text-[10px] text-muted-foreground sm:px-4 shrink-0">
                 {filteredEntries.length} participante{filteredEntries.length !== 1 ? 's' : ''}
               </div>
             )}
