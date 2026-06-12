@@ -234,6 +234,7 @@ export function MatchCard({
                 onChangeHome={(score) => onUpdatePrediction?.(score, prediction?.away_score_predicted ?? 0)}
                 onChangeAway={(score) => onUpdatePrediction?.(prediction?.home_score_predicted ?? 0, score)}
                 locked={isLocked}
+                hasPrediction={!!prediction}
               />
             ) : prediction ? (
               <ScoreReadonly home={prediction.home_score_predicted} away={prediction.away_score_predicted} />
@@ -306,6 +307,7 @@ export function MatchCard({
               onChangeHome={(score) => onUpdatePrediction?.(score, prediction?.away_score_predicted ?? 0)}
               onChangeAway={(score) => onUpdatePrediction?.(prediction?.home_score_predicted ?? 0, score)}
               locked={isLocked}
+              hasPrediction={!!prediction}
             />
           </div>
         ) : prediction ? (
