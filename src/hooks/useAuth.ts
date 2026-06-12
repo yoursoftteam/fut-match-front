@@ -29,7 +29,19 @@ export function useAuth() {
 
     init()
 
-    return () => { mounted = false }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        if (mounted) {
+          setUser(session?.user ?? null)
+          setLoading(false)
+        }
+      }
+    )
+
+    return () => {
+      mounted = false
+      subscription.unsubscribe()
+    }
   }, [])
 
   const signIn = async (email: string, password: string) => {
