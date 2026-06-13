@@ -48,6 +48,8 @@ export default {
 
     console.log("[push] event:", event);
     console.log("[push] match:", match?.id);
+    console.log("[push] env.SUPABASE_URL:", env.SUPABASE_URL ? "set" : "NOT SET");
+    console.log("[push] env.SUPABASE_SERVICE_ROLE_KEY:", env.SUPABASE_SERVICE_ROLE_KEY ? "set" : "NOT SET");
 
     // ── Build notification content ──────────────────────────────────────────
     let title, body;
@@ -66,11 +68,14 @@ export default {
 
     // ── Get subscribed tokens from Supabase ─────────────────────────────────
     const tokens = await getSubscribedTokens(match.id, env);
+    if (tokens.error) {
+      return Response.json({ ok: false, sent: 0, debug: "v2-query-error", match_id: match.id, error: tokens.error, status: tokens.status, url: tokens.url });
+    }
     console.log(`[push] subscribed tokens for match ${match.id}:`, tokens.length);
 
     if (tokens.length === 0) {
       console.log("[push] no subscribers, skipping");
-      return Response.json({ ok: true, sent: 0 });
+      return Response.json({ ok: true, sent: 0, debug: "v2-no-tokens", match_id: match.id, url_short: (env.SUPABASE_URL || "").replace(/^https?:\/\//,"").slice(0,40), sk_short: (env.SUPABASE_SERVICE_ROLE_KEY || "").slice(0,10) + "..." });
     }
 
     // ── Send FCM notification to each token ─────────────────────────────────
@@ -112,11 +117,14 @@ async function getSubscribedTokens(matchId, env) {
   });
 
   if (!res.ok) {
-    console.error(`[push] supabase query failed: ${res.status} ${await res.text()}`);
-    return [];
+    const errText = await res.text();
+    console.error(`[push] supabase query failed: ${res.status} ${errText}`);
+    return { error: `supabase_${res.status}`, status: res.status, url: url.substring(0, 100) };
   }
 
   const rows = await res.json();
+  console.log(`[push] supabase query returned ${rows.length} rows for match ${matchId}`);
+  console.log(`[push] raw response length: ${JSON.stringify(rows).length}`);
   return rows.map((r) => r.fcm_token);
 }
 
@@ -136,12 +144,13 @@ async function sendFcmPush({ tokens, title, body, matchId, registrationId, playe
     const message = {
       message: {
         token,
-        notification: { title, body },
         data: {
           match_id: matchId,
           registration_id: registrationId,
           player_name: playerName,
           is_goalkeeper: String(isGoalkeeper),
+          title,
+          body,
         },
         android: { priority: "high" },
         apns: {
@@ -150,7 +159,6 @@ async function sendFcmPush({ tokens, title, body, matchId, registrationId, playe
         },
         webpush: {
           headers: { Urgency: "high" },
-          notification: { title, body, icon: "/icon-192.png" },
         },
       },
     };

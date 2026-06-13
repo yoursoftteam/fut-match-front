@@ -24,7 +24,7 @@ if (messaging) {
 
     self.registration.showNotification(title || "Parti2", {
       body: body || "Nuevo movimiento en tu partido",
-      icon: "/icon-192.png",
+      icon: "/p2-logo.png",
       badge: "/badge-72.png",
       data: { match_id: data.match_id, url: "/match/" + data.match_id },
     });
