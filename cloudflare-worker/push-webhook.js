@@ -144,13 +144,12 @@ async function sendFcmPush({ tokens, title, body, matchId, registrationId, playe
     const message = {
       message: {
         token,
+        notification: { title, body },
         data: {
           match_id: matchId,
           registration_id: registrationId,
           player_name: playerName,
           is_goalkeeper: String(isGoalkeeper),
-          title,
-          body,
         },
         android: { priority: "high" },
         apns: {

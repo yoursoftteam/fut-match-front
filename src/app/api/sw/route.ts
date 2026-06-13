@@ -34,11 +34,8 @@ try {
 if (messaging) {
   messaging.onBackgroundMessage(function(payload) {
     var data = payload.data || {};
-    var title = data.title || "Parti2";
-    var body = data.body || "Nuevo movimiento en tu partido";
-
-    self.registration.showNotification(title, {
-      body: body,
+    self.registration.showNotification(payload.notification?.title || "Parti2", {
+      body: payload.notification?.body || "Nuevo movimiento en tu partido",
       icon: "/p2-logo.png",
       badge: "/p2-logo.png",
       data: { match_id: data.match_id, url: "/match/" + data.match_id },

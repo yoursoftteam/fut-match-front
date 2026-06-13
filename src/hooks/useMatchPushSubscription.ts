@@ -75,15 +75,13 @@ export function useMatchPushSubscription(matchId: string | null) {
 
         onMessage(messaging, (payload) => {
           console.log("[push] foreground message:", payload);
-          console.log("[push] data:", JSON.stringify(payload.data));
-          const data = payload.data || {};
-          const title = data.title || "Parti2";
-          const body = data.body || "Nuevo movimiento en tu partido";
-          try {
-            const n = new Notification(title, { body, icon: "/p2-logo.png" });
-            console.log("[push] Notification created:", n);
-          } catch (e) {
-            console.error("[push] Notification failed:", e);
+          const { title, body } = payload.notification ?? {};
+          if (title) {
+            new Notification(title, {
+              body: body ?? "",
+              icon: "/p2-logo.png",
+              requireInteraction: true,
+            });
           }
         });
       } catch (err) {
