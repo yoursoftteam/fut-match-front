@@ -33,14 +33,11 @@ try {
 
 if (messaging) {
   messaging.onBackgroundMessage(function(payload) {
-    var title = payload.notification ? payload.notification.title : null;
-    var body = payload.notification ? payload.notification.body : null;
     var data = payload.data || {};
-
-    self.registration.showNotification(title || "Parti2", {
-      body: body || "Nuevo movimiento en tu partido",
-      icon: "/icon-192.png",
-      badge: "/badge-72.png",
+    self.registration.showNotification(payload.notification?.title || "Parti2", {
+      body: payload.notification?.body || "Nuevo movimiento en tu partido",
+      icon: "/p2-logo.png",
+      badge: "/p2-logo.png",
       data: { match_id: data.match_id, url: "/match/" + data.match_id },
     });
   });
@@ -58,6 +55,7 @@ self.addEventListener("notificationclick", function(event) {
     headers: {
       "Content-Type": "application/javascript",
       "Cache-Control": "no-cache",
+      "Service-Worker-Allowed": "/",
     },
   });
 }
