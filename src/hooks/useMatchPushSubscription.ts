@@ -77,7 +77,11 @@ export function useMatchPushSubscription(matchId: string | null) {
           console.log("[push] foreground message:", payload);
           const { title, body } = payload.notification ?? {};
           if (title) {
-            new Notification(title, { body: body ?? "", icon: "/icon-192.png" });
+            new Notification(title, {
+              body: body ?? "",
+              icon: "/p2-logo.png",
+              requireInteraction: true,
+            });
           }
         });
       } catch (err) {
