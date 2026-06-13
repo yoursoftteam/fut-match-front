@@ -27,9 +27,4 @@ CREATE POLICY "anyone can unsubscribe"
   FOR DELETE
   USING (true);
 
--- Anyone can read (used by the push worker via anon key).
-DROP POLICY IF EXISTS "anyone can read subscriptions" ON public.push_subscriptions;
-CREATE POLICY "anyone can read subscriptions"
-  ON public.push_subscriptions
-  FOR SELECT
-  USING (true);
+-- Worker reads via service role key (bypasses RLS), so no SELECT policy needed.
