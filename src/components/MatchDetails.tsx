@@ -6,13 +6,15 @@ import { MatchInfoSidebar, MatchEditForm, MatchTabs, RegistrationPanel, PlayersP
 import { MatchShareSection } from "@/components/match-details/MatchShareSection";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
+import { useMatchPushSubscription } from "@/hooks/useMatchPushSubscription";
 
 type PanelTab = "register" | "players" | "teams";
 
 function MatchDetailsInner() {
-  const { loading, error, matchData, isCreator } = useMatchDetailsContext();
+  const { loading, error, matchData, isCreator, matchId } = useMatchDetailsContext();
   useMatchPricing();
   const editing = useMatchEditing();
+  useMatchPushSubscription(matchData ? matchId : null);
 
   const [activeTab, setActiveTab] = useState<PanelTab>("register");
   const [showTeamBuilder, setShowTeamBuilder] = useState(false);

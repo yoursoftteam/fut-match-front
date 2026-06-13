@@ -1,7 +1,22 @@
+import { NextResponse } from "next/server";
+
+export const runtime = "edge";
+
+export async function GET() {
+  const firebaseConfig = {
+    apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyDZbpFVdzHPJ6C_bpAUmjL4DiaYTXNhLaI",
+    authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "parti2-4e211.firebaseapp.com",
+    projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "parti2-4e211",
+    storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "parti2-4e211.appspot.com",
+    messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "1022726336826",
+    appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:1022726336826:web:4ab41c7ed69eee92d32003",
+  };
+
+  const swScript = `
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
-var config = self.__FIREBASE_CONFIG__;
+var config = ${JSON.stringify(firebaseConfig)};
 
 try {
   firebase.initializeApp(config);
@@ -36,3 +51,13 @@ self.addEventListener("notificationclick", function(event) {
   var url = event.notification.data ? event.notification.data.url : "/dashboard";
   event.waitUntil(clients.openWindow(url));
 });
+`.trim();
+
+  return new NextResponse(swScript, {
+    status: 200,
+    headers: {
+      "Content-Type": "application/javascript",
+      "Cache-Control": "no-cache",
+    },
+  });
+}

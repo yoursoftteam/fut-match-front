@@ -1,12 +1,15 @@
 /**
  * parti2 push webhook — Cloudflare Worker
  *
- * Receives match_registration_created events from the Supabase DB trigger
- * and sends a Firebase Cloud Messaging (FCM) push to the match topic.
+ * Receives match_registration_created / match_registration_deleted events
+ * from the Supabase DB triggers and sends Firebase Cloud Messaging (FCM)
+ * push notifications to all subscribed devices for that match.
  *
  * Worker secrets (Settings > Variables > Secrets):
  *   WEBHOOK_SECRET       — must match push_webhook_config.webhook_secret in DB
  *   FCM_SERVICE_ACCOUNT  — full JSON string of the Firebase service account key
+ *   SUPABASE_URL         — Supabase project URL (e.g. https://xxx.supabase.co)
+ *   SUPABASE_ANON_KEY    — Supabase anon key (public, for reading push_subscriptions)
  */
 
 export default {
@@ -44,31 +47,82 @@ export default {
     const { event, registration, match, _debug } = payload;
 
     console.log("[push] event:", event);
-    console.log("[push] db debug:", JSON.stringify(_debug));
-    console.log("[push] registration:", JSON.stringify(registration));
-    console.log("[push] match:", JSON.stringify(match));
+    console.log("[push] match:", match?.id);
 
-    if (event !== "match_registration_created") {
+    // ── Build notification content ──────────────────────────────────────────
+    let title, body;
+    if (event === "match_registration_created") {
+      const role = registration.is_goalkeeper ? "🥅 Arquero" : "⚽ Jugador de campo";
+      title = `Nuevo jugador en ${match.title || match.location}`;
+      body = `${registration.name} · ${role}`;
+    } else if (event === "match_registration_deleted") {
+      const role = registration.is_goalkeeper ? "🥅 Arquero" : "⚽ Jugador de campo";
+      title = `Jugador se dio de baja en ${match.title || match.location}`;
+      body = `${registration.name} · ${role}`;
+    } else {
       console.warn("[push] unknown event:", event);
       return Response.json({ ok: false, reason: "unknown_event" }, { status: 400 });
     }
 
-    // ── Send FCM notification ───────────────────────────────────────────────
+    // ── Get subscribed tokens from Supabase ─────────────────────────────────
+    const tokens = await getSubscribedTokens(match.id, env);
+    console.log(`[push] subscribed tokens for match ${match.id}:`, tokens.length);
+
+    if (tokens.length === 0) {
+      console.log("[push] no subscribers, skipping");
+      return Response.json({ ok: true, sent: 0 });
+    }
+
+    // ── Send FCM notification to each token ─────────────────────────────────
     try {
-      const result = await sendFcmPush({ registration, match, env });
-      console.log("[push] FCM response:", JSON.stringify(result));
+      const result = await sendFcmPush({
+        tokens,
+        title,
+        body,
+        matchId: match.id,
+        registrationId: registration.id,
+        playerName: registration.name,
+        isGoalkeeper: registration.is_goalkeeper,
+        env,
+      });
+      console.log("[push] FCM sent:", JSON.stringify(result));
+      return Response.json({ ok: true, sent: tokens.length });
     } catch (err) {
       console.error("[push] FCM failed:", err.message);
       return Response.json({ ok: false, reason: err.message }, { status: 500 });
     }
-
-    return Response.json({ ok: true });
   },
 };
 
+// ── Supabase: get subscribed FCM tokens for a match ──────────────────────────
+
+async function getSubscribedTokens(matchId, env) {
+  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
+    console.warn("[push] SUPABASE_URL or SUPABASE_ANON_KEY not set");
+    return [];
+  }
+
+  const url = `${env.SUPABASE_URL}/rest/v1/push_subscriptions?match_id=eq.${matchId}&select=fcm_token`;
+
+  const res = await fetch(url, {
+    headers: {
+      apikey: env.SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+    },
+  });
+
+  if (!res.ok) {
+    console.error(`[push] supabase query failed: ${res.status} ${await res.text()}`);
+    return [];
+  }
+
+  const rows = await res.json();
+  return rows.map((r) => r.fcm_token);
+}
+
 // ── FCM v1 HTTP API via service account ──────────────────────────────────────
 
-async function sendFcmPush({ registration, match, env }) {
+async function sendFcmPush({ tokens, title, body, matchId, registrationId, playerName, isGoalkeeper, env }) {
   if (!env.FCM_SERVICE_ACCOUNT) {
     throw new Error("FCM_SERVICE_ACCOUNT secret is not set in Worker");
   }
@@ -76,58 +130,53 @@ async function sendFcmPush({ registration, match, env }) {
   const serviceAccount = JSON.parse(env.FCM_SERVICE_ACCOUNT);
   const accessToken = await getFcmAccessToken(serviceAccount);
 
-  const role = registration.is_goalkeeper ? "🥅 Arquero" : "⚽ Jugador de campo";
-  const title = `Nuevo jugador en ${match.title || match.location}`;
-  const body = `${registration.name} · ${role}`;
+  const results = [];
 
-  // Topic: one topic per match so only interested parties receive it.
-  // Clients must subscribe to "match-<match_id>" to receive these.
-  const topic = `match-${match.id}`;
+  for (const token of tokens) {
+    const message = {
+      message: {
+        token,
+        notification: { title, body },
+        data: {
+          match_id: matchId,
+          registration_id: registrationId,
+          player_name: playerName,
+          is_goalkeeper: String(isGoalkeeper),
+        },
+        android: { priority: "high" },
+        apns: {
+          headers: { "apns-priority": "10" },
+          payload: { aps: { sound: "default" } },
+        },
+        webpush: {
+          headers: { Urgency: "high" },
+          notification: { title, body, icon: "/icon-192.png" },
+        },
+      },
+    };
 
-  const message = {
-    message: {
-      topic,
-      notification: { title, body },
-      data: {
-        match_id:        match.id,
-        registration_id: registration.id,
-        player_name:     registration.name,
-        is_goalkeeper:   String(registration.is_goalkeeper),
-      },
-      android: { priority: "high" },
-      apns: {
-        headers: { "apns-priority": "10" },
-        payload: { aps: { sound: "default" } },
-      },
-      webpush: {
-        headers: { Urgency: "high" },
-        notification: { title, body, icon: "/icon-192.png" },
-      },
-    },
-  };
+    const res = await fetch(
+      `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(message),
+      }
+    );
 
-  console.log(`[push] sending FCM to topic "${topic}"`);
+    const responseText = await res.text();
+    results.push({ token: token.slice(0, 20) + "...", status: res.status });
 
-  const res = await fetch(
-    `https://fcm.googleapis.com/v1/projects/${serviceAccount.project_id}/messages:send`,
-    {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(message),
+    if (!res.ok) {
+      console.error(`[push] send failed for token: ${responseText}`);
     }
-  );
-
-  const responseText = await res.text();
-  console.log(`[push] FCM status: ${res.status} — body: ${responseText}`);
-
-  if (!res.ok) {
-    throw new Error(`FCM error ${res.status}: ${responseText}`);
   }
 
-  return JSON.parse(responseText);
+  console.log(`[push] sent ${results.length} pushes`);
+  return results;
 }
 
 // ── Google OAuth2 token from service account (RS256 JWT) ─────────────────────
@@ -152,7 +201,6 @@ async function getFcmAccessToken(serviceAccount) {
   const claimB64 = encode(claim);
   const signingInput = `${headerB64}.${claimB64}`;
 
-  // Import the RSA private key
   const pemContents = serviceAccount.private_key
     .replace(/-----BEGIN PRIVATE KEY-----/, "")
     .replace(/-----END PRIVATE KEY-----/, "")
@@ -181,7 +229,6 @@ async function getFcmAccessToken(serviceAccount) {
 
   const jwt = `${signingInput}.${signatureB64}`;
 
-  // Exchange JWT for access token
   const tokenRes = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },

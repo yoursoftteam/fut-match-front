@@ -3,7 +3,6 @@
 import { useEffect } from "react";
 import { getApp, getApps, initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-import { supabase } from "@/lib/supabase";
 
 const firebaseConfig = {
   apiKey:            process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
@@ -19,10 +18,9 @@ function getFirebaseApp() {
 }
 
 /**
- * Subscribes the current device to a Firebase topic via the FCM v1 API.
- * Requires the FCM token and a server-side call to iid.googleapis.com.
- * Here we store the token in Supabase and let the Worker handle topic subscription
- * when it receives the registration event.
+ * Subscribes the current device to a Firebase topic so it receives
+ * push notifications when players join or leave the match.
+ * Unsubscribes automatically on cleanup (navigate away / unmount).
  */
 export function useMatchPushSubscription(matchId: string | null) {
   useEffect(() => {
@@ -31,6 +29,7 @@ export function useMatchPushSubscription(matchId: string | null) {
     if (!process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY) return;
 
     let cancelled = false;
+    let currentToken: string | null = null;
 
     const subscribe = async () => {
       try {
@@ -43,26 +42,37 @@ export function useMatchPushSubscription(matchId: string | null) {
         const app = getFirebaseApp();
         const messaging = getMessaging(app);
 
+        try {
+          await navigator.serviceWorker.register(
+            "/api/sw",
+            { scope: "/" },
+          );
+        } catch (swErr) {
+          console.warn("[push] SW registration failed:", swErr);
+        }
+
+        const swRegistration = await navigator.serviceWorker.ready;
+        if (!swRegistration || !swRegistration.active) {
+          console.warn("[push] no active service worker available");
+          return;
+        }
+
         const token = await getToken(messaging, {
           vapidKey: process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY,
-          serviceWorkerRegistration: await navigator.serviceWorker.register(
-            "/firebase-messaging-sw.js"
-          ),
+          serviceWorkerRegistration: swRegistration,
         });
 
         if (!token || cancelled) return;
+        currentToken = token;
 
         console.log("[push] FCM token obtained, subscribing to match topic");
 
-        // Subscribe this token to the match topic via Supabase Edge Function or directly.
-        // We call the Worker endpoint to register the token to the topic.
         await fetch("/api/push/subscribe-topic", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, match_id: matchId }),
         });
 
-        // Foreground push handler
         onMessage(messaging, (payload) => {
           console.log("[push] foreground message:", payload);
           const { title, body } = payload.notification ?? {};
@@ -76,6 +86,16 @@ export function useMatchPushSubscription(matchId: string | null) {
     };
 
     subscribe();
-    return () => { cancelled = true; };
+
+    return () => {
+      cancelled = true;
+      if (currentToken) {
+        fetch("/api/push/subscribe-topic", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token: currentToken, match_id: matchId }),
+        }).catch(() => {});
+      }
+    };
   }, [matchId]);
 }
