@@ -9,7 +9,7 @@
  *   WEBHOOK_SECRET       — must match push_webhook_config.webhook_secret in DB
  *   FCM_SERVICE_ACCOUNT  — full JSON string of the Firebase service account key
  *   SUPABASE_URL         — Supabase project URL (e.g. https://xxx.supabase.co)
- *   SUPABASE_ANON_KEY    — Supabase anon key (public, for reading push_subscriptions)
+ *   SUPABASE_SERVICE_ROLE_KEY — Supabase service role key (for reading push_subscriptions)
  */
 
 export default {
@@ -97,8 +97,8 @@ export default {
 // ── Supabase: get subscribed FCM tokens for a match ──────────────────────────
 
 async function getSubscribedTokens(matchId, env) {
-  if (!env.SUPABASE_URL || !env.SUPABASE_ANON_KEY) {
-    console.warn("[push] SUPABASE_URL or SUPABASE_ANON_KEY not set");
+  if (!env.SUPABASE_URL || !env.SUPABASE_SERVICE_ROLE_KEY) {
+    console.warn("[push] SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY not set");
     return [];
   }
 
@@ -106,8 +106,8 @@ async function getSubscribedTokens(matchId, env) {
 
   const res = await fetch(url, {
     headers: {
-      apikey: env.SUPABASE_ANON_KEY,
-      Authorization: `Bearer ${env.SUPABASE_ANON_KEY}`,
+      apikey: env.SUPABASE_SERVICE_ROLE_KEY,
+      Authorization: `Bearer ${env.SUPABASE_SERVICE_ROLE_KEY}`,
     },
   });
 
