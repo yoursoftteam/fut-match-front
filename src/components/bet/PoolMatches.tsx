@@ -105,25 +105,25 @@ function StageSection({
   }, [matches])
 
   return (
-    <div className="rounded-xl border border-slate-800 overflow-hidden bg-slate-900/30">
+    <div className="rounded-xl border border-border overflow-hidden bg-card">
       <button
         type="button"
         onClick={() => setOpen(!open)}
-        className="flex w-full items-center gap-3 bg-slate-900/80 px-4 py-3 text-left transition-colors hover:bg-slate-800/50"
+        className="flex w-full items-center gap-3 bg-muted/80 px-4 py-3 text-left transition-colors hover:bg-muted"
         aria-expanded={open}
       >
         <ChevronDown
           className={cn(
-            'size-4 text-slate-500 transition-transform duration-200',
+            'size-4 text-muted-foreground transition-transform duration-200',
             open && 'rotate-0',
             !open && '-rotate-90'
           )}
         />
         <div className="flex-1 min-w-0">
-          <span className="text-sm font-semibold text-slate-200">
+          <span className="text-sm font-semibold text-foreground">
             {STAGE_LABELS[stage] ?? stage}
           </span>
-          <span className="ml-2 text-xs text-slate-500">
+            <span className="ml-2 text-xs text-muted-foreground">
             {matches.length} partido{matches.length !== 1 ? 's' : ''}
           </span>
         </div>
@@ -134,7 +134,7 @@ function StageSection({
             </span>
           )}
           {finishedCount > 0 && (
-            <span className="rounded-md bg-slate-800 px-2 py-0.5 font-medium text-slate-500">
+            <span className="rounded-md bg-muted px-2 py-0.5 font-medium text-muted-foreground">
               {finishedCount} finalizado{finishedCount !== 1 ? 's' : ''}
             </span>
           )}
@@ -142,7 +142,7 @@ function StageSection({
       </button>
 
       {open && (
-        <div className="divide-y divide-slate-800/50">
+        <div className="divide-y divide-border/50">
           {matches.map((match) => {
             const prediction = predictions.get(match.id)
             const fallbackTeam = (name: string) => ({
@@ -298,7 +298,7 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
     [predictions]
   )
 
-  const filterOptions = useMemo(() => {
+  const { groupOptions, stageOptions } = useMemo(() => {
     const groups = new Set<string>()
     const stages = new Set<string>()
     for (const m of matches) {
@@ -308,16 +308,17 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
         stages.add(m.stage)
       }
     }
-    const items: { key: string; label: string }[] = []
+    const g: { key: string; label: string }[] = []
     for (const name of Array.from(groups).sort()) {
-      items.push({ key: `group:${name}`, label: name })
+      g.push({ key: `group:${name}`, label: name })
     }
+    const s: { key: string; label: string }[] = []
     for (const stage of STAGE_FILTER_ORDER) {
       if (stages.has(stage)) {
-        items.push({ key: `stage:${stage}`, label: FILTER_LABELS[stage] ?? STAGE_LABELS[stage] })
+        s.push({ key: `stage:${stage}`, label: FILTER_LABELS[stage] ?? STAGE_LABELS[stage] })
       }
     }
-    return items
+    return { groupOptions: g, stageOptions: s }
   }, [matches])
 
   const handleUpdatePrediction = useCallback(
@@ -431,8 +432,8 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center gap-3 py-16 text-sm text-slate-500">
-        <Loader2 className="size-5 animate-spin text-emerald-400" />
+      <div className="flex items-center justify-center gap-3 py-16 text-sm text-muted-foreground">
+        <Loader2 className="size-5 animate-spin text-emerald-500 dark:text-emerald-400" />
         Cargando partidos…
       </div>
     )
@@ -440,7 +441,7 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
 
   if (error) {
     return (
-      <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
+      <div className="flex items-center gap-2 rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-300">
         <AlertCircle className="size-4 shrink-0" />
         {error}
       </div>
@@ -449,9 +450,9 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
 
   if (matches.length === 0) {
     return (
-      <div className="flex flex-col items-center gap-2 py-16 text-center text-sm text-slate-500">
+      <div className="flex flex-col items-center gap-2 py-16 text-center text-sm text-muted-foreground">
         <p className="font-medium">No hay partidos disponibles</p>
-        <p className="text-xs">Los partidos aparecerán aquí cuando el torneo comience.</p>
+        <p className="text-xs text-muted-foreground/70">Los partidos aparecerán aquí cuando el torneo comience.</p>
       </div>
     )
   }
@@ -459,68 +460,90 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
   return (
     <div className="space-y-3">
       {(filteredMatches.length !== matches.length || activeFilter) && (
-        <p className="text-xs text-slate-500 text-center">
+        <p className="text-xs text-muted-foreground text-center">
           {filteredMatches.length} de {matches.length} partidos
         </p>
       )}
 
-      <div className="sticky top-0 z-10 -mx-4 border-b border-slate-800 bg-slate-950/95 px-4 py-2 backdrop-blur-sm">
+      <div className="sticky top-0 z-10 -mx-4 border-b border-border bg-background/95 px-4 py-2 backdrop-blur-sm">
         <div className="relative mb-2">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-slate-500" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <input
             ref={searchRef}
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Buscar por equipo…"
-            className="w-full rounded-lg border border-slate-700/50 bg-slate-900 py-2 pl-9 pr-8 text-sm text-slate-200 placeholder-slate-500 outline-none transition-colors focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"
+            className="w-full rounded-lg border border-border bg-muted/50 py-2 pl-9 pr-8 text-sm text-foreground placeholder-muted-foreground outline-none transition-colors focus:border-emerald-500/40 focus:ring-1 focus:ring-emerald-500/20"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-slate-500 transition-colors hover:text-slate-300"
+              className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-muted-foreground transition-colors hover:text-foreground"
               aria-label="Limpiar búsqueda"
             >
               <X className="size-4" />
             </button>
           )}
         </div>
-        {filterOptions.length > 0 && (
-          <div className="flex flex-wrap gap-1.5 pb-1" role="group" aria-label="Filtrar por grupo o fase">
-            <button
-              type="button"
-              onClick={() => setActiveFilter(null)}
-              className={cn(
-                'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                activeFilter === null
-                  ? 'bg-emerald-500/20 text-emerald-400'
-                  : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
-              )}
-            >
-              Todos
-            </button>
-            {filterOptions.map(({ key, label }) => (
+        {(groupOptions.length > 0 || stageOptions.length > 0) && (
+          <div className="space-y-1.5 pb-1" role="group" aria-label="Filtrar por grupo o fase">
+            <div className="flex flex-wrap items-center gap-1.5">
               <button
-                key={key}
                 type="button"
-                onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                onClick={() => setActiveFilter(null)}
                 className={cn(
                   'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
-                  activeFilter === key
-                    ? 'bg-emerald-500/20 text-emerald-400'
-                    : 'bg-slate-800 text-slate-400 hover:bg-slate-700/50 hover:text-slate-300'
+                  activeFilter === null
+                    ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                    : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
                 )}
               >
-                {label}
+                Todos
               </button>
-            ))}
+              {groupOptions.map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                  className={cn(
+                    'flex size-7 items-center justify-center rounded-full text-xs font-semibold transition-colors',
+                    activeFilter === key
+                      ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 ring-1 ring-emerald-500/40'
+                      : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                  )}
+                  aria-label={`Grupo ${label}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            {stageOptions.length > 0 && (
+              <div className="flex flex-wrap items-center gap-1.5">
+                {stageOptions.map(({ key, label }) => (
+                  <button
+                    key={key}
+                    type="button"
+                    onClick={() => setActiveFilter(activeFilter === key ? null : key)}
+                    className={cn(
+                      'rounded-md px-2.5 py-1 text-xs font-medium transition-colors',
+                      activeFilter === key
+                        ? 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400'
+                        : 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground'
+                    )}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         )}
       </div>
 
       {grouped.length === 0 && searchQuery.trim() && (
-        <p className="py-12 text-center text-sm text-slate-500">
+        <p className="py-12 text-center text-sm text-muted-foreground">
           No hay partidos que coincidan con &ldquo;{searchQuery.trim()}&rdquo;
         </p>
       )}

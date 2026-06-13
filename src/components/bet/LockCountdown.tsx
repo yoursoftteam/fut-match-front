@@ -52,20 +52,20 @@ export function LockCountdown({
   if (isLocked) {
     if (status === 'live') {
       return (
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-400">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-blue-500/10 px-3 py-1.5 text-sm font-medium text-blue-600 dark:text-blue-400">
           <span>En juego</span>
         </div>
       )
     }
     if (status === 'finished') {
       return (
-        <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
+        <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
           <span>Finalizado</span>
         </div>
       )
     }
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-md bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-400">
+      <div className="inline-flex items-center gap-1.5 rounded-md bg-red-500/10 px-3 py-1.5 text-sm font-medium text-red-600 dark:text-red-400">
         <span>Por iniciar</span>
       </div>
     )
@@ -73,7 +73,7 @@ export function LockCountdown({
 
   if (showTimer) {
     return (
-      <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-400">
+      <div className="inline-flex items-center gap-1.5 rounded-md bg-emerald-500/10 px-3 py-1.5 text-sm font-medium text-emerald-600 dark:text-emerald-400">
         <span>Edit closes in {timeLeft}</span>
       </div>
     )

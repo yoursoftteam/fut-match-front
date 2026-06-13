@@ -63,19 +63,19 @@ export function CreatePoolReview({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-bold text-slate-50">Confirmacion</h2>
-        <p className="mt-1 text-sm text-slate-400">
+        <h2 className="text-xl font-bold text-foreground">Confirmacion</h2>
+        <p className="mt-1 text-sm text-muted-foreground">
           Revisa los datos antes de crear {isPredictions ? "la competencia" : "la polla"}.
         </p>
       </div>
 
-      <div className="space-y-4 rounded-lg border border-slate-800 bg-slate-900/70 p-4">
+      <div className="space-y-4 rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-xs text-slate-500">Nombre</p>
-            <p className="text-sm font-medium text-slate-50">{name}</p>
+            <p className="text-xs text-muted-foreground">Nombre</p>
+            <p className="text-sm font-medium text-foreground">{name}</p>
           </div>
-          <div className="flex items-center gap-1.5 text-xs text-slate-400">
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
             {visibility === "public" ? (
               <>
                 <Globe className="size-3" />
@@ -91,20 +91,20 @@ export function CreatePoolReview({
         </div>
 
         {description && (
-          <div className="border-t border-slate-800 pt-4">
-            <p className="mb-1 text-xs text-slate-500">Descripcion</p>
-            <p className="whitespace-pre-wrap text-sm text-slate-400">{description}</p>
+          <div className="border-t border-border pt-4">
+            <p className="mb-1 text-xs text-muted-foreground">Descripcion</p>
+            <p className="whitespace-pre-wrap text-sm text-muted-foreground">{description}</p>
           </div>
         )}
 
-        <div className="border-t border-slate-800 pt-4">
-          <p className="mb-2 text-xs font-medium text-slate-500">Reglas de juego</p>
+        <div className="border-t border-border pt-4">
+          <p className="mb-2 text-xs font-medium text-muted-foreground">Reglas de juego</p>
           <div className="grid grid-cols-2 gap-x-4 gap-y-1.5">
             {rules
               ? rules.map(([label, value]) => (
                   <div key={label} className="flex justify-between text-sm">
-                    <span className="truncate pr-2 text-slate-400">{label}</span>
-                    <span className="shrink-0 font-medium text-slate-50">{value}</span>
+                    <span className="truncate pr-2 text-muted-foreground">{label}</span>
+                    <span className="shrink-0 font-medium text-foreground">{value}</span>
                   </div>
                 ))
               : Object.entries(config).map(([key, value]) => {
@@ -112,13 +112,13 @@ export function CreatePoolReview({
                   if (!label) return null;
                   return (
                     <div key={key} className="flex justify-between text-sm">
-                      <span className="truncate pr-2 text-slate-400">{label}</span>
-                      <span className="shrink-0 font-medium text-slate-50">{value}</span>
+                      <span className="truncate pr-2 text-muted-foreground">{label}</span>
+                      <span className="shrink-0 font-medium text-foreground">{value}</span>
                     </div>
                   );
                 })}
           </div>
-          <p className="mt-3 text-xs text-slate-500">
+          <p className="mt-3 text-xs text-muted-foreground">
             Los marcadores no tienen en cuenta tiempo extra, solo resultado oficial de los 90 minutos del partido.
           </p>
         </div>
@@ -136,8 +136,8 @@ export function CreatePoolReview({
         disabled={isLoading}
         className={cn(
           "w-full rounded-lg px-4 py-3 text-sm font-semibold transition-all",
-          "bg-[#22C55E] text-slate-950 hover:bg-emerald-400",
-          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#22C55E]/70",
+          "bg-emerald-500 text-white hover:bg-emerald-400",
+          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/70",
           "disabled:cursor-not-allowed disabled:opacity-50"
         )}
       >
@@ -145,7 +145,7 @@ export function CreatePoolReview({
       </button>
 
       {showOptimistic && (
-        <div className="rounded-lg border border-[#22C55E]/40 bg-[#22C55E]/10 px-4 py-3 text-sm text-[#22C55E]">
+        <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-500">
           {isPredictions ? "La competencia esta lista. Link en camino." : "La polla esta lista. Link en camino."}
         </div>
       )}

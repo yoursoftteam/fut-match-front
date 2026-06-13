@@ -19,7 +19,7 @@ export function PoolCard({ pool, onClick, children, nextMatchKickoffAt, rank, to
     <button
       type="button"
       onClick={onClick}
-      className="w-full rounded-lg border border-border bg-card p-4 text-left transition-colors hover:border-[#22C55E]/50"
+      className="w-full rounded-lg border border-border bg-card p-4 text-left shadow-sm transition-colors hover:border-emerald-500/50"
     >
       <div className="flex items-center justify-between">
         <div className="min-w-0 flex-1">

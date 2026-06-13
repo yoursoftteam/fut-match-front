@@ -32,10 +32,10 @@ export function NextMatchCountdown({ kickoffAt }: { kickoffAt: string }) {
   if (!label) return null
 
   const colorClass = diffRef.current < 1_800_000
-    ? 'text-red-400'
+    ? 'text-red-600 dark:text-red-400'
     : diffRef.current < 3_600_000
-    ? 'text-orange-400'
-    : 'text-emerald-400'
+    ? 'text-orange-600 dark:text-orange-400'
+    : 'text-emerald-600 dark:text-emerald-400'
 
   return (
     <span className={cn('flex items-center gap-1 whitespace-nowrap text-[11px]', colorClass)}>

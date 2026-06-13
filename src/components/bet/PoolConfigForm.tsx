@@ -73,16 +73,16 @@ export function PoolConfigForm({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border border-slate-700 bg-slate-900/50 p-4 md:p-6">
-      <h2 className="text-lg font-bold text-slate-50">Pool Scoring Rules</h2>
+    <form onSubmit={handleSubmit} className="space-y-6 rounded-lg border border-border bg-card p-4 md:p-6 shadow-sm">
+      <h2 className="text-lg font-bold text-foreground">Pool Scoring Rules</h2>
 
       <div className="grid gap-4 md:grid-cols-2">
         {Object.entries(initialConfig).map(([key, _]) => (
           <div key={key} className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-300">
+            <label className="text-sm font-medium text-foreground">
               {key.replace(/_/g, ' ').toUpperCase()}
             </label>
-            <p className="text-xs text-slate-400">{fieldDescriptions[key]}</p>
+            <p className="text-xs text-muted-foreground">{fieldDescriptions[key]}</p>
             <input
               type="number"
               min="0"
@@ -91,7 +91,7 @@ export function PoolConfigForm({
               onChange={(e) => handleChange(key, parseInt(e.target.value, 10) || 0)}
               disabled={!isOwner || isFrozen}
               className={cn(
-                'w-full rounded-md border border-slate-700 bg-slate-800 px-3 py-2 text-slate-50 outline-none focus:border-emerald-500',
+                'w-full rounded-md border border-border bg-muted px-3 py-2 text-foreground outline-none focus:border-emerald-500',
                 (!isOwner || isFrozen) && 'opacity-50 cursor-not-allowed'
               )}
             />
@@ -115,14 +115,14 @@ export function PoolConfigForm({
         type="submit"
         disabled={!isOwner || isFrozen || isSubmitting}
         className={cn(
-          'w-full rounded-md bg-emerald-500 px-4 py-2 font-semibold text-slate-950 transition-all hover:bg-emerald-400',
+          'w-full rounded-md bg-emerald-500 px-4 py-2 font-semibold text-white transition-all hover:bg-emerald-400',
           (!isOwner || isFrozen || isSubmitting) && 'opacity-50 cursor-not-allowed'
         )}
       >
         {isSubmitting ? 'Saving...' : 'Guardar reglas'}
       </button>
 
-      {isFrozen && <p className="text-xs text-slate-400">Pool rules are frozen and cannot be edited.</p>}
+      {isFrozen && <p className="text-xs text-muted-foreground">Pool rules are frozen and cannot be edited.</p>}
     </form>
   )
 }
