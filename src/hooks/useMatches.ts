@@ -3,6 +3,8 @@
 import { useEffect, useState, useCallback } from 'react'
 import { supabase } from '@/lib/supabase'
 
+let isSecureRegistrationRpcAvailable: boolean | null = null
+
 function generateSelfUnregisterToken(): string {
   if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
     return crypto.randomUUID().replace(/-/g, '')
@@ -11,15 +13,23 @@ function generateSelfUnregisterToken(): string {
   return `${Date.now()}-${Math.random().toString(36).slice(2, 14)}`
 }
 
-function isRpcNotDeployedError(error: { code?: string; message?: string } | null): boolean {
+function isRpcNotDeployedError(error: { code?: string; message?: string; details?: string; status?: number } | null): boolean {
   if (!error) return false
 
   if (error.code === '42883' || error.code === 'PGRST202') {
     return true
   }
 
-  const message = (error.message || '').toLowerCase()
-  return message.includes('could not find the function')
+  if (error.status === 404) {
+    return true
+  }
+
+  const message = `${error.message || ''} ${error.details || ''}`.toLowerCase()
+  return (
+    message.includes('could not find the function') ||
+    message.includes('/rpc/register_for_match_public') ||
+    message.includes('404')
+  )
 }
 
 function isValidUuid(value: string): boolean {
@@ -367,20 +377,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         user_id: string | null
       } | null = null
 
-      const rpcResult = await supabase
-        .rpc('register_for_match_public', {
-          p_match_id: normalizedMatchId,
-          p_name: trimmedName,
-          p_is_goalkeeper: isGoalkeeper,
-          p_self_token: selfUnregisterToken,
-        })
-
-      if (rpcResult.error) {
-        if (!isRpcNotDeployedError(rpcResult.error)) {
-          throw rpcResult.error
-        }
-
-        // Keep registration working even if secure RPC is unavailable or misconfigured.
+      const runLegacyRegistrationInsert = async () => {
         const legacyResult = await supabase
           .from('match_registrations')
           .insert([{
@@ -396,7 +393,57 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
           throw legacyResult.error
         }
 
-        data = legacyResult.data
+        return legacyResult.data
+      }
+
+      if (isSecureRegistrationRpcAvailable === false) {
+        data = await runLegacyRegistrationInsert()
+        return {
+          data,
+          error: null,
+          selfUnregisterToken: null,
+          selfUnregisterAvailable: false,
+        }
+      }
+
+      let rpcResult:
+        | { data: unknown; error: { code?: string; message?: string; details?: string; status?: number } | null }
+        | null = null
+
+      try {
+        rpcResult = await supabase
+          .rpc('register_for_match_public', {
+            p_match_id: normalizedMatchId,
+            p_name: trimmedName,
+            p_is_goalkeeper: isGoalkeeper,
+            p_self_token: selfUnregisterToken,
+          })
+      } catch (rpcThrown) {
+        const rpcThrownCandidate = rpcThrown as { code?: string; message?: string; details?: string; status?: number } | null
+        if (!isRpcNotDeployedError(rpcThrownCandidate)) {
+          throw rpcThrown
+        }
+
+        isSecureRegistrationRpcAvailable = false
+
+        data = await runLegacyRegistrationInsert()
+        return {
+          data,
+          error: null,
+          selfUnregisterToken: null,
+          selfUnregisterAvailable: false,
+        }
+      }
+
+      if (rpcResult?.error) {
+        if (!isRpcNotDeployedError(rpcResult.error)) {
+          throw rpcResult.error
+        }
+
+        isSecureRegistrationRpcAvailable = false
+
+        // Keep registration working even if secure RPC is unavailable or misconfigured.
+        data = await runLegacyRegistrationInsert()
         return {
           data,
           error: null,
@@ -408,6 +455,8 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       const rpcData = Array.isArray(rpcResult.data)
         ? (rpcResult.data[0] ?? null)
         : rpcResult.data
+
+      isSecureRegistrationRpcAvailable = true
 
       data = rpcData
 

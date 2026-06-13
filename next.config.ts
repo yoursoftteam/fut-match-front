@@ -13,7 +13,8 @@ const csp = [
   // Scripts: unsafe-inline necesario en prod porque Next.js inyecta scripts inline de bootstrap.
   // unsafe-eval solo en dev (Fast Refresh / webpack).
   // static.cloudflareinsights.com necesario para Cloudflare Pages Analytics beacon.
-  `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
+  // www.gstatic.com necesario para Firebase Messaging Service Worker (importScripts).
+  `script-src 'self' 'unsafe-inline' https://static.cloudflareinsights.com https://www.gstatic.com${process.env.NODE_ENV === "development" ? " 'unsafe-eval'" : ""}`,
   // Styles: unsafe-inline requerido por Tailwind en producción (no usa nonces por defecto).
   "style-src 'self' 'unsafe-inline'",
   // Fuentes embebidas en CSS (data: URI) usadas por next/font.
@@ -22,7 +23,8 @@ const csp = [
   "img-src 'self' data: blob: https:",
   // Conexiones: self + Supabase REST/auth + WebSocket de Supabase Realtime.
   // En dev se agrega el Supabase local (http://127.0.0.1:54321).
-  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS}${process.env.NODE_ENV === "development" ? " http://127.0.0.1:54321 ws://127.0.0.1:54321" : ""}`,
+  // firebase.googleapis.com y fcm.googleapis.com necesarios para Firebase Cloud Messaging.
+  `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS} https://*.googleapis.com${process.env.NODE_ENV === "development" ? " http://127.0.0.1:54321 ws://127.0.0.1:54321" : ""}`,
   // Evitar iframes de contenido externo.
   "frame-src 'none'",
   // Fuerza HTTPS en recursos mixtos.
