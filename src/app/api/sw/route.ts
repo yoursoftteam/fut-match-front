@@ -28,6 +28,10 @@ self.addEventListener("push", function(event) {
           icon: "/p2-logo.png",
           badge: "/p2-logo.png",
           data: { match_id: matchId, url: matchId ? "/match/" + matchId : "/dashboard" },
+          actions: [
+            { action: "ver_inscritos", title: "📋 Ver inscritos" },
+            { action: "compartir", title: "📤 Compartir" },
+          ],
         })
       );
     } catch(e) {
@@ -66,14 +70,24 @@ if (messaging) {
       icon: "/p2-logo.png",
       badge: "/p2-logo.png",
       data: { match_id: data.match_id, url: "/match/" + data.match_id },
+      actions: [
+        { action: "ver_inscritos", title: "📋 Ver inscritos" },
+        { action: "compartir", title: "📤 Compartir" },
+      ],
     });
   });
 }
 
 self.addEventListener("notificationclick", function(event) {
   event.notification.close();
-  var url = event.notification.data ? event.notification.data.url : "/dashboard";
-  event.waitUntil(clients.openWindow(url));
+  var matchId = event.notification.data ? event.notification.data.match_id : "";
+  if (event.action === "compartir" && matchId) {
+    event.waitUntil(clients.openWindow("/match/" + matchId + "?compartir=1"));
+  } else if (matchId) {
+    event.waitUntil(clients.openWindow("/match/" + matchId));
+  } else {
+    event.waitUntil(clients.openWindow("/dashboard"));
+  }
 });
 `.trim();
 
