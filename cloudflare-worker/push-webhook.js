@@ -175,10 +175,12 @@ async function sendFcmPush({ tokens, title, body, matchId, registrationId, playe
     );
 
     const responseText = await res.text();
-    results.push({ token: token.slice(0, 20) + "...", status: res.status });
+    results.push({ token: token.slice(0, 20) + "...", status: res.status, body: responseText.slice(0, 500) });
 
     if (!res.ok) {
       console.error(`[push] send failed for token: ${responseText}`);
+    } else if (responseText.length > 10) {
+      console.log(`[push] FCM response body: ${responseText.slice(0, 500)}`);
     }
   }
 

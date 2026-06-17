@@ -13,6 +13,33 @@ export async function GET() {
   };
 
   const swScript = `
+self.addEventListener("push", function(event) {
+  console.log("[sw] RAW push event received");
+  if (event.data) {
+    try {
+      var payload = event.data.json();
+      console.log("[sw] push payload:", JSON.stringify(payload));
+      var title = payload.notification?.title || payload.data?.title || "Parti2";
+      var body = payload.notification?.body || payload.data?.body || "Nuevo movimiento";
+      var matchId = payload.data?.match_id || "";
+      event.waitUntil(
+        self.registration.showNotification(title, {
+          body: body,
+          icon: "/p2-logo.png",
+          badge: "/p2-logo.png",
+          data: { match_id: matchId, url: matchId ? "/match/" + matchId : "/dashboard" },
+        })
+      );
+    } catch(e) {
+      console.log("[sw] push data not JSON:", event.data.text());
+      self.registration.showNotification("Parti2", { body: event.data.text() || "Nuevo movimiento", icon: "/p2-logo.png" });
+    }
+  } else {
+    console.log("[sw] push event with no data");
+    self.registration.showNotification("Parti2", { body: "Nuevo movimiento", icon: "/p2-logo.png" });
+  }
+});
+
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js");
 importScripts("https://www.gstatic.com/firebasejs/10.12.0/firebase-messaging-compat.js");
 
