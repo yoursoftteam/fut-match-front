@@ -90,17 +90,6 @@ export async function GET(
 
     const allUserIds = memberRows.map((r) => r.user_id)
 
-    const sortedUserIds = allUserIds
-      .map((uid) => ({ uid, points: scoreMap.get(uid) ?? 0 }))
-      .sort((a, b) => {
-        const ptsDiff = b.points - a.points
-        if (ptsDiff !== 0) return ptsDiff
-        return a.uid.localeCompare(b.uid)
-      })
-      .map((entry) => entry.uid)
-
-    const paginatedUserIds = sortedUserIds.slice(offset, offset + limit)
-
     const { data: finishedMatches } = await supabase
       .from('bet_matches')
       .select('id, home_score_official, away_score_official')
@@ -117,14 +106,14 @@ export async function GET(
     const exactCountMap = new Map<string, number>()
     const totalPredMap = new Map<string, number>()
 
-    if (finishedMatchIds.length > 0 && paginatedUserIds.length > 0) {
+    if (finishedMatchIds.length > 0 && allUserIds.length > 0) {
       const { data: predictions } = await supabase
         .from('bet_match_predictions')
         .select('user_id, match_id, home_score_predicted, away_score_predicted')
         .eq('pool_id', poolId)
         .eq('mode', 'pool')
         .in('match_id', finishedMatchIds)
-        .in('user_id', paginatedUserIds)
+        .in('user_id', allUserIds)
 
       if (predictions) {
         for (const p of predictions) {
@@ -139,6 +128,23 @@ export async function GET(
         }
       }
     }
+
+    const sortedUserIds = allUserIds
+      .map((uid) => ({
+        uid,
+        points: scoreMap.get(uid) ?? 0,
+        exactas: exactCountMap.get(uid) ?? 0,
+      }))
+      .sort((a, b) => {
+        const ptsDiff = b.points - a.points
+        if (ptsDiff !== 0) return ptsDiff
+        const exactDiff = b.exactas - a.exactas
+        if (exactDiff !== 0) return exactDiff
+        return a.uid.localeCompare(b.uid)
+      })
+      .map((entry) => entry.uid)
+
+    const paginatedUserIds = sortedUserIds.slice(offset, offset + limit)
 
     const userMetaMap = new Map<string, { email: string; fullName: string | null }>()
     await Promise.all(
