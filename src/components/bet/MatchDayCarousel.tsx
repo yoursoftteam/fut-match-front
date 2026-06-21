@@ -110,11 +110,9 @@ export function MatchDayCarousel({
     tick()
     const id = setInterval(tick, 1000)
     return () => clearInterval(id)
-  }, [currentIndex, currentMatch?.kickoff_at, currentMatch?.status])
+  }, [currentIndex, currentMatch?.kickoff_at, currentMatch?.status, currentMatch])
 
   if (totalSlides === 0) return null
-
-  const prediction = predictions[currentMatch.id] ?? undefined
 
   const bannerLabel = currentMatch.status === 'scheduled'
     ? countdown

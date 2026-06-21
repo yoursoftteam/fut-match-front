@@ -133,7 +133,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
       const teamMap = new Map((teams ?? []).map(t => [t.id, t]))
 
       const matchIds = matchRows.map(m => m.id)
-      let predictionsMap: Record<string, { home_score_predicted: number; away_score_predicted: number } | null> = {}
+      const predictionsMap: Record<string, { home_score_predicted: number; away_score_predicted: number } | null> = {}
       if (uid) {
         const { data: preds } = await supabase
           .from('bet_match_predictions')
