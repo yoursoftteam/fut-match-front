@@ -107,7 +107,7 @@ serve(async (req) => {
     const { data: activeMatches, error: activeMatchesError } = await supabase
       .from("bet_matches")
       .select("id, api_fixture_id, kickoff_at, status, home_team_id, away_team_id")
-      .in("status", ["scheduled", "live", "finished"])
+      .in("status", ["scheduled", "live"])
       .lte("kickoff_at", threshold)
       .not("api_fixture_id", "is", null);
 

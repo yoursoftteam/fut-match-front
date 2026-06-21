@@ -8,8 +8,8 @@ import { TournamentPredictions } from './TournamentPredictions'
 import { PoolMatches } from './PoolMatches'
 import { ShareActions } from '@/components/ShareLink'
 import { PoolRules } from './PoolRules'
-import { MatchCard } from './MatchCard'
-import { ArrowLeft, Calendar, Clock, FileText, Globe, Lock, Trophy, Users } from 'lucide-react'
+import { MatchDayCarousel, type CarouselMatchData } from './MatchDayCarousel'
+import { ArrowLeft, Calendar, FileText, Globe, Lock, Trophy, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
 type Tab = 'ranking' | 'matches' | 'tournament' | 'rules'
@@ -44,20 +44,11 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     const fromUrl = searchParams.get('tab') as Tab | null
     return fromUrl && validTabs.includes(fromUrl) ? fromUrl : 'ranking'
   })
-  const [nextKickoffAt, setNextKickoffAt] = useState<string | null>(null)
-  const [countdown, setCountdown] = useState('')
-  const [nextMatch, setNextMatch] = useState<{
-    id: string
-    home_team: { id: string; name: string; fifa_code: string; flag_svg_url?: string } | null
-    away_team: { id: string; name: string; fifa_code: string; flag_svg_url?: string } | null
-    kickoff_at: string
-    status: string
-    home_score_official?: number | null
-    away_score_official?: number | null
-    stage: string
-    group_name?: string | null
+  const [carouselData, setCarouselData] = useState<{
+    matches: CarouselMatchData[]
+    initialIndex: number
+    predictions: Record<string, { home_score_predicted: number; away_score_predicted: number } | null>
   } | null>(null)
-  const [nextPrediction, setNextPrediction] = useState<{ home_score_predicted: number; away_score_predicted: number } | null>(null)
 
   const fallbackPath = '/bet/pools'
   const [listPath, setListPath] = useState(fallbackPath)
@@ -104,72 +95,93 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
       const { data: authData } = await supabase.auth.getSession()
       const uid = authData.session?.user?.id
 
-      const { data } = await supabase
+      const now = new Date()
+      const dayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+      const dayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999)
+
+      let { data: matchRows } = await supabase
         .from('bet_matches')
-        .select('id, tournament_id, kickoff_at, status, stage, group_name, home_team_id, away_team_id')
+        .select('id, tournament_id, kickoff_at, status, stage, group_name, home_team_id, away_team_id, home_score_official, away_score_official')
         .eq('tournament_id', pool.tournament_id)
-        .gte('kickoff_at', new Date().toISOString())
+        .gte('kickoff_at', dayStart.toISOString())
+        .lte('kickoff_at', dayEnd.toISOString())
         .order('kickoff_at', { ascending: true })
-        .limit(1)
-        .maybeSingle()
-      if (cancelled || !data) return
+      if (cancelled) return
 
-      setNextKickoffAt(data.kickoff_at)
+      if (!matchRows || matchRows.length === 0) {
+        const broadStart = new Date(now.getTime() - 12 * 60 * 60 * 1000)
+        const broadEnd = new Date(now.getTime() + 36 * 60 * 60 * 1000)
+        const { data: broadRows } = await supabase
+          .from('bet_matches')
+          .select('id, tournament_id, kickoff_at, status, stage, group_name, home_team_id, away_team_id, home_score_official, away_score_official')
+          .eq('tournament_id', pool.tournament_id)
+          .gte('kickoff_at', broadStart.toISOString())
+          .lte('kickoff_at', broadEnd.toISOString())
+          .order('kickoff_at', { ascending: true })
+        if (cancelled) return
+        matchRows = broadRows
+      }
 
-      // Fetch team info
-      const [{ data: home }, { data: away }] = await Promise.all([
-        supabase.from('bet_teams').select('id, name, fifa_code, flag_svg_url').eq('id', data.home_team_id).maybeSingle(),
-        supabase.from('bet_teams').select('id, name, fifa_code, flag_svg_url').eq('id', data.away_team_id).maybeSingle(),
+      if (!matchRows || matchRows.length === 0) return
+
+      const allTeamIds = [...new Set(matchRows.flatMap(m => [m.home_team_id, m.away_team_id]))]
+      const [{ data: teams }] = await Promise.all([
+        supabase.from('bet_teams').select('id, name, fifa_code, flag_svg_url').in('id', allTeamIds),
       ])
       if (cancelled) return
 
-      // Fetch user prediction
+      const teamMap = new Map((teams ?? []).map(t => [t.id, t]))
+
+      const matchIds = matchRows.map(m => m.id)
+      let predictionsMap: Record<string, { home_score_predicted: number; away_score_predicted: number } | null> = {}
       if (uid) {
-        const { data: pred } = await supabase
+        const { data: preds } = await supabase
           .from('bet_match_predictions')
-          .select('home_score_predicted, away_score_predicted')
-          .eq('match_id', data.id)
+          .select('match_id, home_score_predicted, away_score_predicted')
+          .in('match_id', matchIds)
           .eq('pool_id', pool.id)
           .eq('user_id', uid)
           .eq('mode', 'pool')
-          .maybeSingle()
         if (cancelled) return
-        if (pred) setNextPrediction(pred)
+        for (const p of preds ?? []) {
+          predictionsMap[p.match_id] = { home_score_predicted: p.home_score_predicted, away_score_predicted: p.away_score_predicted }
+        }
       }
 
-      setNextMatch({
-        id: data.id,
-        home_team: home ?? null,
-        away_team: away ?? null,
-        kickoff_at: data.kickoff_at,
-        status: data.status,
-        stage: data.stage ?? '',
-        group_name: data.group_name,
+      const matches: CarouselMatchData[] = matchRows.map(m => {
+        const homeTeam = teamMap.get(m.home_team_id)
+        const awayTeam = teamMap.get(m.away_team_id)
+        return {
+          id: m.id,
+          home_team: {
+            name: homeTeam?.name ?? 'TBD',
+            fifa_code: homeTeam?.fifa_code ?? '---',
+            flag_svg_url: homeTeam?.flag_svg_url ?? '',
+          },
+          away_team: {
+            name: awayTeam?.name ?? 'TBD',
+            fifa_code: awayTeam?.fifa_code ?? '---',
+            flag_svg_url: awayTeam?.flag_svg_url ?? '',
+          },
+          kickoff_at: m.kickoff_at,
+          stage: m.stage ?? '',
+          group_name: m.group_name ?? undefined,
+          status: (m.status === 'live' || m.status === 'finished' ? m.status : 'scheduled') as 'scheduled' | 'live' | 'finished',
+          home_score_official: m.home_score_official ?? null,
+          away_score_official: m.away_score_official ?? null,
+        }
       })
+
+      const nowMs = now.getTime()
+      const nextIdx = matches.findIndex(m =>
+        m.status !== 'finished' && new Date(m.kickoff_at).getTime() > nowMs - 100 * 60 * 1000
+      )
+      const initialIndex = nextIdx >= 0 ? nextIdx : matches.length - 1
+
+      setCarouselData({ matches, initialIndex, predictions: predictionsMap })
     })()
     return () => { cancelled = true }
   }, [pool])
-
-  useEffect(() => {
-    if (!nextKickoffAt) return
-    const tick = () => {
-      const diff = new Date(nextKickoffAt).getTime() - Date.now()
-      if (diff <= 0) { setCountdown(''); setNextKickoffAt(null); return }
-      const days = Math.floor(diff / 86400000)
-      const hours = Math.floor((diff % 86400000) / 3600000)
-      const minutes = Math.floor((diff % 3600000) / 60000)
-      const seconds = Math.floor((diff % 60000) / 1000)
-      const parts: string[] = []
-      if (days > 0) parts.push(`${days}d`)
-      parts.push(`${hours}h`)
-      parts.push(`${minutes}m`)
-      parts.push(`${seconds}s`)
-      setCountdown(parts.join(' '))
-    }
-    tick()
-    const id = setInterval(tick, 1000)
-    return () => clearInterval(id)
-  }, [nextKickoffAt])
 
   const isPredictions = pool?.competition_type === 'predictions'
 
@@ -263,54 +275,34 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           </div>
         </div>
 
-        {nextMatch && (
-          <div className="mb-6 space-y-3">
-            <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm">
-              <Clock className="size-4 shrink-0 text-emerald-400" aria-hidden="true" />
-              <span className="text-muted-foreground">Próximo partido:</span>
-              <span className="font-mono font-semibold tabular-nums text-emerald-400">{countdown}</span>
-            </div>
-            <MatchCard
-              match={{
-                id: nextMatch.id,
-                home_team: {
-                  name: nextMatch.home_team?.name ?? 'TBD',
-                  fifa_code: nextMatch.home_team?.fifa_code ?? '---',
-                  flag_svg_url: nextMatch.home_team?.flag_svg_url ?? '',
-                },
-                away_team: {
-                  name: nextMatch.away_team?.name ?? 'TBD',
-                  fifa_code: nextMatch.away_team?.fifa_code ?? '---',
-                  flag_svg_url: nextMatch.away_team?.flag_svg_url ?? '',
-                },
-                kickoff_at: nextMatch.kickoff_at,
-                stage: nextMatch.stage,
-                group_name: nextMatch.group_name ?? undefined,
-                status: (nextMatch.status === 'live' || nextMatch.status === 'finished' ? nextMatch.status : 'scheduled') as 'scheduled' | 'live' | 'finished',
-                home_score_official: nextMatch.home_score_official ?? null,
-                away_score_official: nextMatch.away_score_official ?? null,
-              }}
-              prediction={nextPrediction ?? undefined}
-              canEdit={true}
-              onUpdatePrediction={async (home, away) => {
-                setNextPrediction({ home_score_predicted: home, away_score_predicted: away })
-                const { data: authData } = await supabase.auth.getSession()
-                const token = authData.session?.access_token
-                if (!token) return
-                await fetch('/api/v1/bet/predictions', {
-                  method: 'POST',
-                  headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-                  body: JSON.stringify({
-                    match_id: nextMatch.id,
-                    home_score_predicted: home,
-                    away_score_predicted: away,
-                    pool_id: pool.id,
-                  }),
-                })
-              }}
-              compact
-            />
-          </div>
+        {carouselData && (
+          <MatchDayCarousel
+            matches={carouselData.matches}
+            initialIndex={carouselData.initialIndex}
+            predictions={carouselData.predictions}
+            onUpdatePrediction={async (matchId, home, away) => {
+              setCarouselData(prev => {
+                if (!prev) return prev
+                return {
+                  ...prev,
+                  predictions: { ...prev.predictions, [matchId]: { home_score_predicted: home, away_score_predicted: away } }
+                }
+              })
+              const { data: authData } = await supabase.auth.getSession()
+              const token = authData.session?.access_token
+              if (!token) return
+              await fetch('/api/v1/bet/predictions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                body: JSON.stringify({
+                  match_id: matchId,
+                  home_score_predicted: home,
+                  away_score_predicted: away,
+                  pool_id: pool.id,
+                }),
+              })
+            }}
+          />
         )}
 
         <div
