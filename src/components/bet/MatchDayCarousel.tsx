@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
 import { MatchCard } from './MatchCard'
+import { MatchPredictionsModal } from './MatchPredictionsModal'
 import { cn } from '@/lib/utils'
 
 export interface CarouselMatchData {
@@ -22,6 +23,9 @@ interface MatchDayCarouselProps {
   initialIndex: number
   predictions: Record<string, { home_score_predicted: number; away_score_predicted: number } | null>
   onUpdatePrediction: (matchId: string, home: number, away: number) => Promise<void>
+  poolId: string
+  showGroupTable?: boolean
+  onShowGroup?: (groupName: string) => void
 }
 
 export function MatchDayCarousel({
@@ -29,10 +33,14 @@ export function MatchDayCarousel({
   initialIndex,
   predictions,
   onUpdatePrediction,
+  poolId,
+  showGroupTable = false,
+  onShowGroup,
 }: MatchDayCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [countdown, setCountdown] = useState('')
   const [isPaused, setIsPaused] = useState(false)
+  const [selectedMatchId, setSelectedMatchId] = useState<string | null>(null)
   const touchStartX = useRef(0)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
@@ -177,6 +185,9 @@ export function MatchDayCarousel({
                   prediction={predictions[m.id] ?? undefined}
                   canEdit={true}
                   onUpdatePrediction={(home, away) => onUpdatePrediction(m.id, home, away)}
+                  onClick={m.status !== 'scheduled' ? () => setSelectedMatchId(m.id) : undefined}
+                  onShowGroup={m.stage === 'group_stage' && m.group_name && showGroupTable ? () => onShowGroup?.(m.group_name!) : undefined}
+                  showGroupTable={showGroupTable}
                   compact
                 />
               </div>
@@ -222,6 +233,13 @@ export function MatchDayCarousel({
           ))}
         </div>
       )}
+
+      <MatchPredictionsModal
+        matchId={selectedMatchId ?? ''}
+        poolId={poolId}
+        open={!!selectedMatchId}
+        onClose={() => setSelectedMatchId(null)}
+      />
     </div>
   )
 }
