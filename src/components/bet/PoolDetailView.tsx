@@ -6,11 +6,13 @@ import { supabase } from '@/lib/supabase'
 import { PoolRanking } from './PoolRanking'
 import { TournamentPredictions } from './TournamentPredictions'
 import { PoolMatches } from './PoolMatches'
+import { GroupStandingsModal } from './GroupStandingsModal'
 import { ShareActions } from '@/components/ShareLink'
 import { PoolRules } from './PoolRules'
 import { MatchDayCarousel, type CarouselMatchData } from './MatchDayCarousel'
 import { ArrowLeft, Calendar, FileText, Globe, Lock, Trophy, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import type { Match, Team } from '@/types/bet'
 
 type Tab = 'ranking' | 'matches' | 'tournament' | 'rules'
 
@@ -48,6 +50,11 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     matches: CarouselMatchData[]
     initialIndex: number
     predictions: Record<string, { home_score_predicted: number; away_score_predicted: number } | null>
+  } | null>(null)
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const [groupStandings, setGroupStandings] = useState<{
+    matches: GroupStandingsMatch[]
+    predictions: Map<string, { home_score_predicted: number; away_score_predicted: number }>
   } | null>(null)
 
   const fallbackPath = '/bet/pools'
@@ -183,6 +190,52 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     return () => { cancelled = true }
   }, [pool])
 
+  type GroupStandingsMatch = Match & {
+    home_team?: Team | null
+    away_team?: Team | null
+  }
+
+  useEffect(() => {
+    if (!selectedGroup || !pool) {
+      setGroupStandings(null)
+      return
+    }
+    let cancelled = false
+    ;(async () => {
+      const { data: authData } = await supabase.auth.getSession()
+      const uid = authData.session?.user?.id
+      if (!uid) return
+
+      const { data: matchRows } = await supabase
+        .from('bet_matches')
+        .select('*, home_team:home_team_id(*), away_team:away_team_id(*)')
+        .eq('tournament_id', pool.tournament_id)
+        .eq('group_name', selectedGroup)
+      if (cancelled || !matchRows) return
+
+      const matchIds = matchRows.map(m => m.id)
+      const predMap = new Map<string, { home_score_predicted: number; away_score_predicted: number }>()
+      if (matchIds.length > 0) {
+        const { data: preds } = await supabase
+          .from('bet_match_predictions')
+          .select('match_id, home_score_predicted, away_score_predicted')
+          .in('match_id', matchIds)
+          .eq('pool_id', pool.id)
+          .eq('user_id', uid)
+          .eq('mode', 'pool')
+        if (cancelled) return
+        for (const p of preds ?? []) {
+          predMap.set(p.match_id, { home_score_predicted: p.home_score_predicted, away_score_predicted: p.away_score_predicted })
+        }
+      }
+
+      if (!cancelled) {
+        setGroupStandings({ matches: matchRows as GroupStandingsMatch[], predictions: predMap })
+      }
+    })()
+    return () => { cancelled = true }
+  }, [selectedGroup, pool])
+
   const isPredictions = pool?.competition_type === 'predictions'
 
   const tabs: { id: Tab; label: string; icon: typeof Trophy }[] = useMemo(
@@ -302,6 +355,9 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
                 }),
               })
             }}
+            poolId={pool.id}
+            showGroupTable={!isPredictions}
+            onShowGroup={setSelectedGroup}
           />
         )}
 
@@ -357,6 +413,15 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
         {tab === 'tournament' && <TournamentPredictions poolId={pool.id} />}
 
         {tab === 'rules' && <PoolRules competitionType={pool.competition_type} config={pool.config_active} />}
+
+      {selectedGroup && groupStandings && (
+        <GroupStandingsModal
+          groupName={selectedGroup}
+          matches={groupStandings.matches}
+          getPrediction={(matchId) => groupStandings.predictions.get(matchId)}
+          onClose={() => setSelectedGroup(null)}
+        />
+      )}
       </div>
     </div>
   )
