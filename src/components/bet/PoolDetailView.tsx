@@ -361,6 +361,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
             poolId={pool.id}
             showGroupTable={!isPredictions}
             onShowGroup={setSelectedGroup}
+            showClassificationBanner={!isPredictions}
           />
         )}
 

@@ -26,6 +26,7 @@ interface MatchDayCarouselProps {
   poolId: string
   showGroupTable?: boolean
   onShowGroup?: (groupName: string) => void
+  showClassificationBanner?: boolean
 }
 
 export function MatchDayCarousel({
@@ -36,6 +37,7 @@ export function MatchDayCarousel({
   poolId,
   showGroupTable = false,
   onShowGroup,
+  showClassificationBanner = false,
 }: MatchDayCarouselProps) {
   const [currentIndex, setCurrentIndex] = useState(initialIndex)
   const [countdown, setCountdown] = useState('')
@@ -132,8 +134,6 @@ export function MatchDayCarousel({
         hour: '2-digit',
         minute: '2-digit',
       })
-
-  const showClassificationBanner = new Date() <= new Date('2026-06-27T23:59:59')
 
   return (
     <div className="mb-6 space-y-3">
