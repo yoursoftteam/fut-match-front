@@ -503,3 +503,13 @@ BEGIN
   RETURN QUERY SELECT true, 'Resultado actualizado y puntos recalculados';
 END;
 $$;
+
+-- Grant permissions for the new functions
+GRANT EXECUTE ON FUNCTION fn_user_simulated_group_standings(UUID, UUID, CHAR, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION fn_user_simulated_group_standings(UUID, UUID, CHAR, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION fn_actual_group_standings(CHAR, UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION fn_actual_group_standings(CHAR, UUID) TO service_role;
+GRANT EXECUTE ON FUNCTION fn_calculate_group_classification(UUID, CHAR) TO authenticated;
+GRANT EXECUTE ON FUNCTION fn_calculate_group_classification(UUID, CHAR) TO service_role;
+GRANT EXECUTE ON FUNCTION fn_calculate_best_third_points(UUID) TO authenticated;
+GRANT EXECUTE ON FUNCTION fn_calculate_best_third_points(UUID) TO service_role;
