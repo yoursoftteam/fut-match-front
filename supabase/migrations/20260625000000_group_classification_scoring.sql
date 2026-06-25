@@ -371,7 +371,7 @@ BEGIN
 END;
 $$;
 
--- Permissions
+-- Permissions 
 GRANT EXECUTE ON FUNCTION fn_user_simulated_group_standings(UUID, UUID, CHAR, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION fn_user_simulated_group_standings(UUID, UUID, CHAR, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION fn_actual_group_standings(CHAR, UUID) TO authenticated;
