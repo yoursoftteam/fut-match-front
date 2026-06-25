@@ -11,9 +11,9 @@ CREATE TABLE IF NOT EXISTS bet_best_third_qualifiers (
   UNIQUE (pool_id, group_name)
 );
 
-CREATE INDEX idx_bet_best_third_pool ON bet_best_third_qualifiers(pool_id);
+CREATE INDEX IF NOT EXISTS idx_bet_best_third_pool ON bet_best_third_qualifiers(pool_id);
 
--- 2. Function: calculate simulated group standings for a user
+-- 2. Function: simulated group standings for a user from their predictions
 CREATE OR REPLACE FUNCTION fn_user_simulated_group_standings(
   p_user_id UUID,
   p_pool_id UUID,
@@ -40,62 +40,51 @@ BEGIN
     SELECT DISTINCT bt.id, bt.name
     FROM bet_matches bm
     JOIN bet_teams bt ON bt.id IN (bm.home_team_id, bm.away_team_id)
-    WHERE bm.tournament_id = p_tournament_id
-      AND bm.group_name = p_group_name
+    WHERE bm.tournament_id = p_tournament_id AND bm.group_name = p_group_name
   ),
   match_predictions AS (
     SELECT
-      bm.home_team_id,
-      bm.away_team_id,
+      bm.home_team_id, bm.away_team_id,
       COALESCE(bmp.home_score_predicted, 0) AS home_goals,
       COALESCE(bmp.away_score_predicted, 0) AS away_goals
     FROM bet_matches bm
     LEFT JOIN bet_match_predictions bmp ON bmp.match_id = bm.id
-      AND bmp.user_id = p_user_id
-      AND bmp.pool_id = p_pool_id
-      AND bmp.mode = 'pool'
-    WHERE bm.tournament_id = p_tournament_id
-      AND bm.group_name = p_group_name
+      AND bmp.user_id = p_user_id AND bmp.pool_id = p_pool_id AND bmp.mode = 'pool'
+    WHERE bm.tournament_id = p_tournament_id AND bm.group_name = p_group_name
   ),
-  team_stats AS (
+  team_calc AS (
     SELECT
-      gt.id,
-      gt.name,
-      COUNT(*) FILTER (WHERE mp.home_team_id = gt.id OR mp.away_team_id = gt.id) AS played,
-      COUNT(*) FILTER (
-        WHERE mp.home_team_id = gt.id AND mp.home_goals > mp.away_goals
-          OR mp.away_team_id = gt.id AND mp.away_goals > mp.home_goals
-      ) AS wins,
-      COUNT(*) FILTER (
-        WHERE mp.home_team_id = gt.id AND mp.home_goals = mp.away_goals
-          OR mp.away_team_id = gt.id AND mp.away_goals = mp.home_goals
-      ) AS draws,
-      COUNT(*) FILTER (
-        WHERE mp.home_team_id = gt.id AND mp.home_goals < mp.away_goals
-          OR mp.away_team_id = gt.id AND mp.away_goals < mp.home_goals
-      ) AS losses,
-      SUM(CASE WHEN mp.home_team_id = gt.id THEN mp.home_goals ELSE mp.away_goals END) AS goals_for,
-      SUM(CASE WHEN mp.home_team_id = gt.id THEN mp.away_goals ELSE mp.home_goals END) AS goals_against
+      gt.id, gt.name,
+      COALESCE(SUM(CASE WHEN mp.home_team_id = gt.id OR mp.away_team_id = gt.id THEN 1 ELSE 0 END), 0)::INT AS played,
+      COALESCE(SUM(CASE
+        WHEN mp.home_team_id = gt.id AND mp.home_goals > mp.away_goals THEN 1
+        WHEN mp.away_team_id = gt.id AND mp.away_goals > mp.home_goals THEN 1
+        ELSE 0
+      END), 0)::INT AS wins,
+      COALESCE(SUM(CASE
+        WHEN (mp.home_team_id = gt.id OR mp.away_team_id = gt.id)
+          AND mp.home_goals = mp.away_goals THEN 1
+        ELSE 0
+      END), 0)::INT AS draws,
+      COALESCE(SUM(CASE
+        WHEN mp.home_team_id = gt.id AND mp.home_goals < mp.away_goals THEN 1
+        WHEN mp.away_team_id = gt.id AND mp.away_goals < mp.home_goals THEN 1
+        ELSE 0
+      END), 0)::INT AS losses,
+      COALESCE(SUM(CASE WHEN mp.home_team_id = gt.id THEN mp.home_goals ELSE mp.away_goals END), 0)::INT AS goals_for,
+      COALESCE(SUM(CASE WHEN mp.home_team_id = gt.id THEN mp.away_goals ELSE mp.home_goals END), 0)::INT AS goals_against
     FROM group_teams gt
     LEFT JOIN match_predictions mp ON mp.home_team_id = gt.id OR mp.away_team_id = gt.id
     GROUP BY gt.id, gt.name
   )
-  SELECT
-    ts.id,
-    ts.name,
-    ts.played::INT,
-    ts.wins::INT,
-    ts.draws::INT,
-    ts.losses::INT,
-    ts.goals_for::INT,
-    ts.goals_against::INT,
-    (ts.wins * 3 + ts.draws)::INT AS points
-  FROM team_stats ts
+  SELECT tc.id, tc.name, tc.played, tc.wins, tc.draws, tc.losses, tc.goals_for, tc.goals_against,
+    (tc.wins * 3 + tc.draws)::INT AS points
+  FROM team_calc tc
   ORDER BY points DESC, (goals_for - goals_against) DESC, goals_for DESC;
 END;
 $$;
 
--- 3. Function: calculate actual group standings from official results
+-- 3. Function: actual group standings from official results
 CREATE OR REPLACE FUNCTION fn_actual_group_standings(
   p_group_name CHAR(1),
   p_tournament_id UUID
@@ -120,70 +109,53 @@ BEGIN
     SELECT DISTINCT bt.id, bt.name
     FROM bet_matches bm
     JOIN bet_teams bt ON bt.id IN (bm.home_team_id, bm.away_team_id)
-    WHERE bm.tournament_id = p_tournament_id
-      AND bm.group_name = p_group_name
+    WHERE bm.tournament_id = p_tournament_id AND bm.group_name = p_group_name
   ),
   match_results AS (
-    SELECT
-      bm.home_team_id,
-      bm.away_team_id,
-      COALESCE(bm.home_score_official, 0) AS home_goals,
-      COALESCE(bm.away_score_official, 0) AS away_goals
+    SELECT bm.home_team_id, bm.away_team_id,
+      bm.home_score_official AS home_goals,
+      bm.away_score_official AS away_goals
     FROM bet_matches bm
-    WHERE bm.tournament_id = p_tournament_id
-      AND bm.group_name = p_group_name
-      AND bm.status = 'finished'
-      AND bm.home_score_official IS NOT NULL
-      AND bm.away_score_official IS NOT NULL
+    WHERE bm.tournament_id = p_tournament_id AND bm.group_name = p_group_name
+      AND bm.status = 'finished' AND bm.home_score_official IS NOT NULL AND bm.away_score_official IS NOT NULL
   ),
-  team_stats AS (
+  team_calc AS (
     SELECT
-      gt.id,
-      gt.name,
-      COUNT(*) FILTER (WHERE mr.home_team_id = gt.id OR mr.away_team_id = gt.id) AS played,
-      COUNT(*) FILTER (
-        WHERE mr.home_team_id = gt.id AND mr.home_goals > mr.away_goals
-          OR mr.away_team_id = gt.id AND mr.away_goals > mr.home_goals
-      ) AS wins,
-      COUNT(*) FILTER (
-        WHERE mr.home_team_id = gt.id AND mr.home_goals = mr.away_goals
-          OR mr.away_team_id = gt.id AND mr.away_goals = mr.home_goals
-      ) AS draws,
-      COUNT(*) FILTER (
-        WHERE mr.home_team_id = gt.id AND mr.home_goals < mr.away_goals
-          OR mr.away_team_id = gt.id AND mr.away_goals < mr.home_goals
-      ) AS losses,
-      SUM(CASE WHEN mr.home_team_id = gt.id THEN mr.home_goals ELSE mr.away_goals END) AS goals_for,
-      SUM(CASE WHEN mr.home_team_id = gt.id THEN mr.away_goals ELSE mr.home_goals END) AS goals_against
+      gt.id, gt.name,
+      COALESCE(SUM(CASE WHEN mr.home_team_id = gt.id OR mr.away_team_id = gt.id THEN 1 ELSE 0 END), 0)::INT AS played,
+      COALESCE(SUM(CASE
+        WHEN mr.home_team_id = gt.id AND mr.home_goals > mr.away_goals THEN 1
+        WHEN mr.away_team_id = gt.id AND mr.away_goals > mr.home_goals THEN 1
+        ELSE 0
+      END), 0)::INT AS wins,
+      COALESCE(SUM(CASE
+        WHEN (mr.home_team_id = gt.id OR mr.away_team_id = gt.id) AND mr.home_goals = mr.away_goals THEN 1
+        ELSE 0
+      END), 0)::INT AS draws,
+      COALESCE(SUM(CASE
+        WHEN mr.home_team_id = gt.id AND mr.home_goals < mr.away_goals THEN 1
+        WHEN mr.away_team_id = gt.id AND mr.away_goals < mr.home_goals THEN 1
+        ELSE 0
+      END), 0)::INT AS losses,
+      COALESCE(SUM(CASE WHEN mr.home_team_id = gt.id THEN mr.home_goals ELSE mr.away_goals END), 0)::INT AS goals_for,
+      COALESCE(SUM(CASE WHEN mr.home_team_id = gt.id THEN mr.away_goals ELSE mr.home_goals END), 0)::INT AS goals_against
     FROM group_teams gt
     LEFT JOIN match_results mr ON mr.home_team_id = gt.id OR mr.away_team_id = gt.id
     GROUP BY gt.id, gt.name
   )
-  SELECT
-    ts.id,
-    ts.name,
-    ts.played::INT,
-    ts.wins::INT,
-    ts.draws::INT,
-    ts.losses::INT,
-    ts.goals_for::INT,
-    ts.goals_against::INT,
-    (ts.wins * 3 + ts.draws)::INT AS points
-  FROM team_stats ts
+  SELECT tc.id, tc.name, tc.played, tc.wins, tc.draws, tc.losses, tc.goals_for, tc.goals_against,
+    (tc.wins * 3 + tc.draws)::INT AS points
+  FROM team_calc tc
   ORDER BY points DESC, (goals_for - goals_against) DESC, goals_for DESC;
 END;
 $$;
 
--- 4. Main function: calculate group classification points for a pool
+-- 4. Function: calculate group classification points (1st/2nd) for a pool
 CREATE OR REPLACE FUNCTION fn_calculate_group_classification(
   p_pool_id UUID,
   p_group_name CHAR(1)
 )
-RETURNS TABLE(
-  affected_users INT,
-  points_awarded INT,
-  success BOOLEAN
-)
+RETURNS TABLE(affected_users INT, points_awarded INT, success BOOLEAN)
 LANGUAGE plpgsql
 AS $$
 DECLARE
@@ -197,115 +169,75 @@ DECLARE
   v_affected INT := 0;
   v_points_total INT := 0;
 BEGIN
-  -- Get tournament and config
   SELECT tournament_id INTO v_tournament_id FROM bet_pools WHERE id = p_pool_id;
-  IF v_tournament_id IS NULL THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
-  END IF;
+  IF v_tournament_id IS NULL THEN RETURN QUERY SELECT 0, 0, false; RETURN; END IF;
 
-  SELECT id INTO v_config_id
-  FROM bet_pool_config_versions
-  WHERE pool_id = p_pool_id
-  ORDER BY created_at DESC LIMIT 1;
+  SELECT id INTO v_config_id FROM bet_pool_config_versions
+  WHERE pool_id = p_pool_id ORDER BY created_at DESC LIMIT 1;
+  IF v_config_id IS NULL THEN RETURN QUERY SELECT 0, 0, false; RETURN; END IF;
 
-  IF v_config_id IS NULL THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
-  END IF;
-
-  SELECT pts_qualified_round_2 INTO v_pts_qualified
-  FROM bet_pool_config_versions WHERE id = v_config_id;
-
-  IF v_pts_qualified IS NULL OR v_pts_qualified <= 0 THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
-  END IF;
+  SELECT pts_qualified_round_2 INTO v_pts_qualified FROM bet_pool_config_versions WHERE id = v_config_id;
+  IF v_pts_qualified IS NULL OR v_pts_qualified <= 0 THEN RETURN QUERY SELECT 0, 0, false; RETURN; END IF;
 
   -- Check all matches in group are finished
   SELECT bool_and(bm.status = 'finished') INTO v_all_finished
-  FROM bet_matches bm
-  WHERE bm.tournament_id = v_tournament_id
-    AND bm.group_name = p_group_name;
-
-  IF NOT v_all_finished THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
-  END IF;
+  FROM bet_matches bm WHERE bm.tournament_id = v_tournament_id AND bm.group_name = p_group_name;
+  IF NOT v_all_finished THEN RETURN QUERY SELECT 0, 0, false; RETURN; END IF;
 
   -- Get actual top 2
   SELECT array_agg(team_id ORDER BY rank) INTO v_actual_top2
   FROM (
     SELECT team_id, ROW_NUMBER() OVER (ORDER BY points DESC, (goals_for - goals_against) DESC, goals_for DESC) AS rank
     FROM fn_actual_group_standings(p_group_name, v_tournament_id)
-  ) sub
-  WHERE rank <= 2;
+  ) sub WHERE rank <= 2;
 
   IF v_actual_top2 IS NULL OR array_length(v_actual_top2, 1) < 2 THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
+    RETURN QUERY SELECT 0, 0, false; RETURN;
   END IF;
 
-  -- For each pool member with predictions for this group, check simulated top 2
+  -- For each pool member with predictions for this group
   FOR v_user IN
     SELECT DISTINCT bmp.user_id
     FROM bet_match_predictions bmp
     JOIN bet_matches bm ON bm.id = bmp.match_id
-    WHERE bmp.pool_id = p_pool_id
-      AND bmp.mode = 'pool'
-      AND bm.tournament_id = v_tournament_id
-      AND bm.group_name = p_group_name
+    WHERE bmp.pool_id = p_pool_id AND bmp.mode = 'pool'
+      AND bm.tournament_id = v_tournament_id AND bm.group_name = p_group_name
   LOOP
-    -- Get simulated top 2 for this user
     SELECT array_agg(team_id ORDER BY rank) INTO v_sim_top2
     FROM (
       SELECT team_id, ROW_NUMBER() OVER (ORDER BY points DESC, (goals_for - goals_against) DESC, goals_for DESC) AS rank
       FROM fn_user_simulated_group_standings(v_user.user_id, p_pool_id, p_group_name, v_tournament_id)
-    ) sub
-    WHERE rank <= 2;
+    ) sub WHERE rank <= 2;
 
-    -- Compare top 2 regardless of order
     IF v_sim_top2 IS NOT NULL AND array_length(v_sim_top2, 1) >= 2 THEN
       IF (v_sim_top2[1] = v_actual_top2[1] AND v_sim_top2[2] = v_actual_top2[2])
-         OR (v_sim_top2[1] = v_actual_top2[2] AND v_sim_top2[2] = v_actual_top2[1]) THEN
-        -- Remove old classification details for this user/group
+         OR (v_sim_top2[1] = v_actual_top2[2] AND v_sim_top2[2] = v_actual_top2[1])
+      THEN
         DELETE FROM bet_scores_details
-        WHERE source_type = 'classification'
-          AND source_id = 'group_' || p_group_name
-          AND mode = 'pool'
-          AND pool_id = p_pool_id
-          AND user_id = v_user.user_id;
-
-        -- Insert new classification points
+        WHERE source_type = 'classification' AND source_id = 'group_' || p_group_name
+          AND mode = 'pool' AND pool_id = p_pool_id AND user_id = v_user.user_id;
         INSERT INTO bet_scores_details (mode, pool_id, user_id, source_type, source_id, points)
         VALUES ('pool', p_pool_id, v_user.user_id, 'classification', 'group_' || p_group_name, v_pts_qualified);
-
         v_affected := v_affected + 1;
         v_points_total := v_points_total + v_pts_qualified;
       END IF;
     END IF;
   END LOOP;
 
-  -- Rebuild aggregate for affected users
   IF v_affected > 0 THEN
     WITH affected_users AS (
-      SELECT DISTINCT user_id FROM bet_scores_details
-      WHERE mode = 'pool' AND pool_id = p_pool_id
+      SELECT DISTINCT user_id FROM bet_scores_details WHERE mode = 'pool' AND pool_id = p_pool_id
     ),
     user_totals AS (
-      SELECT bsd.user_id, SUM(bsd.points) as total
-      FROM bet_scores_details bsd
+      SELECT bsd.user_id, SUM(bsd.points) as total FROM bet_scores_details bsd
       JOIN affected_users au ON au.user_id = bsd.user_id
-      WHERE bsd.mode = 'pool' AND bsd.pool_id = p_pool_id
-      GROUP BY bsd.user_id
+      WHERE bsd.mode = 'pool' AND bsd.pool_id = p_pool_id GROUP BY bsd.user_id
     )
     INSERT INTO bet_scores_aggregate (mode, pool_id, user_id, points_total)
-    SELECT 'pool', p_pool_id, ut.user_id, GREATEST(ut.total, 0)
-    FROM user_totals ut
+    SELECT 'pool', p_pool_id, ut.user_id, GREATEST(ut.total, 0) FROM user_totals ut
     ON CONFLICT (user_id, mode, pool_id) DO UPDATE
     SET points_total = GREATEST(EXCLUDED.points_total, 0), updated_at = NOW();
   END IF;
-
   RETURN QUERY SELECT v_affected, v_points_total, true;
 END;
 $$;
@@ -314,75 +246,46 @@ $$;
 CREATE OR REPLACE FUNCTION fn_calculate_best_third_points(
   p_pool_id UUID
 )
-RETURNS TABLE(
-  affected_users INT,
-  points_awarded INT,
-  success BOOLEAN
-)
+RETURNS TABLE(affected_users INT, points_awarded INT, success BOOLEAN)
 LANGUAGE plpgsql
 AS $$
 DECLARE
+  v_tournament_id UUID;
   v_config_id UUID;
   v_pts_qualified INT;
-  v_third_qualifiers RECORD;
+  v_third RECORD;
   v_user RECORD;
   v_sim_third UUID;
   v_affected INT := 0;
   v_points_total INT := 0;
 BEGIN
-  SELECT id INTO v_config_id
-  FROM bet_pool_config_versions
-  WHERE pool_id = p_pool_id
-  ORDER BY created_at DESC LIMIT 1;
+  SELECT tournament_id INTO v_tournament_id FROM bet_pools WHERE id = p_pool_id;
 
-  IF v_config_id IS NULL THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
-  END IF;
+  SELECT id INTO v_config_id FROM bet_pool_config_versions
+  WHERE pool_id = p_pool_id ORDER BY created_at DESC LIMIT 1;
+  IF v_config_id IS NULL THEN RETURN QUERY SELECT 0, 0, false; RETURN; END IF;
 
-  SELECT pts_qualified_round_2 INTO v_pts_qualified
-  FROM bet_pool_config_versions WHERE id = v_config_id;
+  SELECT pts_qualified_round_2 INTO v_pts_qualified FROM bet_pool_config_versions WHERE id = v_config_id;
+  IF v_pts_qualified IS NULL OR v_pts_qualified <= 0 THEN RETURN QUERY SELECT 0, 0, false; RETURN; END IF;
 
-  IF v_pts_qualified IS NULL OR v_pts_qualified <= 0 THEN
-    RETURN QUERY SELECT 0, 0, false;
-    RETURN;
-  END IF;
-
-  FOR v_third_qualifiers IN
-    SELECT bbtq.group_name, bbtq.team_id
-    FROM bet_best_third_qualifiers bbtq
-    WHERE bbtq.pool_id = p_pool_id
+  FOR v_third IN SELECT group_name, team_id FROM bet_best_third_qualifiers WHERE pool_id = p_pool_id
   LOOP
     FOR v_user IN
-      SELECT DISTINCT bmp.user_id
-      FROM bet_match_predictions bmp
+      SELECT DISTINCT bmp.user_id FROM bet_match_predictions bmp
       JOIN bet_matches bm ON bm.id = bmp.match_id
-      WHERE bmp.pool_id = p_pool_id
-        AND bmp.mode = 'pool'
-        AND bm.group_name = v_third_qualifiers.group_name
+      WHERE bmp.pool_id = p_pool_id AND bmp.mode = 'pool' AND bm.group_name = v_third.group_name
     LOOP
-      -- Get the 3rd place team in user's simulated standings
-      SELECT team_id INTO v_sim_third
-      FROM (
+      SELECT team_id INTO v_sim_third FROM (
         SELECT team_id, ROW_NUMBER() OVER (ORDER BY points DESC, (goals_for - goals_against) DESC, goals_for DESC) AS rank
-        FROM fn_user_simulated_group_standings(
-          v_user.user_id, p_pool_id, v_third_qualifiers.group_name,
-          (SELECT tournament_id FROM bet_pools WHERE id = p_pool_id)
-        )
-      ) sub
-      WHERE rank = 3;
+        FROM fn_user_simulated_group_standings(v_user.user_id, p_pool_id, v_third.group_name, v_tournament_id)
+      ) sub WHERE rank = 3;
 
-      IF v_sim_third = v_third_qualifiers.team_id THEN
-        DELETE FROM bet_scores_details
-        WHERE source_type = 'classification'
-          AND source_id = 'best_third_' || v_third_qualifiers.group_name
-          AND mode = 'pool'
-          AND pool_id = p_pool_id
-          AND user_id = v_user.user_id;
-
+      IF v_sim_third = v_third.team_id THEN
+        DELETE FROM bet_scores_details WHERE source_type = 'classification'
+          AND source_id = 'best_third_' || v_third.group_name
+          AND mode = 'pool' AND pool_id = p_pool_id AND user_id = v_user.user_id;
         INSERT INTO bet_scores_details (mode, pool_id, user_id, source_type, source_id, points)
-        VALUES ('pool', p_pool_id, v_user.user_id, 'classification', 'best_third_' || v_third_qualifiers.group_name, v_pts_qualified);
-
+        VALUES ('pool', p_pool_id, v_user.user_id, 'classification', 'best_third_' || v_third.group_name, v_pts_qualified);
         v_affected := v_affected + 1;
         v_points_total := v_points_total + v_pts_qualified;
       END IF;
@@ -391,28 +294,23 @@ BEGIN
 
   IF v_affected > 0 THEN
     WITH affected_users AS (
-      SELECT DISTINCT user_id FROM bet_scores_details
-      WHERE mode = 'pool' AND pool_id = p_pool_id
+      SELECT DISTINCT user_id FROM bet_scores_details WHERE mode = 'pool' AND pool_id = p_pool_id
     ),
     user_totals AS (
-      SELECT bsd.user_id, SUM(bsd.points) as total
-      FROM bet_scores_details bsd
+      SELECT bsd.user_id, SUM(bsd.points) as total FROM bet_scores_details bsd
       JOIN affected_users au ON au.user_id = bsd.user_id
-      WHERE bsd.mode = 'pool' AND bsd.pool_id = p_pool_id
-      GROUP BY bsd.user_id
+      WHERE bsd.mode = 'pool' AND bsd.pool_id = p_pool_id GROUP BY bsd.user_id
     )
     INSERT INTO bet_scores_aggregate (mode, pool_id, user_id, points_total)
-    SELECT 'pool', p_pool_id, ut.user_id, GREATEST(ut.total, 0)
-    FROM user_totals ut
+    SELECT 'pool', p_pool_id, ut.user_id, GREATEST(ut.total, 0) FROM user_totals ut
     ON CONFLICT (user_id, mode, pool_id) DO UPDATE
     SET points_total = GREATEST(EXCLUDED.points_total, 0), updated_at = NOW();
   END IF;
-
   RETURN QUERY SELECT v_affected, v_points_total, true;
 END;
 $$;
 
--- 6. Update fn_update_match_result to trigger group classification when group finishes
+-- 6. Update fn_update_match_result to auto-trigger group classification
 CREATE OR REPLACE FUNCTION fn_update_match_result(
   p_match_id UUID,
   p_home_score INT,
@@ -424,65 +322,40 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
-  v_old_home INT;
-  v_old_away INT;
-  v_stage bet_match_stage;
-  v_score_was_set BOOLEAN;
-  v_pool_id UUID;
-  v_match_group CHAR(1);
-  v_tournament_id UUID;
-  v_all_group_finished BOOLEAN;
+  v_old_home INT; v_old_away INT;
+  v_stage bet_match_stage; v_score_was_set BOOLEAN;
+  v_pool_id UUID; v_match_group CHAR(1); v_tournament_id UUID; v_all_group_finished BOOLEAN;
 BEGIN
   SELECT m.home_score_official, m.away_score_official, m.stage, m.group_name, m.tournament_id
   INTO v_old_home, v_old_away, v_stage, v_match_group, v_tournament_id
   FROM bet_matches m WHERE m.id = p_match_id;
-
-  IF NOT FOUND THEN
-    RETURN QUERY SELECT false, 'Partido no encontrado';
-    RETURN;
-  END IF;
+  IF NOT FOUND THEN RETURN QUERY SELECT false, 'Partido no encontrado'; RETURN; END IF;
 
   IF p_home_score < 0 OR p_home_score > 20 OR p_away_score < 0 OR p_away_score > 20 THEN
-    RETURN QUERY SELECT false, 'Los marcadores deben estar entre 0 y 20';
-    RETURN;
+    RETURN QUERY SELECT false, 'Los marcadores deben estar entre 0 y 20'; RETURN;
   END IF;
 
   v_score_was_set := v_old_home IS NOT NULL AND v_old_away IS NOT NULL;
-
-  UPDATE bet_matches
-  SET home_score_official = p_home_score,
-      away_score_official = p_away_score,
-      status = 'finished',
-      updated_at = NOW()
-  WHERE id = p_match_id;
+  UPDATE bet_matches SET home_score_official = p_home_score, away_score_official = p_away_score,
+    status = 'finished', updated_at = NOW() WHERE id = p_match_id;
 
   PERFORM fn_calculate_match_scores_v1(p_match_id);
-
-  FOR v_pool_id IN
-    SELECT DISTINCT bmp.pool_id
-    FROM bet_match_predictions bmp
+  FOR v_pool_id IN SELECT DISTINCT bmp.pool_id FROM bet_match_predictions bmp
     WHERE bmp.match_id = p_match_id AND bmp.mode = 'pool' AND bmp.pool_id IS NOT NULL
   LOOP
     PERFORM fn_calculate_pool_match_scores(p_match_id, v_pool_id);
   END LOOP;
 
-  -- If this was a group stage match, check if the whole group is now finished
-  -- and if so, calculate classification points for each pool
+  -- Auto-trigger group classification when last match of a group finishes
   IF v_stage = 'group_stage' AND v_match_group IS NOT NULL THEN
     SELECT bool_and(bm.status = 'finished') INTO v_all_group_finished
-    FROM bet_matches bm
-    WHERE bm.tournament_id = v_tournament_id
-      AND bm.group_name = v_match_group;
+    FROM bet_matches bm WHERE bm.tournament_id = v_tournament_id AND bm.group_name = v_match_group;
 
     IF v_all_group_finished THEN
-      FOR v_pool_id IN
-        SELECT DISTINCT bmp.pool_id
-        FROM bet_match_predictions bmp
+      FOR v_pool_id IN SELECT DISTINCT bmp.pool_id FROM bet_match_predictions bmp
         JOIN bet_matches bm ON bm.id = bmp.match_id
-        WHERE bm.tournament_id = v_tournament_id
-          AND bm.group_name = v_match_group
-          AND bmp.mode = 'pool'
-          AND bmp.pool_id IS NOT NULL
+        WHERE bm.tournament_id = v_tournament_id AND bm.group_name = v_match_group
+          AND bmp.mode = 'pool' AND bmp.pool_id IS NOT NULL
       LOOP
         PERFORM fn_calculate_group_classification(v_pool_id, v_match_group);
       END LOOP;
@@ -490,21 +363,15 @@ BEGIN
   END IF;
 
   INSERT INTO bet_audit_logs (event_type, match_id, old_value, new_value, created_at)
-  VALUES (
-    'MATCH_SCORED', p_match_id,
-    CASE WHEN v_score_was_set
-      THEN jsonb_build_object('home_score', v_old_home, 'away_score', v_old_away)
-      ELSE NULL
-    END,
-    jsonb_build_object('home_score', p_home_score, 'away_score', p_away_score),
-    NOW()
-  );
+  VALUES ('MATCH_SCORED', p_match_id,
+    CASE WHEN v_score_was_set THEN jsonb_build_object('home_score', v_old_home, 'away_score', v_old_away) ELSE NULL END,
+    jsonb_build_object('home_score', p_home_score, 'away_score', p_away_score), NOW());
 
   RETURN QUERY SELECT true, 'Resultado actualizado y puntos recalculados';
 END;
 $$;
 
--- Grant permissions for the new functions
+-- Permissions
 GRANT EXECUTE ON FUNCTION fn_user_simulated_group_standings(UUID, UUID, CHAR, UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION fn_user_simulated_group_standings(UUID, UUID, CHAR, UUID) TO service_role;
 GRANT EXECUTE ON FUNCTION fn_actual_group_standings(CHAR, UUID) TO authenticated;
