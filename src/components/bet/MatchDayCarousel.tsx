@@ -1,7 +1,7 @@
 'use client'
 
 import { useEffect, useState, useRef } from 'react'
-import { ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { ChevronLeft, ChevronRight, Clock, Info } from 'lucide-react'
 import { MatchCard } from './MatchCard'
 import { MatchPredictionsModal } from './MatchPredictionsModal'
 import { cn } from '@/lib/utils'
@@ -133,9 +133,19 @@ export function MatchDayCarousel({
         minute: '2-digit',
       })
 
+  const showClassificationBanner = new Date() <= new Date('2026-06-27T23:59:59')
+
   return (
     <div className="mb-6 space-y-3">
       <h2 className="text-sm font-bold text-muted-foreground">Partidos del día</h2>
+      {showClassificationBanner && (
+        <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-2.5 text-sm">
+          <Info className="size-4 shrink-0 text-blue-400" aria-hidden="true" />
+          <span className="text-muted-foreground">
+            Los puntos calculados por clasificados se reflejan al finalizar todos los grupos
+          </span>
+        </div>
+      )}
       <div className="flex items-center gap-2 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5 text-sm">
         <Clock className="size-4 shrink-0 text-emerald-400" aria-hidden="true" />
         <span className="text-muted-foreground">Próximo partido:</span>
