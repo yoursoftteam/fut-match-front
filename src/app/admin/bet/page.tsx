@@ -10,6 +10,12 @@ import {
   AlertCircle,
   Trophy,
   Search,
+  ListChecks,
+  Users,
+  Flag,
+  Medal,
+  X,
+  ChevronDown,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader } from '@/components/ui/card'
@@ -114,6 +120,7 @@ export default function AdminPage() {
         <TabsList>
           <TabsTrigger value="scores">Actualizar Marcadores</TabsTrigger>
           <TabsTrigger value="simulate">Simular Resultados</TabsTrigger>
+          <TabsTrigger value="classification">Clasificados</TabsTrigger>
         </TabsList>
 
         <TabsContent value="scores">
@@ -122,6 +129,10 @@ export default function AdminPage() {
 
         <TabsContent value="simulate">
           <SimulateTab />
+        </TabsContent>
+
+        <TabsContent value="classification">
+          <ClassificationTab />
         </TabsContent>
       </Tabs>
     </div>
@@ -619,42 +630,369 @@ function SimulateTab() {
               {errs > 0 && <span className="text-destructive">✗ {errs} errores</span>}
             </div>
 
-            {results.length > 0 && (
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-sm">
-                  <thead>
-                    <tr className="border-b border-border text-muted-foreground">
-                      <th className="pb-2 pr-4">Local</th>
-                      <th className="pb-2 pr-4">Visitante</th>
-                      <th className="pb-2 pr-4">Marcador</th>
-                      <th className="pb-2">Estado</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {results.map((r) => (
-                      <tr key={r.match_id} className="border-b border-border/50 last:border-0">
-                        <td className="py-2 pr-4">{r.home_team ?? '—'}</td>
-                        <td className="py-2 pr-4">{r.away_team ?? '—'}</td>
-                        <td className="py-2 pr-4 font-mono">
-                          {r.status === 'simulated' ? `${r.home_score} – ${r.away_score}` : '—'}
-                        </td>
-                        <td className="py-2">
-                          {r.status === 'simulated' && <span className="text-emerald-400">Simulado</span>}
-                          {r.status === 'skipped' && <span className="text-muted-foreground">Omitido</span>}
-                          {r.status === 'error' && (
-                            <span className="text-destructive" title={r.error}>
-                              Error
-                            </span>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    {results.length > 0 && (
+                      <div className="overflow-x-auto">
+                        <table className="w-full text-left text-sm">
+                          <thead>
+                            <tr className="border-b border-border text-muted-foreground">
+                              <th className="pb-2 pr-4">Local</th>
+                              <th className="pb-2 pr-4">Visitante</th>
+                              <th className="pb-2 pr-4">Marcador</th>
+                              <th className="pb-2">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {results.map((r) => (
+                              <tr key={r.match_id} className="border-b border-border/50 last:border-0">
+                                <td className="py-2 pr-4">{r.home_team ?? '—'}</td>
+                                <td className="py-2 pr-4">{r.away_team ?? '—'}</td>
+                                <td className="py-2 pr-4 font-mono">
+                                  {r.status === 'simulated' ? `${r.home_score} – ${r.away_score}` : '—'}
+                                </td>
+                                <td className="py-2">
+                                  {r.status === 'simulated' && <span className="text-emerald-400">Simulado</span>}
+                                  {r.status === 'skipped' && <span className="text-muted-foreground">Omitido</span>}
+                                  {r.status === 'error' && (
+                                    <span className="text-destructive" title={r.error}>
+                                      Error
+                                    </span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          )
+        }
+
+interface ClassificationData {
+  groups: string[]
+  groupTeams: Record<string, Array<{
+    team_id: string
+    team_name: string
+    fifa_code: string
+    flag_svg_url?: string
+    played: number
+    wins: number
+    draws: number
+    losses: number
+    goals_for: number
+    goals_against: number
+    points: number
+  }>>
+  existingThird: Array<{ group_name: string; team_id: string }>
+}
+
+function ClassificationTab() {
+  const [pools, setPools] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedPool, setSelectedPool] = useState<string | null>(null)
+  const [data, setData] = useState<ClassificationData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [statusMsg, setStatusMsg] = useState<string | null>(null)
+
+  useEffect(() => {
+    supabase
+      .from('bet_pools')
+      .select('id, name')
+      .order('name')
+      .then(({ data: d }) => setPools((d as Array<{ id: string; name: string }>) || []))
+  }, [])
+
+  useEffect(() => {
+    if (!selectedPool) { setData(null); return }
+    setLoading(true)
+    fetch(`/api/v1/bet/admin/classification?pool_id=${selectedPool}`)
+      .then((r) => r.json())
+      .then((res) => {
+        if (res.success) setData(res.data)
+      })
+      .finally(() => setLoading(false))
+  }, [selectedPool])
+
+  const handleSetBestThird = async (groupName: string, teamId: string) => {
+    setSaving(true)
+    setStatusMsg(null)
+    const res = await fetch('/api/v1/bet/admin/classification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_best_third', pool_id: selectedPool, group_name: groupName, team_id: teamId }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      setData((prev) => {
+        if (!prev) return prev
+        const existing = prev.existingThird.filter((e) => e.group_name !== groupName)
+        return { ...prev, existingThird: [...existing, { group_name: groupName, team_id: teamId }] }
+      })
+      setStatusMsg(`Mejor tercero del grupo ${groupName} actualizado`)
+    } else {
+      setStatusMsg(`Error: ${json.error}`)
+    }
+    setSaving(false)
+  }
+
+  const handleRemoveBestThird = async (groupName: string) => {
+    setSaving(true)
+    setStatusMsg(null)
+    const res = await fetch('/api/v1/bet/admin/classification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'remove_best_third', pool_id: selectedPool, group_name: groupName }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      setData((prev) => {
+        if (!prev) return prev
+        return { ...prev, existingThird: prev.existingThird.filter((e) => e.group_name !== groupName) }
+      })
+      setStatusMsg(`Mejor tercero del grupo ${groupName} removido`)
+    } else {
+      setStatusMsg(`Error: ${json.error}`)
+    }
+    setSaving(false)
+  }
+
+  const handleCalculateAll = async () => {
+    setSaving(true)
+    setStatusMsg(null)
+    const res = await fetch('/api/v1/bet/admin/classification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'calculate_classification', pool_id: selectedPool, group_name: null }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      setStatusMsg(`Puntos de clasificación calculados para ${json.data?.groups_processed || 0} grupos`)
+    } else {
+      setStatusMsg(`Error: ${json.error}`)
+    }
+    setSaving(false)
+  }
+
+  const handleCalculateBestThird = async () => {
+    setSaving(true)
+    setStatusMsg(null)
+    const res = await fetch('/api/v1/bet/admin/classification', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'calculate_best_third', pool_id: selectedPool }),
+    })
+    const json = await res.json()
+    if (json.success) {
+      setStatusMsg('Puntos de mejor tercero calculados')
+    } else {
+      setStatusMsg(`Error: ${json.error}`)
+    }
+    setSaving(false)
+  }
+
+  const getThirdSelectedTeam = (groupName: string): string | null => {
+    return data?.existingThird.find((e) => e.group_name === groupName)?.team_id || null
+  }
+
+  const getThirdSelectedTeamName = (groupName: string): string => {
+    const teamId = getThirdSelectedTeam(groupName)
+    if (!teamId || !data?.groupTeams[groupName]) return ''
+    const team = (data.groupTeams[groupName] as unknown as Array<{ team_id?: string; id?: string; team_name: string }>)
+      .find((t) => (t.team_id || t.id) === teamId)
+    return team?.team_name || ''
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <Users className="size-4 text-muted-foreground" />
+        <Select value={selectedPool} onValueChange={setSelectedPool}>
+          <SelectTrigger className="w-64" aria-label="Seleccionar polla">
+            <SelectValue placeholder="Seleccionar una polla" />
+          </SelectTrigger>
+          <SelectContent>
+            {pools.map((p) => (
+              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {loading && (
+        <Card><CardContent className="flex items-center justify-center py-12"><Loader2 className="size-5 animate-spin text-muted-foreground" /></CardContent></Card>
+      )}
+
+      {!selectedPool && !loading && (
+        <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Selecciona una polla para gestionar clasificados</CardContent></Card>
+      )}
+
+      {data && (
+        <>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <ListChecks className="size-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">Clasificación por Grupos</h2>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button size="sm" variant="outline" onClick={handleCalculateAll} disabled={saving}>
+                    {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Check className="size-3.5" />}
+                    Calcular puntos 1° y 2°
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={handleCalculateBestThird} disabled={saving}>
+                    {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Medal className="size-3.5" />}
+                    Calcular puntos mejor 3°
+                  </Button>
+                </div>
               </div>
+            </CardHeader>
+            {statusMsg && (
+              <div className="px-6 pb-3 text-xs text-emerald-400">{statusMsg}</div>
             )}
-          </CardContent>
-        </Card>
+            <CardContent className="space-y-6">
+              {data.groups.map((gn) => {
+                const standings = data.groupTeams[gn] as unknown as Array<{
+                  team_id?: string; id?: string; team_name: string; fifa_code?: string;
+                  flag_svg_url?: string; played?: number; wins?: number; draws?: number;
+                  losses?: number; goals_for?: number; goals_against?: number; points?: number;
+                }>
+                const selectedThirdTeamId = getThirdSelectedTeam(gn)
+
+                return (
+                  <div key={gn} className="rounded-lg border border-border/60">
+                    <div className="flex items-center gap-2 border-b border-border/60 bg-muted/20 px-4 py-2.5">
+                      <Trophy className="size-3.5 text-muted-foreground" />
+                      <h3 className="text-xs font-semibold uppercase tracking-wider">Grupo {gn}</h3>
+                    </div>
+
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="text-[0.625rem] uppercase text-muted-foreground">
+                          <th className="px-3 py-2 text-left font-semibold">#</th>
+                          <th className="px-3 py-2 text-left font-semibold">Equipo</th>
+                          <th className="px-3 py-2 text-center font-semibold">PJ</th>
+                          <th className="px-3 py-2 text-center font-semibold">G</th>
+                          <th className="px-3 py-2 text-center font-semibold">E</th>
+                          <th className="px-3 py-2 text-center font-semibold">P</th>
+                          <th className="px-3 py-2 text-center font-semibold">GF</th>
+                          <th className="px-3 py-2 text-center font-semibold">GC</th>
+                          <th className="px-3 py-2 text-center font-semibold">Pts</th>
+                          <th className="px-3 py-2 text-center font-semibold">Mejor 3°</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {standings.map((t, idx) => {
+                          const teamId = t.team_id || t.id
+                          const isThird = idx === 2
+                          const isBestThird = isThird && selectedThirdTeamId === teamId
+                          return (
+                            <tr key={teamId} className={cn(
+                              'border-t border-border/40 transition-colors',
+                              idx < 2 && 'bg-emerald-500/[0.03]',
+                              isBestThird && 'bg-blue-500/[0.05]'
+                            )}>
+                              <td className="px-3 py-2 font-mono tabular-nums text-muted-foreground">{idx + 1}</td>
+                              <td className="flex items-center gap-1.5 px-3 py-2">
+                                {t.flag_svg_url && (
+                                  <img src={t.flag_svg_url} alt="" className="size-4 shrink-0 rounded-sm object-cover" loading="lazy" />
+                                )}
+                                <span className="truncate font-medium">{t.team_name}</span>
+                                <span className="text-[0.625rem] text-muted-foreground">{t.fifa_code}</span>
+                              </td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{t.played ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{t.wins ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{t.draws ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{t.losses ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{t.goals_for ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-mono tabular-nums">{t.goals_against ?? 0}</td>
+                              <td className="px-3 py-2 text-center font-mono text-sm font-bold tabular-nums text-emerald-400">{t.points ?? 0}</td>
+                              <td className="px-3 py-2 text-center">
+                                {isThird ? (
+                                  selectedThirdTeamId === teamId ? (
+                                    <div className="flex items-center justify-center gap-1">
+                                      <Check className="size-3.5 text-blue-400" />
+                                      <button
+                                        type="button"
+                                        onClick={() => handleRemoveBestThird(gn)}
+                                        className="text-muted-foreground hover:text-destructive transition-colors"
+                                        disabled={saving}
+                                        title="Quitar como mejor tercero"
+                                      >
+                                        <X className="size-3" />
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      onClick={() => { if (teamId) handleSetBestThird(gn, teamId); }}
+                                      disabled={saving}
+                                      className={cn(
+                                        'text-xs px-2 py-1 rounded border transition-colors',
+                                        saving
+                                          ? 'border-border/40 text-muted-foreground cursor-not-allowed'
+                                          : 'border-blue-500/30 text-blue-400 hover:bg-blue-500/10 cursor-pointer'
+                                      )}
+                                    >
+                                      Marcar como mejor 3°
+                                    </button>
+                                  )
+                                ) : selectedThirdTeamId === teamId ? (
+                                  <div className="flex items-center justify-center gap-1">
+                                    <Check className="size-3.5 text-blue-400" />
+                                    <span className="text-[0.625rem] text-blue-400">3° ({gn})</span>
+                                  </div>
+                                ) : null}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                )
+              })}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <Medal className="size-4 text-muted-foreground" />
+                <h2 className="text-sm font-semibold">Mejores Terceros Seleccionados ({data.existingThird.length}/8)</h2>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {data.existingThird.length === 0 ? (
+                <p className="text-xs text-muted-foreground">No hay mejores terceros seleccionados aún</p>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {data.existingThird
+                    .sort((a, b) => a.group_name.localeCompare(b.group_name))
+                    .map((e) => (
+                      <div key={e.group_name} className="flex items-center gap-1.5 rounded-full border border-blue-500/30 bg-blue-500/5 px-3 py-1 text-xs">
+                        <Flag className="size-3 text-blue-400" />
+                        <span className="font-medium">Grupo {e.group_name}</span>
+                        <span className="text-muted-foreground">→</span>
+                        <span>{getThirdSelectedTeamName(e.group_name) || '—'}</span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveBestThird(e.group_name)}
+                          disabled={saving}
+                          className="ml-1 text-muted-foreground hover:text-destructive transition-colors"
+                        >
+                          <X className="size-3" />
+                        </button>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </>
       )}
     </div>
   )
