@@ -131,6 +131,9 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
 
       if (!matchRows || matchRows.length === 0) return
 
+      matchRows = matchRows.filter(m => m.status !== 'finished')
+      if (matchRows.length === 0) return
+
       const allTeamIds = [...new Set(matchRows.flatMap(m => [m.home_team_id, m.away_team_id]))]
       const [{ data: teams }] = await Promise.all([
         supabase.from('bet_teams').select('id, name, fifa_code, flag_svg_url').in('id', allTeamIds),
