@@ -22,7 +22,7 @@ interface TeamBuilderProps {
 }
 
 export function TeamBuilder({ show, onOpen }: TeamBuilderProps) {
-  const { isCreator } = useMatchDetailsContext();
+  const { isCreator, registrationsLoading } = useMatchDetailsContext();
 
   if (!isCreator) return null;
 
@@ -34,9 +34,17 @@ export function TeamBuilder({ show, onOpen }: TeamBuilderProps) {
           <button
             type="button"
             onClick={onOpen}
-            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white hover:bg-blue-700"
+            disabled={registrationsLoading}
+            className="mt-3 rounded bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center gap-2"
           >
-            Iniciar equipos
+            {registrationsLoading ? (
+              <>
+                <span className="inline-block h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" aria-hidden="true" />
+                Cargando...
+              </>
+            ) : (
+              "Iniciar equipos"
+            )}
           </button>
         </div>
       </div>
@@ -223,6 +231,7 @@ function TeamBuilderActive() {
           </button>
           <button
             type="button"
+            disabled={teamSaved}
             onClick={saveTeams}
             className={`rounded border px-3 py-1.5 text-sm font-semibold transition ${teamSaved ? "border-green-600 bg-green-600 text-white" : "border-blue-600 bg-blue-600 text-white hover:bg-blue-700"}`}
           >
