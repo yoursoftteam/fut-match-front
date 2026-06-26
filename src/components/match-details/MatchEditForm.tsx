@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
-import { FileTextIcon } from "lucide-react";
+import { FileTextIcon, SaveIcon, XIcon } from "lucide-react";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
 import type { UseMatchEditingReturn } from "@/hooks/useMatchEditing";
@@ -156,17 +156,18 @@ export function MatchEditForm({ editing }: MatchEditFormProps) {
         <div className="flex gap-3">
           <button
             type="submit"
-            className={`flex-1 rounded px-4 py-2 font-semibold text-foreground transition ${loading || message?.includes("✓") ? "cursor-not-allowed bg-muted opacity-60" : "bg-green-500 hover:bg-green-600"}`}
+            className={`flex-1 rounded px-4 py-2 font-semibold text-foreground transition inline-flex items-center justify-center gap-2 ${loading || message?.includes("✓") ? "cursor-not-allowed bg-muted opacity-60" : "bg-green-500 hover:bg-green-600"}`}
             disabled={loading || message?.includes("✓")}
           >
-            {loading ? "Guardando…" : message?.includes("✓") ? "✓ Guardado" : "Guardar cambios"}
+            {loading ? "Guardando…" : message?.includes("✓") ? "✓ Guardado" : <><SaveIcon className="h-4 w-4" aria-hidden="true" />Guardar cambios</>}
           </button>
           <button
             type="button"
             onClick={closeForm}
-            className="flex-1 rounded border border-border bg-muted px-4 py-2 font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60"
+            className="flex-1 rounded border border-border bg-muted px-4 py-2 font-medium text-foreground transition hover:bg-secondary disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center gap-2"
             disabled={loading}
           >
+            <XIcon className="h-4 w-4" aria-hidden="true" />
             Cancelar
           </button>
         </div>
