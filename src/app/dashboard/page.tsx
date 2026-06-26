@@ -562,6 +562,18 @@ export default function DashboardPage() {
                       />
                     </div>
 
+                    {/* Missing rules alert */}
+                    {!match.rules && (
+                      <Link
+                        href={`/match/${match.id}?edit=rules`}
+                        className="flex items-center gap-2 rounded-lg border border-amber-500/25 bg-amber-500/8 px-3 py-2 text-xs text-amber-400 transition hover:bg-amber-500/15 cursor-pointer"
+                      >
+                        <span className="size-1.5 rounded-full bg-amber-400 shrink-0" aria-hidden />
+                        <span className="flex-1">Sin reglas — agrégalas</span>
+                        <ChevronRight className="size-3 shrink-0" />
+                      </Link>
+                    )}
+
                     {/* Share */}
                     <div className="w-full min-w-0">
                       <ShareLink matchId={match.id} showTitle={false} />

@@ -45,6 +45,7 @@ export default function MatchFormSteps(props: MatchFormStepsProps) {
       hasRentedGoalkeepers: false,
       rentedGoalkeepersCount: 1,
       rentalCost: 0,
+      rules: "",
       ...props.defaultValues,
     },
     mode: "onBlur",
@@ -116,6 +117,7 @@ function MatchFormStepsInner({
       hasRentedGoalkeepers: data.hasRentedGoalkeepers,
       rentedGoalkeepersCount: data.rentedGoalkeepersCount,
       rentalCost: data.rentalCost,
+      rules: data.rules,
       totalPlayers,
       costPerPlayer,
     }

@@ -91,6 +91,7 @@ export interface Match {
   players_per_team: number
   source_template_id?: string | null
   source_template?: { id: string; name: string } | null
+  rules?: string | null
 }
 
 export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }: UseMatchesOptions = {}) {
@@ -116,7 +117,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       let query = supabase
         .from('matches')
-        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, created_at, updated_at, source_template_id, source_template:source_template_id(id, name)')
+        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, created_at, updated_at, source_template_id, source_template:source_template_id(id, name), rules')
         .order('created_at', { ascending: false })
 
       if (userId) {
@@ -188,7 +189,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       const { data, error } = await supabase
         .from('matches')
         .insert([{ ...matchData, created_by: user.id }])
-        .select('id, title, location, date, max_players, created_by, created_at, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id')
+        .select('id, title, location, date, max_players, created_by, created_at, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id, rules')
         .single()
 
       if (error) throw error
@@ -218,7 +219,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
   const updateMatch = async (
     matchId: string,
-    updates: Partial<Pick<Match, 'title' | 'location' | 'date' | 'max_players' | 'field_cost' | 'rental_cost' | 'has_rented_goalkeepers' | 'rented_goalkeepers_count' | 'players_per_team'>>,
+    updates: Partial<Pick<Match, 'title' | 'location' | 'date' | 'max_players' | 'field_cost' | 'rental_cost' | 'has_rented_goalkeepers' | 'rented_goalkeepers_count' | 'players_per_team' | 'rules'>>,
   ) => {
     try {
       const { data: { user } } = await supabase.auth.getUser()
@@ -244,7 +245,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         .update(updates)
         .eq('id', matchId)
         .eq('created_by', user.id)
-        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id')
+        .select('id, title, location, date, max_players, created_by, field_cost, rental_cost, has_rented_goalkeepers, rented_goalkeepers_count, players_per_team, source_template_id, rules')
         .single()
 
       if (error) throw error
