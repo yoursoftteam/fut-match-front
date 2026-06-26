@@ -183,9 +183,37 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
       return;
     }
 
-    const shuffled = shuffle(currentPlayers);
-    const goalkeepers = shuffled.filter((p) => p.is_goalkeeper);
-    const fieldPlayers = shuffled.filter((p) => !p.is_goalkeeper);
+    const goalkeepers = currentPlayers.filter((p) => p.is_goalkeeper);
+    const nongoalkeepers = currentPlayers.filter((p) => !p.is_goalkeeper);
+
+    const byPosition = (players: PlayerRegistration[]) => {
+      const order = ["portero", "defensa", "centrocampista", "delantero"] as const;
+      const grouped: Record<string, PlayerRegistration[]> = {};
+      const unknown: PlayerRegistration[] = [];
+      for (const p of players) {
+        const pos = (p.position ?? "").toLowerCase();
+        if (order.includes(pos as typeof order[number])) {
+          (grouped[pos] ??= []).push(p);
+        } else {
+          unknown.push(p);
+        }
+      }
+      return { grouped, unknown };
+    };
+
+    const distributeEvenly = (players: PlayerRegistration[], teamA: PlayerRegistration[], teamB: PlayerRegistration[]) => {
+      const shuffled = shuffle(players);
+      for (const player of shuffled) {
+        if (teamA.length < playersPerTeamLimit && teamB.length < playersPerTeamLimit) {
+          const target = teamA.length <= teamB.length ? teamA : teamB;
+          target.push(player);
+        } else if (teamA.length < playersPerTeamLimit) {
+          teamA.push(player);
+        } else if (teamB.length < playersPerTeamLimit) {
+          teamB.push(player);
+        }
+      }
+    };
 
     const nextTeamA: PlayerRegistration[] = [];
     const nextTeamB: PlayerRegistration[] = [];
@@ -193,22 +221,16 @@ export function useTeamBuilder(): UseTeamBuilderReturn {
     if (goalkeepers[0]) nextTeamA.push(goalkeepers[0]);
     if (goalkeepers[1]) nextTeamB.push(goalkeepers[1]);
 
-    const remainingPlayers = shuffle([...goalkeepers.slice(2), ...fieldPlayers]);
+    const remaining = shuffle([...goalkeepers.slice(2), ...nongoalkeepers]);
+    const { grouped, unknown } = byPosition(remaining);
 
-    remainingPlayers.forEach((player) => {
-      const canAddToA = nextTeamA.length < playersPerTeamLimit;
-      const canAddToB = nextTeamB.length < playersPerTeamLimit;
-
-      if (canAddToA && canAddToB) {
-        (nextTeamA.length === nextTeamB.length ? (Math.random() < 0.5 ? nextTeamA : nextTeamB) : nextTeamA.length < nextTeamB.length ? nextTeamA : nextTeamB).push(player);
-        return;
-      }
-      if (canAddToA) { nextTeamA.push(player); return; }
-      if (canAddToB) { nextTeamB.push(player); }
-    });
+    for (const pos of ["portero", "defensa", "centrocampista", "delantero"] as const) {
+      distributeEvenly(grouped[pos] ?? [], nextTeamA, nextTeamB);
+    }
+    distributeEvenly(unknown, nextTeamA, nextTeamB);
 
     const assignedIds = new Set([...nextTeamA, ...nextTeamB].map((p) => p.id));
-    const nextUnassigned = shuffled.filter((p) => !assignedIds.has(p.id));
+    const nextUnassigned = remaining.filter((p) => !assignedIds.has(p.id));
 
     setTeamA(nextTeamA);
     setTeamB(nextTeamB);

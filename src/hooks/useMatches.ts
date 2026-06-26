@@ -365,6 +365,13 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       // Capacity and role limits are enforced at DB level by trigger/rpc.
       // Avoid duplicating pre-checks in client to prevent stale-count mismatches.
 
+      const userPosition = (user?.user_metadata as Record<string, unknown> | null)?.position as string | undefined
+
+      const updateRegistrationPosition = async (regId: string) => {
+        if (!userPosition || !user || !trackCurrentUser) return
+        await supabase.from('match_registrations').update({ position: userPosition }).eq('id', regId)
+      }
+
       const selfUnregisterToken = generateSelfUnregisterToken()
 
       let data: {
@@ -379,14 +386,20 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       } | null = null
 
       const runLegacyRegistrationInsert = async () => {
+        const insertPayload: Record<string, unknown> = {
+          match_id: normalizedMatchId,
+          name: trimmedName,
+          is_goalkeeper: isGoalkeeper,
+          user_id: trackCurrentUser ? (user?.id ?? null) : null,
+        }
+
+        if (userPosition && trackCurrentUser) {
+          insertPayload.position = userPosition
+        }
+
         const legacyResult = await supabase
           .from('match_registrations')
-          .insert([{
-            match_id: normalizedMatchId,
-            name: trimmedName,
-            is_goalkeeper: isGoalkeeper,
-            user_id: trackCurrentUser ? (user?.id ?? null) : null,
-          }])
+          .insert([insertPayload])
           .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by, user_id')
           .single()
 
@@ -464,6 +477,8 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       if (!data) {
         throw new Error('No se pudo crear la inscripción.')
       }
+
+      void updateRegistrationPosition(data.id)
 
       return {
         data,
