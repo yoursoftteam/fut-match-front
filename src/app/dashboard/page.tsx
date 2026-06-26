@@ -5,11 +5,10 @@ import { useMatches, type Match } from '@/hooks/useMatches'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { Trash2, Plus, Trophy, MapPin, Users, Calendar, Zap, ChevronRight, Target } from 'lucide-react'
+import { Trash2, Plus, Trophy, MapPin, Users, Calendar, Zap, ChevronRight, Target, Share2, Check } from 'lucide-react'
 import FrecuentesSection from '@/components/FrecuentesSection'
 import MisPrediccionesSection from '@/components/MisPrediccionesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
-import ShareLink from '@/components/ShareLink'
 import MatchGroupedList from '@/components/MatchGroupedList'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
 import { Button } from '@/components/ui/button'
@@ -33,6 +32,48 @@ function getLevelInfo(maxPlayers: number): { label: string; cls: string } {
   return                       { label: 'Pro',      cls: 'level-pro'     }
 }
 
+function getMatchStatus(dateStr: string): { label: string; cls: string } | null {
+  const now = new Date();
+  const matchDate = new Date(dateStr);
+  const diffDays = Math.floor((matchDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
+
+  if (diffDays < -1) return null;
+  if (diffDays < 0) return { label: "Hoy", cls: "bg-green-600/15 text-green-400" };
+  if (diffDays === 0) return { label: "Hoy", cls: "bg-green-600/15 text-green-400" };
+  if (diffDays <= 3) return { label: "Próximo", cls: "bg-blue-600/15 text-blue-400" };
+  return null;
+}
+
+function InlineShareButton({ matchId }: { matchId: string }) {
+  const [copied, setCopied] = useState(false);
+  const shareableLink = typeof window !== "undefined" ? `${window.location.origin}/match/${matchId}` : "";
+
+  const handleShare = async () => {
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: "Partido de fútbol", url: shareableLink });
+        return;
+      } catch { /* ignore */ }
+    }
+    try {
+      await navigator.clipboard.writeText(shareableLink);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch { /* ignore */ }
+  };
+
+  return (
+    <button
+      type="button"
+      onClick={handleShare}
+      className="flex size-8 items-center justify-center rounded-lg border border-border bg-muted/30 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+      aria-label="Compartir partido"
+    >
+      {copied ? <Check className="size-3.5 text-green-500" /> : <Share2 className="size-3.5" />}
+    </button>
+  );
+}
+
 export default function DashboardPage() {
   const { user, loading: authLoading } = useAuth()
   const { matches, loading: matchesLoading, registrationCounts, deleteMatch } = useMatches({
@@ -52,7 +93,12 @@ export default function DashboardPage() {
   const [savedAlias, setSavedAlias] = useState<string | null>(null)
   const [aliasSaving, setAliasSaving] = useState(false)
   const [aliasMessage, setAliasMessage] = useState<string | null>(null)
-  const [aliasDismissed, setAliasDismissed] = useState(false)
+  const [aliasDismissed, setAliasDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dashboard-alias-dismissed") === "true";
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -266,6 +312,9 @@ export default function DashboardPage() {
 
       setSavedAlias(nextAlias)
       setAliasDismissed(true)
+      if (typeof window !== "undefined") {
+        localStorage.setItem("dashboard-alias-dismissed", "true");
+      }
       setAliasMessage('Alias actualizado correctamente.')
     } catch {
       setAliasMessage('No pudimos guardar tu alias. Intenta nuevamente.')
@@ -499,6 +548,7 @@ export default function DashboardPage() {
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center gap-2 mb-1 flex-wrap">
                           <span className={`level-badge ${level.cls}`}>{level.label}</span>
+                          {(() => { const s = getMatchStatus(match.date); return s ? <span className={`level-badge ${s.cls}`}>{s.label}</span> : null })()}
                           {isFull && (
                             <span className="level-badge bg-red-600/15 text-red-400">Completo</span>
                           )}
@@ -507,17 +557,20 @@ export default function DashboardPage() {
                           {match.title}
                         </h3>
                       </div>
-                      <SaveFrecuenteButton
-                        location={match.location}
-                        playersPerTeam={match.players_per_team}
-                        matchId={match.id}
-                        matchDate={match.date}
-                        fieldCost={match.field_cost}
-                        rentalCost={match.rental_cost}
-                        hasRentedGoalkeepers={match.has_rented_goalkeepers}
-                        rentedGoalkeepersCount={match.rented_goalkeepers_count}
-                        time={getLocalTimeInputValue(match.date)}
-                      />
+                      <div className="flex items-center gap-1 shrink-0">
+                        <SaveFrecuenteButton
+                          location={match.location}
+                          playersPerTeam={match.players_per_team}
+                          matchId={match.id}
+                          matchDate={match.date}
+                          fieldCost={match.field_cost}
+                          rentalCost={match.rental_cost}
+                          hasRentedGoalkeepers={match.has_rented_goalkeepers}
+                          rentedGoalkeepersCount={match.rented_goalkeepers_count}
+                          time={getLocalTimeInputValue(match.date)}
+                        />
+                        <InlineShareButton matchId={match.id} />
+                      </div>
                     </div>
 
                     {/* Meta info */}
@@ -574,11 +627,6 @@ export default function DashboardPage() {
                       </Link>
                     )}
 
-                    {/* Share */}
-                    <div className="w-full min-w-0">
-                      <ShareLink matchId={match.id} showTitle={false} />
-                    </div>
-
                     {/* Actions */}
                     <div className="flex flex-col gap-2">
                       <Link
@@ -617,6 +665,15 @@ export default function DashboardPage() {
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5">Acceso rapido a tus inscripciones</p>
             </div>
+            {registeredMatches.length > 0 && (
+              <Link
+                href="/matches"
+                className="inline-flex items-center gap-1 text-primary hover:text-primary/80 transition-colors text-sm font-semibold cursor-pointer"
+              >
+                Ver todos
+                <ChevronRight className="w-4 h-4" />
+              </Link>
+            )}
           </div>
 
           {registeredMatchesLoading ? (
@@ -626,6 +683,9 @@ export default function DashboardPage() {
             </div>
           ) : registeredMatches.length === 0 ? (
             <div className="card p-8 text-center">
+              <div className="w-14 h-14 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
+                <Users className="w-6 h-6 text-muted-foreground" />
+              </div>
               <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
                 No tienes inscripciones activas
               </h3>
@@ -635,13 +695,22 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
-              {registeredMatches.map(({ registrationId, match }) => (
+              {registeredMatches.map(({ registrationId, match }) => {
+                const regCount = registrationCounts[match.id] || 0;
+                const isFull = regCount >= match.max_players;
+                return (
                 <div key={`${match.id}-${registrationId}`} className="card match-card p-5 relative flex flex-col gap-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex-1 min-w-0">
-                      <h3 className="text-base font-heading font-bold text-card-foreground leading-tight truncate">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1 flex-wrap">
+                          {(() => { const s = getMatchStatus(match.date); return s ? <span className={`level-badge ${s.cls}`}>{s.label}</span> : null })()}
+                        </div>
+                        <h3 className="text-base font-heading font-bold text-card-foreground leading-tight truncate">
                         {match.title}
                       </h3>
+                    </div>
+                    <div className="flex items-center gap-1 shrink-0">
+                      <InlineShareButton matchId={match.id} />
                     </div>
                   </div>
 
@@ -650,18 +719,39 @@ export default function DashboardPage() {
                       <MapPin className="w-3.5 h-3.5 shrink-0" />
                       <span className="truncate">{match.location}</span>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                      <Calendar className="w-3.5 h-3.5 shrink-0" />
-                      <span>
-                        {new Date(match.date).toLocaleDateString('es-CO', {
-                          weekday: 'short',
-                          day: '2-digit',
-                          month: 'short',
-                        })}
-                        {' · '}
-                        {formatLocalTime(match.date)}
-                      </span>
+                    <div className="flex items-center justify-between text-xs text-muted-foreground">
+                      <div className="flex items-center gap-1.5">
+                        <Users className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {regCount}/{match.max_players}
+                          {' · '}
+                          {!isFull ? (
+                            <span className="text-primary font-semibold">
+                              {match.max_players - regCount} cupo{(match.max_players - regCount) !== 1 ? 's' : ''} libre{(match.max_players - regCount) !== 1 ? 's' : ''}
+                            </span>
+                          ) : (
+                            <span className="text-red-400 font-semibold">Sin cupos</span>
+                          )}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Calendar className="w-3.5 h-3.5 shrink-0" />
+                        <span>
+                          {new Date(match.date).toLocaleDateString('es-CO', {
+                            weekday: 'short',
+                            day: '2-digit',
+                            month: 'short',
+                          })}
+                        </span>
+                      </div>
                     </div>
+                  </div>
+
+                  <div className="w-full h-1 rounded-full bg-muted overflow-hidden">
+                    <div
+                      className="h-full rounded-full bg-primary transition-all"
+                      style={{ width: `${Math.min(100, (regCount / match.max_players) * 100)}%` }}
+                    />
                   </div>
 
                   <div className="flex flex-col gap-2">
@@ -681,7 +771,7 @@ export default function DashboardPage() {
                     </button>
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           )}
 
