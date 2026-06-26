@@ -11,6 +11,7 @@ export const matchFormSchema = z
     hasRentedGoalkeepers: z.boolean(),
     rentedGoalkeepersCount: z.number(),
     rentalCost: z.number(),
+    rules: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (!data.noLocationYet && data.location.trim().length < 3) {
@@ -32,6 +33,7 @@ export interface MatchFormValues {
   hasRentedGoalkeepers: boolean;
   rentedGoalkeepersCount: number;
   rentalCost: number;
+  rules?: string;
 }
 
 export type MatchFormSubmitData = Omit<MatchFormValues, "noLocationYet"> & {

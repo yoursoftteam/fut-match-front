@@ -15,6 +15,7 @@ interface GroupedMatch {
   rented_goalkeepers_count: number
   source_template_id?: string | null
   source_template?: { id: string; name: string } | null
+  rules?: string | null
 }
 
 interface MatchGroup {

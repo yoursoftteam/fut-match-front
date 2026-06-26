@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { FileTextIcon } from "lucide-react";
 import { useMatchEditing } from "@/hooks/useMatchEditing";
 import { useMatchPricing } from "@/hooks/useMatchPricing";
 import type { UseMatchEditingReturn } from "@/hooks/useMatchEditing";
 import { formatTimeAmPm } from "@/lib/date-utils";
+import RichEditor from "@/components/rich-editor/RichEditor";
 
 interface MatchEditFormProps {
   editing?: UseMatchEditingReturn;
@@ -22,6 +24,7 @@ export function MatchEditForm({ editing }: MatchEditFormProps) {
     closeForm,
     handleInputChange,
     handleSubmit,
+    setFieldValue,
   } = editing ?? fallbackEditing;
   const { goalkeepersCount } = useMatchPricing();
   const formRef = useRef<HTMLDivElement>(null);
@@ -128,6 +131,21 @@ export function MatchEditForm({ editing }: MatchEditFormProps) {
               </div>
             </div>
           )}
+        </div>
+
+        <div>
+          <label htmlFor="edit-rules" className="mb-2 flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <FileTextIcon className="h-4 w-4 text-muted-foreground" />
+            Reglas del partido
+          </label>
+          <RichEditor
+            value={form.rules}
+            onChange={(html) => setFieldValue("rules", html)}
+            placeholder="Ej: tiempo de juego, cambios permitidos, penales, etc."
+            minHeight={80}
+            id="edit-rules"
+            autoFocus
+          />
         </div>
 
         {message && (

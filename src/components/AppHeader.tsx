@@ -5,8 +5,10 @@ import { useRouter, usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { outfit } from "@/lib/fonts";
-import { Menu, X, LogOut, User } from "lucide-react";
+import { Menu, X, LogOut, User, ShieldCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
+
+const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
 
 export function AppHeader() {
   const router = useRouter();
@@ -14,6 +16,7 @@ export function AppHeader() {
   const { user, loading, signOut } = useAuth();
   const isAuthPage = pathname === "/auth";
   const isLoggedIn = Boolean(user) && !isAuthPage;
+  const isAdmin = isLoggedIn && user?.id === ADMIN_USER_ID;
 
   const handleSignOut = async () => {
     await signOut();
@@ -32,6 +35,7 @@ export function AppHeader() {
       { href: "/profile", label: "Mi Perfil" },
       { href: "/matches", label: "Mis Partidos" },
       { href: "/bet", label: "Predicciones" },
+      ...(isAdmin ? [{ href: "/admin/bet", label: "Admin" }] : []),
     ]),
   ];
 

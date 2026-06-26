@@ -1,6 +1,6 @@
 'use client'
 
-import { Check } from 'lucide-react'
+import { CircleCheckBig, Clock } from 'lucide-react'
 import { usePaymentManager } from '@/hooks/usePaymentManager'
 import { useMatchDetailsContext } from '@/contexts/MatchDetailsContext'
 
@@ -32,7 +32,7 @@ export function PaymentStatus({
         className="flex items-center gap-1 rounded px-2 py-1 bg-green-900/30 text-green-400"
         title="Pagado"
       >
-        <Check size={16} aria-hidden />
+        <CircleCheckBig size={16} aria-hidden />
         <span className="text-xs font-medium">Pagado</span>
       </div>
     ) : null
@@ -51,11 +51,11 @@ export function PaymentStatus({
       title={hasPaid ? `Marcar a ${name} como no pagado` : `Marcar a ${name} como pagado`}
       aria-label={`Estado de pago: ${hasPaid ? 'Pagado' : 'Pendiente'}`}
     >
-      <Check
-        size={16}
-        aria-hidden
-        className={hasPaid ? '' : 'opacity-30'}
-      />
+      {hasPaid ? (
+        <CircleCheckBig size={16} aria-hidden />
+      ) : (
+        <Clock size={16} aria-hidden />
+      )}
       <span className="text-xs font-medium">
         {hasPaid ? 'Pagado' : 'Pendiente'}
       </span>

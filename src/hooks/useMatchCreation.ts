@@ -69,6 +69,7 @@ export function useMatchCreation(): UseMatchCreationReturn {
         rented_goalkeepers_count: data.rentedGoalkeepersCount,
         players_per_team: data.playersPerTeam,
         source_template_id: templateId || null,
+        rules: data.rules || null,
       };
 
       const { data: newMatch, error: createError } = await apiCreateMatch(matchData);

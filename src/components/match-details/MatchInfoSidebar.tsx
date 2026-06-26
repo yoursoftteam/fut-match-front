@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { FileTextIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
@@ -16,6 +17,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { Separator } from "@/components/ui/separator";
 import { MatchShareSection } from "@/components/match-details/MatchShareSection";
 import { getLocalTimeInputValue } from "@/lib/date-utils";
+import RichTextRenderer from "@/components/rich-editor/RichTextRenderer";
 
 interface MatchInfoSidebarProps {
   onOpenTeamBuilder?: () => void;
@@ -137,7 +139,18 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
                       <p><span className="text-muted-foreground">Formato:</span> {matchData.players_per_team} vs {matchData.players_per_team}</p>
                     </div>
                   )}
-                  {isCreator && (
+                  {matchData.rules ? (
+                      <div className="mt-2 rounded-xl border border-border bg-muted/50 p-3 text-sm">
+                        <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Reglas</p>
+                        <RichTextRenderer html={matchData.rules} className="text-foreground" />
+                      </div>
+                    ) : isCreator && !showForm ? (
+                      <button type="button" onClick={openForm} className="mt-2 flex w-full items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-muted/60 hover:text-foreground cursor-pointer">
+                        <FileTextIcon className="h-4 w-4" aria-hidden="true" />
+                        Agregar reglas del partido
+                      </button>
+                    ) : null}
+          {isCreator && (
                     <div className="pt-2">
                       <Separator />
                       <div className="mt-4">
@@ -210,6 +223,17 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
               <p><span className="text-muted-foreground">Formato:</span> {matchData.players_per_team} vs {matchData.players_per_team}</p>
             </div>
           )}
+          {matchData.rules ? (
+            <div className="mt-3 rounded-xl border border-border bg-muted/50 p-3 text-sm">
+              <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Reglas</p>
+              <RichTextRenderer html={matchData.rules} className="text-foreground" />
+            </div>
+          ) : isCreator && !showForm ? (
+            <button type="button" onClick={openForm} className="mt-3 flex w-full cursor-pointer items-center gap-2 rounded-xl border border-dashed border-border bg-muted/30 p-3 text-sm text-muted-foreground transition hover:border-primary/40 hover:bg-muted/60 hover:text-foreground">
+              <FileTextIcon className="h-4 w-4" aria-hidden="true" />
+              Agregar reglas del partido
+            </button>
+          ) : null}
           <p className={`mt-3 text-sm ${colorStatus}`}>{tituloStatus}</p>
           {isCreator && !showForm && (
             <div className="mt-4 flex flex-col gap-2">
