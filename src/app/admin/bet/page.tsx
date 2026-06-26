@@ -34,6 +34,7 @@ import type { Tournament, Match } from '@/types/bet'
 
 const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
 const EDGE_FN_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-match-result`
+const LOCAL_API_URL = '/api/v1/admin/update-match-result'
 
 const STAGE_LABELS: Record<string, string> = {
   group_stage: 'Fase de Grupos',
@@ -232,22 +233,31 @@ function ScoreEditor() {
       return next
     })
 
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      const token = session?.access_token
-
-      const res = await fetch(EDGE_FN_URL, {
+    const saveMatch = async (url: string, authToken?: string) => {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      }
+      if (authToken) headers['Authorization'] = `Bearer ${authToken}`
+      return fetch(url, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers,
         body: JSON.stringify({
           match_id: matchId,
           home_score: edit.homeScore,
           away_score: edit.awayScore,
         }),
       })
+    }
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const token = session?.access_token
+
+      let res = await saveMatch(EDGE_FN_URL, token)
+
+      if (res.status === 503) {
+        res = await saveMatch(LOCAL_API_URL)
+      }
 
       const body = await res.json()
 
@@ -696,6 +706,9 @@ function ClassificationTab() {
   const [loading, setLoading] = useState(false)
   const [saving, setSaving] = useState(false)
   const [statusMsg, setStatusMsg] = useState<string | null>(null)
+  const [debug, setDebug] = useState<any>(null)
+  const [calcResult, setCalcResult] = useState<any>(null)
+  const [rawResponse, setRawResponse] = useState<string | null>(null)
 
   useEffect(() => {
     supabase
