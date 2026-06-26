@@ -16,6 +16,7 @@ export interface MatchEditFormData {
   hasRentedGoalkeepers: boolean;
   rentedGoalkeepersCount: number;
   rentalCost: number;
+  rules: string;
 }
 
 export interface UseMatchEditingReturn {
@@ -27,8 +28,9 @@ export interface UseMatchEditingReturn {
   rentalCostInput: string;
   openForm: () => void;
   closeForm: () => void;
-  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void;
+  handleInputChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => void;
   handleSubmit: (e: React.FormEvent) => Promise<void>;
+  setFieldValue: (name: string, value: string | boolean | number) => void;
 }
 
 const PLAYER_OPTIONS = [6, 7, 8, 9, 10, 11] as const;
@@ -76,6 +78,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
     hasRentedGoalkeepers: false,
     rentedGoalkeepersCount: 1,
     rentalCost: 0,
+    rules: "",
   });
   const [fieldCostInput, setFieldCostInput] = useState("");
   const [rentalCostInput, setRentalCostInput] = useState("");
@@ -94,6 +97,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
       hasRentedGoalkeepers: matchData.has_rented_goalkeepers,
       rentedGoalkeepersCount: matchData.rented_goalkeepers_count || 1,
       rentalCost: matchData.rental_cost,
+      rules: matchData.rules || "",
     });
     setFieldCostInput(matchData.field_cost > 0 ? formatCurrency(matchData.field_cost) : "");
     setRentalCostInput(matchData.rental_cost > 0 ? formatCurrency(matchData.rental_cost) : "");
@@ -110,7 +114,11 @@ export function useMatchEditing(): UseMatchEditingReturn {
     setMessage(null);
   }, []);
 
-  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+  const setFieldValue = useCallback((name: string, value: string | boolean | number) => {
+    setForm((prev) => ({ ...prev, [name]: value }));
+  }, []);
+
+  const handleInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
 
     if (name === "fieldCost") {
@@ -177,6 +185,7 @@ export function useMatchEditing(): UseMatchEditingReturn {
         has_rented_goalkeepers: form.hasRentedGoalkeepers,
         rented_goalkeepers_count: form.rentedGoalkeepersCount,
         players_per_team: selectedPlayersPerTeam,
+        rules: form.rules || null,
       });
 
       if (error || !data) {
@@ -202,5 +211,5 @@ export function useMatchEditing(): UseMatchEditingReturn {
     }
   }, [form, matchData, isCreator, registrations.length, matchId, updateMatch, registerRentedGoalkeepers, setMatchData]);
 
-  return { showForm, loading, message, form, fieldCostInput, rentalCostInput, openForm, closeForm, handleInputChange, handleSubmit };
+  return { showForm, loading, message, form, fieldCostInput, rentalCostInput, openForm, closeForm, handleInputChange, handleSubmit, setFieldValue };
 }

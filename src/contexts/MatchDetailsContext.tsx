@@ -20,6 +20,7 @@ export interface MatchData {
   rented_goalkeepers_count: number;
   players_per_team: number;
   source_template_id?: string | null;
+  rules?: string | null;
 }
 
 export interface PlayerRegistration {

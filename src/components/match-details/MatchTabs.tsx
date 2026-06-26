@@ -13,6 +13,7 @@ import { ShareActions } from "@/components/ShareLink";
 import { PaymentStatus } from "./PaymentStatus";
 import { PaymentSummary } from "./PaymentSummary";
 import { buildConvocatoriaSummary, buildMatchShareSummary } from "./MatchShareSection";
+import RulesModal from "./RulesModal";
 
 type PanelTab = "register" | "players" | "teams";
 
@@ -103,6 +104,7 @@ export function RegistrationPanel() {
   const [showShareToast, setShowShareToast] = useState(false);
   const [quickActionLoading, setQuickActionLoading] = useState(false);
   const [quickActionMessage, setQuickActionMessage] = useState<string | null>(null);
+  const [showRulesModal, setShowRulesModal] = useState(false);
   const totalGoalkeepersRegistered = registrations.filter((registration) => registration.is_goalkeeper).length;
   const selectedGoalkeepersInForm = entries.filter((entry) => entry.isGoalkeeper).length;
   const isGoalkeeperCheckboxDisabled = totalGoalkeepersRegistered >= maxGoalkeepers;
@@ -217,6 +219,7 @@ export function RegistrationPanel() {
     const success = await handleSubmit(e);
     if (success) {
       setShowShareToast(true);
+      if (matchData?.rules) setShowRulesModal(true);
     }
   };
 
@@ -252,6 +255,7 @@ export function RegistrationPanel() {
       await refreshRegistrations();
       setShowShareToast(true);
       setQuickActionMessage("¡Inscripción completada con tu cuenta!");
+      if (matchData.rules) setShowRulesModal(true);
     } finally {
       setQuickActionLoading(false);
     }
@@ -438,6 +442,14 @@ export function RegistrationPanel() {
         </form>
       )}
     </div>
+
+    {showRulesModal && matchData?.rules && (
+      <RulesModal
+        open={showRulesModal}
+        rulesHtml={matchData.rules}
+        onClose={() => setShowRulesModal(false)}
+      />
+    )}
 
     {showShareToast && (
       <div className="fixed bottom-4 left-1/2 z-50 w-[calc(100%-2rem)] max-w-sm -translate-x-1/2 rounded-xl border border-border bg-card p-3 shadow-2xl animate-in fade-in slide-in-from-bottom-2 duration-200">

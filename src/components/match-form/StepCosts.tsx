@@ -1,7 +1,7 @@
 "use client";
 
 import { useWatch } from "react-hook-form";
-import { DollarSignIcon, ChevronLeftIcon, Loader2Icon } from "lucide-react";
+import { DollarSignIcon, ChevronLeftIcon, Loader2Icon, FileTextIcon } from "lucide-react";
 
 import { formatCurrency } from "@/lib/currency";
 import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { CurrencyInput } from "@/components/form/CurrencyInput";
 import { FieldGroup } from "@/components/form/FieldGroup";
+import RichEditor from "@/components/rich-editor/RichEditor";
 
 interface StepCostsProps {
   isValid: boolean;
@@ -94,6 +95,22 @@ export default function StepCosts({
               />
             </FieldGroup>
           )}
+        </div>
+
+        <div>
+          <div className="flex items-center gap-2 mb-2">
+            <FileTextIcon className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
+            <label htmlFor={`${formId}-rules`} className="text-sm font-medium text-card-foreground">
+              Reglas del partido
+            </label>
+          </div>
+          <RichEditor
+            value={useWatch({ control, name: "rules" }) ?? ""}
+            onChange={(html) => setValue("rules", html)}
+            placeholder="Ej: tiempo de juego, cambios permitidos, penales, etc."
+            minHeight={100}
+            id={`${formId}-rules`}
+          />
         </div>
 
         {fieldCost > 0 && (

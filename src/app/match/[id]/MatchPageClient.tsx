@@ -23,7 +23,7 @@ export default function MatchPageClient({ matchId }: { matchId: string }) {
   return (
     <div className="min-h-screen bg-background py-12 px-4">
       <div className="mx-auto">
-        <MatchDetails matchId={matchId} />
+        <MatchDetails matchId={matchId} editParam={searchParams.get('edit')} />
       </div>
     </div>
   )

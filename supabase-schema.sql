@@ -13,7 +13,8 @@ CREATE TABLE matches (
   has_rented_goalkeepers BOOLEAN NOT NULL DEFAULT FALSE,
   rented_goalkeepers_count INTEGER NOT NULL DEFAULT 0,
   players_per_team INTEGER NOT NULL DEFAULT 5,
-  source_template_id UUID REFERENCES match_templates(id) ON DELETE SET NULL
+  source_template_id UUID REFERENCES match_templates(id) ON DELETE SET NULL,
+  rules TEXT
 );
 
 -- Enable Row Level Security
