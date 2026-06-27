@@ -747,6 +747,44 @@ function ClassificationTab() {
     })
   }, [selectedPool])
 
+  useEffect(() => {
+    if (!tournamentId) return
+    supabase
+      .from('bet_matches')
+      .select('id, fifa_match_number, kickoff_at, venue, home_placeholder, away_placeholder, home_team_id, away_team_id')
+      .eq('tournament_id', tournamentId)
+      .eq('stage', 'round_of_32')
+      .order('fifa_match_number', { ascending: true })
+      .then(({ data: r32 }) => {
+        if (!r32 || r32.length === 0) return
+        const hasTeams = (r32 as any[]).some((m) => m.home_team_id || m.away_team_id)
+        if (!hasTeams) return
+        setR32Matches((r32 as any[]).map((m) => ({
+          match_id: m.id, fifa_match_number: m.fifa_match_number,
+          kickoff_at: m.kickoff_at, venue: m.venue,
+          home_placeholder: m.home_placeholder, away_placeholder: m.away_placeholder,
+          home_team_id: m.home_team_id, away_team_id: m.away_team_id,
+        })))
+        const resolved = (r32 as any[]).filter((m) => m.home_team_id && m.away_team_id).length
+        const partial = (r32 as any[]).filter((m) => m.home_team_id || m.away_team_id).length - resolved
+        setR32Summary({ total: r32.length, resolved, partial, unresolved: r32.length - resolved - partial })
+      })
+  }, [tournamentId])
+
+  useEffect(() => {
+    if (!data || !tournamentId) return
+    const allTeams: Array<{ team_id: string; team_name: string; flag_svg_url?: string }> = []
+    for (const teams of Object.values(data.groupTeams)) {
+      for (const t of teams as any[]) {
+        const teamId = t.team_id || t.id
+        if (teamId && !allTeams.some((qt) => qt.team_id === teamId)) {
+          allTeams.push({ team_id: teamId, team_name: t.team_name, flag_svg_url: t.flag_svg_url })
+        }
+      }
+    }
+    if (allTeams.length > 0) setQualifiedTeams(allTeams)
+  }, [data, tournamentId])
+
   const handleSetBestThird = async (groupName: string, teamId: string) => {
     setSaving(true)
     setStatusMsg(null)
