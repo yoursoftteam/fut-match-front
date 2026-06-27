@@ -32,6 +32,7 @@ export interface PlayerRegistration {
   paid_at: string | null;
   paid_by: string | null;
   user_id: string | null;
+  position?: string | null;
 }
 
 interface MatchDetailsContextValue {

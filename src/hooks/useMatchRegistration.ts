@@ -89,6 +89,7 @@ interface RegistrationEntry {
   id: string;
   name: string;
   isGoalkeeper: boolean;
+  position: string;
 }
 
 interface UseMatchRegistrationReturn {
@@ -101,6 +102,7 @@ interface UseMatchRegistrationReturn {
   removeEntry: (entryId: string) => void;
   updateEntryName: (entryId: string, value: string) => void;
   updateEntryGoalkeeper: (entryId: string, isGoalkeeper: boolean) => void;
+  updateEntryPosition: (entryId: string, value: string) => void;
   handleSubmit: (e: React.FormEvent) => Promise<boolean>;
   handleEntryKeyDown: (e: React.KeyboardEvent<HTMLInputElement>, entryId: string) => void;
   resetForm: () => void;
@@ -111,6 +113,7 @@ function createRegistrationEntry(): RegistrationEntry {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     name: "",
     isGoalkeeper: false,
+    position: "",
   };
 }
 
@@ -174,6 +177,12 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
     )));
   }, []);
 
+  const updateEntryPosition = useCallback((entryId: string, value: string) => {
+    setEntries((prev) => prev.map((entry) => (
+      entry.id === entryId ? { ...entry, position: value } : entry
+    )));
+  }, []);
+
   const handleEntryKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, entryId: string) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
@@ -234,6 +243,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
           matchId,
           entry.name,
           entry.isGoalkeeper,
+          entry.position ? { position: entry.position } : undefined,
         );
 
         if (error || !data) {
@@ -289,6 +299,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         name: item.name,
         isGoalkeeper: item.isGoalkeeper,
+        position: '',
       })));
       return successCount > 0;
     } catch {
@@ -310,6 +321,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
     removeEntry,
     updateEntryName,
     updateEntryGoalkeeper,
+    updateEntryPosition,
     handleSubmit,
     handleEntryKeyDown,
     resetForm,

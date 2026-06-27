@@ -85,60 +85,130 @@ function drawField(canvas: HTMLCanvasElement, teamA: Player[], teamB: Player[], 
     const field = players.filter(p => !p.is_goalkeeper);
 
     const isLeft = side === "left";
-    const startX = isLeft ? pad + 30 : W / 2 + 30;
-    const endX = isLeft ? W / 2 - 30 : W - pad - 30;
+    const startX = isLeft ? pad + 50 : W / 2 + 30;
+    const endX = isLeft ? W / 2 - 30 : W - pad - 50;
     const teamColor = isLeft ? "#60a5fa" : "#f87171"; // blue-400 / red-400
     const gkColor = "#facc15"; // yellow-400
 
     const drawPlayer = (name: string, x: number, y: number, isGk: boolean) => {
       const color = isGk ? gkColor : teamColor;
-      // Circle
+      const bw = 14, bh = 17;
+      const sl = 9, sd = 7;
+      const neckW = 5, neckD = 5;
+      const r = 4;
+
       ctx.beginPath();
-      ctx.arc(x, y, 18, 0, Math.PI * 2);
+      ctx.moveTo(x - bw, y + bh - r);
+      ctx.quadraticCurveTo(x - bw, y + bh, x - bw + r, y + bh);
+      ctx.lineTo(x + bw - r, y + bh);
+      ctx.quadraticCurveTo(x + bw, y + bh, x + bw, y + bh - r);
+      ctx.lineTo(x + bw, y - bh + 10);
+      ctx.lineTo(x + bw + sl, y - bh + 10 + sd);
+      ctx.lineTo(x + bw + sl, y - bh + sd);
+      ctx.lineTo(x + bw - 2, y - bh + 2);
+      ctx.lineTo(x + neckW, y - bh - 2);
+      ctx.lineTo(x, y - bh + neckD + 2);
+      ctx.lineTo(x - neckW, y - bh - 2);
+      ctx.lineTo(x - bw + 2, y - bh + 2);
+      ctx.lineTo(x - bw - sl, y - bh + sd);
+      ctx.lineTo(x - bw - sl, y - bh + 10 + sd);
+      ctx.lineTo(x - bw, y - bh + 10);
+      ctx.closePath();
+
       ctx.fillStyle = color + "33";
       ctx.fill();
       ctx.strokeStyle = color;
-      ctx.lineWidth = 2;
+      ctx.lineWidth = 2.5;
+      ctx.lineJoin = "round";
+      ctx.lineCap = "round";
       ctx.stroke();
-      // Icon
-      ctx.font = "14px serif";
+
+      ctx.font = "bold 12px serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.fillText(isGk ? "🥅" : "⚽", x, y - 2);
-      // Name
+      ctx.fillStyle = "#ffffff";
+      ctx.fillText(isGk ? "🥅" : "⚽", x, y);
+
       const short = name.length > 10 ? name.substring(0, 9) + "…" : name;
       ctx.font = "bold 10px 'Space Grotesk', sans-serif";
       ctx.fillStyle = "#ffffff";
       ctx.textBaseline = "top";
-      ctx.fillText(short, x, y + 20);
+      ctx.fillText(short, x, y + bh + 4);
     };
 
     // GK position
     gk.forEach((p, i) => {
-      const gkX = isLeft ? pad + 45 : W - pad - 45;
+      const gkX = isLeft ? pad + 25 : W - pad - 25;
       const gkY = H / 2 + (i - (gk.length - 1) / 2) * 60;
       drawPlayer(p.name, gkX, gkY, true);
     });
 
-    // Field players — distribute in a rough 2-column grid
-    if (field.length === 0) return;
-    const cols = field.length <= 4 ? 1 : 2;
-    const rows = Math.ceil(field.length / cols);
-    const colWidth = (endX - startX) / cols;
-    const rowHeight = (H - pad * 2 - 60) / (rows + 1);
+    const colWidth = (endX - startX) / 3;
+    // Distribución inteligente: DEF >= MID >= DEL, prioridad DEF > DEL
+    const n = field.length;
+    const base = Math.floor(n / 3);
+    const rem = n - base * 3;
+    let def = base + (rem >= 1 ? 1 : 0);
+    const mid = base + (rem >= 2 ? 1 : 0);
+    let del = base;
+    // Para n divisible por 3 (ej: 6, 9), mover 1 de DEL → DEF para jerarquía
+    if (rem === 0 && n >= 6) { def++; del--; }
+    const targetPos: [number, number, number] = [def, mid, del];
 
-    field.forEach((p, i) => {
-      const col = i % cols;
-      const row = Math.floor(i / cols);
-      const x = startX + colWidth * col + colWidth / 2;
-      const y = pad + 40 + rowHeight * (row + 1);
-      drawPlayer(p.name, x, y, false);
-    });
+    // Build 3 columns
+    const col0: Player[] = [];
+    const col1: Player[] = [];
+    const col2: Player[] = [];
+    const unknown: Player[] = [];
+
+    const pushKnown = (pos: string, p: Player) => {
+      if (pos === "defensa")        (isLeft ? col0 : col2).push(p);
+      else if (pos === "centrocampista") col1.push(p);
+      else if (pos === "delantero")  (isLeft ? col2 : col0).push(p);
+      else unknown.push(p);
+    };
+    for (const p of field) pushKnown((p.position ?? "").toLowerCase(), p);
+
+    // Distribuir desconocidos. target por columna: para Team B se invierte
+    // porque col0=DEL, col2=DEF (al revés que targetPos que es [DEF,MID,DEL])
+    const colTarget = isLeft ? targetPos : [targetPos[2], targetPos[1], targetPos[0]] as [number, number, number];
+    for (const p of unknown) {
+      const need = colTarget.map((t, i) => t - [col0, col1, col2][i].length);
+      const maxNeed = Math.max(...need);
+      if (maxNeed > 0) {
+        const idx = need.indexOf(maxNeed);
+        [col0, col1, col2][idx].push(p);
+      } else {
+        const lens = [col0.length, col1.length, col2.length];
+        const minIdx = lens.indexOf(Math.min(...lens));
+        [col0, col1, col2][minIdx].push(p);
+      }
+    }
+
+    const columns = [col0, col1, col2];
+
+    // Draw columns
+    const vertSpace = H - pad * 2 - 60;
+    for (let ci = 0; ci < 3; ci++) {
+      const players = columns[ci];
+      if (players.length === 0) continue;
+      const cx = startX + colWidth * ci + colWidth / 2;
+      const rowHeight = vertSpace / (players.length + 1);
+      players.forEach((p, i) => {
+        const y = pad + 40 + rowHeight * (i + 1);
+        drawPlayer(p.name, cx, y, false);
+      });
+
+    }
   };
 
   drawTeam(teamA, "left");
   drawTeam(teamB, "right");
 
+  // Version watermark — remove after confirming
+  ctx.font = "8px monospace";
+  ctx.fillStyle = "rgba(255,255,0,0.3)";
+  ctx.textAlign = "left";
   // Team labels
   ctx.font = "bold 13px 'Space Grotesk', sans-serif";
   ctx.textAlign = "center";
