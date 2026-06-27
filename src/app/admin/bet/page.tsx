@@ -710,6 +710,17 @@ function ClassificationTab() {
   const [calcResult, setCalcResult] = useState<any>(null)
   const [rawResponse, setRawResponse] = useState<string | null>(null)
 
+  const [tournamentId, setTournamentId] = useState<string | null>(null)
+  const [r32Matches, setR32Matches] = useState<Array<{
+    match_id: string; fifa_match_number: number; kickoff_at: string; venue: string;
+    home_placeholder: string; away_placeholder: string;
+    home_team_id: string | null; away_team_id: string | null;
+  }>>([])
+  const [qualifiedTeams, setQualifiedTeams] = useState<Array<{ team_id: string; team_name: string; flag_svg_url?: string }>>([])
+  const [generatingR32, setGeneratingR32] = useState(false)
+  const [savingR32, setSavingR32] = useState(false)
+  const [r32Summary, setR32Summary] = useState<{ total: number; resolved: number; partial: number; unresolved: number } | null>(null)
+
   useEffect(() => {
     supabase
       .from('bet_pools')
@@ -727,6 +738,13 @@ function ClassificationTab() {
         if (res.success) setData(res.data)
       })
       .finally(() => setLoading(false))
+  }, [selectedPool])
+
+  useEffect(() => {
+    if (!selectedPool) { setTournamentId(null); return }
+    supabase.from('bet_pools').select('tournament_id').eq('id', selectedPool).single().then(({ data }) => {
+      if (data) setTournamentId(data.tournament_id)
+    })
   }, [selectedPool])
 
   const handleSetBestThird = async (groupName: string, teamId: string) => {
@@ -770,6 +788,61 @@ function ClassificationTab() {
       setStatusMsg(`Error: ${json.error}`)
     }
     setSaving(false)
+  }
+
+  const handleGenerateR32 = async () => {
+    if (!tournamentId) return
+    setGeneratingR32(true)
+    setR32Summary(null)
+    try {
+      const res = await fetch('/api/v1/bet/admin/generate-round-of-32', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'generate', tournament_id: tournamentId }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setR32Matches(json.data.matches.map((m: any) => ({
+          match_id: m.match_id, fifa_match_number: m.fifa_match_number,
+          kickoff_at: m.kickoff_at, venue: m.venue,
+          home_placeholder: m.home_placeholder, away_placeholder: m.away_placeholder,
+          home_team_id: m.home_team_id, away_team_id: m.away_team_id,
+        })))
+        setQualifiedTeams(json.data.qualified)
+        setR32Summary(json.data.summary)
+      }
+    } catch (e) {
+      console.error(e)
+    } finally {
+      setGeneratingR32(false)
+    }
+  }
+
+  const handleR32Edit = (matchId: string, field: 'home_team_id' | 'away_team_id', value: string) => {
+    setR32Matches((prev) => prev.map((m) => m.match_id === matchId ? { ...m, [field]: value || null } : m))
+  }
+
+  const handleSaveR32 = async () => {
+    if (!tournamentId) return
+    setSavingR32(true)
+    try {
+      const res = await fetch('/api/v1/bet/admin/generate-round-of-32', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_matches',
+          tournament_id: tournamentId,
+          matches: r32Matches.map((m) => ({ match_id: m.match_id, home_team_id: m.home_team_id, away_team_id: m.away_team_id })),
+        }),
+      })
+      const json = await res.json()
+      if (json.success) setStatusMsg(`Partidos de octavos guardados (${json.data.updated})`)
+      else setStatusMsg(`Error: ${json.error}`)
+    } catch (e) {
+      setStatusMsg(`Error: ${e}`)
+    } finally {
+      setSavingR32(false)
+    }
   }
 
   const handleCalculateAll = async () => {
@@ -968,6 +1041,114 @@ function ClassificationTab() {
                   </div>
                 )
               })}
+            </CardContent>
+          </Card>
+
+          {/* OCTAVOS DE FINAL */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="size-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">Octavos de Final</h2>
+                </div>
+                <Button
+                  size="sm"
+                  onClick={handleGenerateR32}
+                  disabled={generatingR32}
+                >
+                  {generatingR32 ? (
+                    <><Loader2 className="size-3.5 animate-spin" /> Generando…</>
+                  ) : (
+                    'Generar Octavos'
+                  )}
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {r32Summary && (
+                <div className="flex gap-4 text-xs">
+                  <span className="text-emerald-400">✓ {r32Summary.resolved} completos</span>
+                  {r32Summary.partial > 0 && <span className="text-amber-400">~ {r32Summary.partial} parciales</span>}
+                  {r32Summary.unresolved > 0 && <span className="text-destructive">✗ {r32Summary.unresolved} sin resolver</span>}
+                </div>
+              )}
+
+              {r32Matches.length > 0 && (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="border-b border-border text-muted-foreground text-xs">
+                        <th className="pb-2 pr-2 font-semibold">#</th>
+                        <th className="pb-2 pr-2 font-semibold">Local</th>
+                        <th className="pb-2 pr-2 font-semibold"></th>
+                        <th className="pb-2 pr-2 font-semibold">Visitante</th>
+                        <th className="pb-2 pr-2 font-semibold">Sede</th>
+                        <th className="pb-2 font-semibold"></th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {r32Matches.map((m) => (
+                        <tr key={m.match_id} className="border-b border-border/40 last:border-0">
+                          <td className="py-2 pr-2 text-muted-foreground font-mono text-xs">{m.fifa_match_number}</td>
+                          <td className="py-2 pr-2">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-[0.625rem] text-muted-foreground truncate max-w-[60px]">{m.home_placeholder}</span>
+                              <select
+                                value={m.home_team_id || ''}
+                                onChange={(e) => handleR32Edit(m.match_id, 'home_team_id', e.target.value)}
+                                className="rounded border border-border bg-muted px-1.5 py-1 text-xs max-w-[130px]"
+                              >
+                                <option value="">—</option>
+                                {qualifiedTeams.map((qt) => (
+                                  <option key={qt.team_id} value={qt.team_id}>{qt.team_name}</option>
+                                ))}
+                              </select>
+                            </div>
+                          </td>
+                          <td className="py-2 pr-2 text-muted-foreground text-xs">vs</td>
+                          <td className="py-2 pr-2">
+                            <div className="flex items-center gap-1.5">
+                              <select
+                                value={m.away_team_id || ''}
+                                onChange={(e) => handleR32Edit(m.match_id, 'away_team_id', e.target.value)}
+                                className="rounded border border-border bg-muted px-1.5 py-1 text-xs max-w-[130px]"
+                              >
+                                <option value="">—</option>
+                                {qualifiedTeams.map((qt) => (
+                                  <option key={qt.team_id} value={qt.team_id}>{qt.team_name}</option>
+                                ))}
+                              </select>
+                              <span className="text-[0.625rem] text-muted-foreground truncate max-w-[60px]">{m.away_placeholder}</span>
+                            </div>
+                          </td>
+                          <td className="py-2 pr-2 text-xs text-muted-foreground truncate max-w-[100px]">{m.venue || '—'}</td>
+                          <td className="py-2">
+                            {m.home_team_id && m.away_team_id ? (
+                              <Check className="size-3.5 text-emerald-400" />
+                            ) : (
+                              <AlertCircle className="size-3.5 text-amber-400" />
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+
+              {r32Matches.length > 0 && (
+                <div className="flex justify-end">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={handleSaveR32}
+                    disabled={savingR32}
+                  >
+                    {savingR32 ? <><Loader2 className="size-3.5 animate-spin" /> Guardando…</> : 'Guardar cambios'}
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
 
