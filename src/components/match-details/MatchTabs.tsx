@@ -8,10 +8,12 @@ import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
 import { useMatches } from "@/hooks/useMatches";
 import { formatCurrency } from "@/lib/currency";
 import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
+import { POSITIONS, type PositionOption } from "@/lib/positions";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ShareActions } from "@/components/ShareLink";
 import { PaymentStatus } from "./PaymentStatus";
 import { PaymentSummary } from "./PaymentSummary";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { buildConvocatoriaSummary, buildMatchShareSummary } from "./MatchShareSection";
 import RulesModal from "./RulesModal";
 
@@ -83,6 +85,7 @@ export function RegistrationPanel() {
     removeEntry,
     updateEntryName,
     updateEntryGoalkeeper,
+    updateEntryPosition,
     handleSubmit,
     handleEntryKeyDown,
     resetForm,
@@ -396,7 +399,7 @@ export function RegistrationPanel() {
                   placeholder="Ingresa el nombre..."
                 />
 
-                <div className="mt-3 flex items-center gap-3">
+                <div className="mt-3 flex flex-wrap items-center gap-3">
                   <input
                     id={`register-gk-${entry.id}`}
                     type="checkbox"
@@ -410,6 +413,26 @@ export function RegistrationPanel() {
                       ? "Portero (ya se encuentran inscritos los porteros)"
                       : "Portero"}
                   </label>
+                  {!entry.isGoalkeeper && (
+                    <div className="w-full sm:w-auto sm:min-w-[180px]">
+                      <Select value={entry.position} onValueChange={(v) => { if (v) updateEntryPosition(entry.id, v); }}>
+                        <SelectTrigger className="w-full text-xs" aria-label="Seleccionar posición">
+                          <SelectValue placeholder="Posición…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {(POSITIONS as readonly PositionOption[]).filter((p) => p.value !== "portero").map((pos) => {
+                            const Icon = pos.icon;
+                            return (
+                              <SelectItem key={pos.value} value={pos.value}>
+                                <Icon className="size-3.5" aria-hidden="true" />
+                                {pos.label}
+                              </SelectItem>
+                            );
+                          })}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
@@ -580,10 +603,27 @@ export function PlayersPanel() {
         )}
         {titulares.map((registration, index) => (
           <div key={registration.id} className="flex items-center justify-between rounded border border-border bg-muted p-2.5 transition hover:bg-muted">
-            <div className="flex-1">
+            <div className="flex-1 min-w-0">
               <span className="mr-2 text-xs text-muted-foreground">#{index + 1}</span>
               <span className="font-medium text-foreground">{registration.name}</span>
-              <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+              <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                {registration.is_goalkeeper ? (
+                  <span className="inline-flex items-center gap-1">🥅 Portero</span>
+                ) : registration.position ? (
+                  <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+                    {(() => {
+                      const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === registration.position);
+                      if (p) {
+                        const Icon = p.icon;
+                        return <><Icon className="size-3" aria-hidden="true" />{p.label}</>;
+                      }
+                      return `⚽ ${registration.position}`;
+                    })()}
+                  </span>
+                ) : (
+                  <span>⚽ Jugador de campo</span>
+                )}
+              </span>
             </div>
             <div className="ml-3 flex items-center gap-2">
               {isCreator && (
@@ -611,10 +651,27 @@ export function PlayersPanel() {
             <p className="mt-4 mb-1 text-xs font-semibold uppercase tracking-wide text-amber-400">Suplentes ({suplentes.length}/{MAX_SUBSTITUTE_SLOTS})</p>
             {suplentes.map((registration, index) => (
               <div key={registration.id} className="flex items-center justify-between rounded border border-amber-800/40 bg-muted p-2.5 transition hover:bg-muted">
-                <div className="flex-1">
+                <div className="flex-1 min-w-0">
                   <span className="mr-2 inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300">S{index + 1}</span>
                   <span className="font-medium text-foreground">{registration.name}</span>
-                  <span className="mt-0.5 block text-xs text-muted-foreground">{registration.is_goalkeeper ? "🥅 Portero" : "⚽ Jugador de campo"}</span>
+                  <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+                    {registration.is_goalkeeper ? (
+                      <span className="inline-flex items-center gap-1">🥅 Portero</span>
+                    ) : registration.position ? (
+                      <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary">
+                        {(() => {
+                          const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === registration.position);
+                          if (p) {
+                            const Icon = p.icon;
+                            return <><Icon className="size-3" aria-hidden="true" />{p.label}</>;
+                          }
+                          return `⚽ ${registration.position}`;
+                        })()}
+                      </span>
+                    ) : (
+                      <span>⚽ Jugador de campo</span>
+                    )}
+                  </span>
                 </div>
                 <div className="ml-3 flex items-center gap-2">
                   {isCreator && (

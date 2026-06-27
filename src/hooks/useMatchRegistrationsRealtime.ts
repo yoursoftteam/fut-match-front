@@ -25,6 +25,37 @@ function dedupeRegistrationsById(items: PlayerRegistration[]): PlayerRegistratio
   )
 }
 
+async function resolvePositions(registrations: PlayerRegistration[]): Promise<PlayerRegistration[]> {
+  const userIds = registrations
+    .filter((r) => r.user_id && !r.position)
+    .map((r) => r.user_id)
+    .filter(Boolean) as string[]
+
+  if (userIds.length === 0) return registrations
+
+  try {
+    const { data, error } = await supabase
+      .rpc('resolve_registration_positions', { p_user_ids: userIds })
+
+    if (error || !data) return registrations
+
+    const posMap = new Map<string, string>()
+    const rows = data as Array<{ user_id: string; position: string }>
+    for (const row of rows) {
+      if (row.position) posMap.set(row.user_id, row.position)
+    }
+
+    return registrations.map((r) => {
+      if (!r.position && r.user_id && posMap.has(r.user_id)) {
+        return { ...r, position: posMap.get(r.user_id) }
+      }
+      return r
+    })
+  } catch {
+    return registrations
+  }
+}
+
 export function useMatchRegistrationsRealtime(matchId: string) {
   const [registrations, setRegistrations] = useState<PlayerRegistration[]>([])
   const [loading, setLoading] = useState(true)
@@ -41,7 +72,8 @@ export function useMatchRegistrationsRealtime(matchId: string) {
         .order('registered_at', { ascending: true })
 
       if (fetchError) throw fetchError
-      setRegistrations(dedupeRegistrationsById(data || []))
+      const resolved = await resolvePositions(data || [])
+      setRegistrations(dedupeRegistrationsById(resolved))
     } catch (err) {
       console.error('[Realtime] Error loading registrations:', err)
       setError(err instanceof Error ? err.message : 'Error desconocido')
@@ -80,13 +112,17 @@ export function useMatchRegistrationsRealtime(matchId: string) {
           const oldData = payload.old as unknown
 
           if (payload.eventType === 'INSERT') {
-            const newReg = newData as PlayerRegistration
-            setRegistrations((prev) => {
-              if (prev.some((reg) => reg.id === newReg.id)) {
-                return prev
-              }
-              return dedupeRegistrationsById([...prev, newReg])
-            })
+            const rawReg = newData as PlayerRegistration
+            const resolveAndAdd = async () => {
+              const resolved = (await resolvePositions([rawReg]))[0] ?? rawReg
+              setRegistrations((prev) => {
+                if (prev.some((reg) => reg.id === resolved.id)) {
+                  return prev
+                }
+                return dedupeRegistrationsById([...prev, resolved])
+              })
+            }
+            void resolveAndAdd()
           } else if (payload.eventType === 'DELETE') {
             const oldReg = oldData as PlayerRegistration
             if (oldReg?.id) {
@@ -95,14 +131,18 @@ export function useMatchRegistrationsRealtime(matchId: string) {
               void loadInitialData()
             }
           } else if (payload.eventType === 'UPDATE') {
-            const updatedReg = newData as PlayerRegistration
-            setRegistrations((prev) =>
-              dedupeRegistrationsById(
-                prev.some((reg) => reg.id === updatedReg.id)
-                  ? prev.map((reg) => (reg.id === updatedReg.id ? updatedReg : reg))
-                  : [...prev, updatedReg]
+            const rawUpdated = newData as PlayerRegistration
+            const resolveAndUpdate = async () => {
+              const resolved = (await resolvePositions([rawUpdated]))[0] ?? rawUpdated
+              setRegistrations((prev) =>
+                dedupeRegistrationsById(
+                  prev.some((reg) => reg.id === resolved.id)
+                    ? prev.map((reg) => (reg.id === resolved.id ? resolved : reg))
+                    : [...prev, resolved]
+                )
               )
-            )
+            }
+            void resolveAndUpdate()
           }
         }
       )

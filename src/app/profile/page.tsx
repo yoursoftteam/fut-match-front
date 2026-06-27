@@ -6,20 +6,16 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { User, Mail, AtSign, Save, ArrowLeft, Shield, Gauge, Crosshair } from 'lucide-react'
+import { User, Mail, AtSign, Save, ArrowLeft, Shield } from 'lucide-react'
 import Link from 'next/link'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { POSITIONS, type PositionOption } from '@/lib/positions'
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const POSITIONS = [
-    { value: "portero", label: "Portero", icon: Shield },
-    { value: "defensa", label: "Defensa", icon: Shield },
-    { value: "centrocampista", label: "Centrocampista", icon: Gauge },
-    { value: "delantero", label: "Delantero", icon: Crosshair },
-  ] as const;
+  const SHARED_POSITIONS = POSITIONS as readonly PositionOption[];
 
   const [alias, setAlias] = useState('')
   const [fullName, setFullName] = useState('')
@@ -88,11 +84,18 @@ export default function ProfilePage() {
 
       if (error) throw error
 
-      if (user.id) {
+      if (user.id && position) {
         await supabase
           .from('match_registrations')
-          .update({ position: position || null })
+          .update({ position })
           .eq('user_id', user.id)
+      }
+      if (position && trimmedAlias) {
+        await supabase
+          .from('match_registrations')
+          .update({ position })
+          .is('user_id', null)
+          .ilike('name', trimmedAlias)
       }
 
       setMessage('Perfil actualizado correctamente.')
@@ -183,7 +186,7 @@ export default function ProfilePage() {
                   <SelectValue placeholder="Selecciona tu posición…" />
                 </SelectTrigger>
                 <SelectContent>
-                  {POSITIONS.map((pos) => {
+                  {SHARED_POSITIONS.map((pos) => {
                     const Icon = pos.icon;
                     return (
                       <SelectItem key={pos.value} value={pos.value}>

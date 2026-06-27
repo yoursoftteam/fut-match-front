@@ -309,7 +309,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     matchId: string,
     name: string,
     isGoalkeeper: boolean,
-    options?: { trackCurrentUser?: boolean },
+    options?: { trackCurrentUser?: boolean; position?: string },
   ) => {
     try {
       // Validate inputs
@@ -336,17 +336,22 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       }
 
       const trackCurrentUser = options?.trackCurrentUser ?? false
+      const explicitPosition = options?.position?.trim() || undefined
       const { data: { user } } = await supabase.auth.getUser()
 
       if (user && !trackCurrentUser) {
+        const insertPayload: Record<string, unknown> = {
+          match_id: normalizedMatchId,
+          name: trimmedName,
+          is_goalkeeper: isGoalkeeper,
+          user_id: null,
+        }
+        if (explicitPosition) {
+          insertPayload.position = explicitPosition
+        }
         const directInsertResult = await supabase
           .from('match_registrations')
-          .insert([{
-            match_id: normalizedMatchId,
-            name: trimmedName,
-            is_goalkeeper: isGoalkeeper,
-            user_id: null,
-          }])
+          .insert([insertPayload])
           .select('id, name, is_goalkeeper, registered_at, has_paid, paid_at, paid_by, user_id')
           .single()
 
@@ -366,10 +371,11 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       // Avoid duplicating pre-checks in client to prevent stale-count mismatches.
 
       const userPosition = (user?.user_metadata as Record<string, unknown> | null)?.position as string | undefined
+      const effectivePosition = explicitPosition || userPosition
 
       const updateRegistrationPosition = async (regId: string) => {
-        if (!userPosition || !user || !trackCurrentUser) return
-        await supabase.from('match_registrations').update({ position: userPosition }).eq('id', regId)
+        if (!effectivePosition || !user || !trackCurrentUser) return
+        await supabase.from('match_registrations').update({ position: effectivePosition }).eq('id', regId)
       }
 
       const selfUnregisterToken = generateSelfUnregisterToken()
@@ -393,8 +399,8 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
           user_id: trackCurrentUser ? (user?.id ?? null) : null,
         }
 
-        if (userPosition && trackCurrentUser) {
-          insertPayload.position = userPosition
+        if (effectivePosition && (trackCurrentUser || explicitPosition)) {
+          insertPayload.position = effectivePosition
         }
 
         const legacyResult = await supabase
@@ -478,7 +484,11 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         throw new Error('No se pudo crear la inscripción.')
       }
 
-      void updateRegistrationPosition(data.id)
+      try {
+        await updateRegistrationPosition(data.id)
+      } catch {
+        console.warn('No se pudo actualizar la posición en la inscripción')
+      }
 
       return {
         data,
