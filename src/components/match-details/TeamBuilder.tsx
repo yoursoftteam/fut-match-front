@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useTeamBuilder } from "@/hooks/useTeamBuilder";
 import { useMatches } from "@/hooks/useMatches";
+import { POSITIONS, type PositionOption } from "@/lib/positions";
 import { TeamFieldImage } from "./TeamFieldImage";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { createPortal } from "react-dom";
@@ -421,6 +422,18 @@ function PoolZone({ unassigned, draggingId, dragOverZone, onDragOver, onDrop, on
             >
               <span aria-hidden>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
               <span>{player.name}</span>
+              {!player.is_goalkeeper && player.position && (
+                <span className="ml-auto inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                  {(() => {
+                    const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === player.position);
+                    if (p) {
+                      const Icon = p.icon;
+                      return <><Icon className="size-2.5" aria-hidden="true" />{p.label}</>;
+                    }
+                    return player.position;
+                  })()}
+                </span>
+              )}
             </div>
             <div className="flex flex-wrap justify-end gap-1">
               <button type="button" className="rounded border border-blue-500/60 bg-blue-600/15 px-2 py-0.5 text-xs font-medium text-blue-300 hover:bg-blue-600/25" onClick={() => onAssign(player.id, "A")} aria-label={`Asignar ${player.name} al equipo A`}>
@@ -503,6 +516,18 @@ function TeamZoneColumn({ team, list, isOver, accentColor, isTeamFull, playersPe
           >
             <span>{player.is_goalkeeper ? "🥅" : "⚽"}</span>
             <span className="font-medium">{player.name}</span>
+            {!player.is_goalkeeper && player.position && (
+              <span className="ml-auto inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-[10px] text-primary">
+                {(() => {
+                  const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === player.position);
+                  if (p) {
+                    const Icon = p.icon;
+                    return <><Icon className="size-2.5" aria-hidden="true" />{p.label}</>;
+                  }
+                  return player.position;
+                })()}
+              </span>
+            )}
           </div>
         ))}
         {list.length === 0 && (

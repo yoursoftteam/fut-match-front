@@ -6,15 +6,20 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
 import { useEffect, useState } from 'react'
-import { User, Mail, AtSign, Save, ArrowLeft } from 'lucide-react'
+import { User, Mail, AtSign, Save, ArrowLeft, Shield } from 'lucide-react'
 import Link from 'next/link'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { POSITIONS, type PositionOption } from '@/lib/positions'
 
 export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
+  const SHARED_POSITIONS = POSITIONS as readonly PositionOption[];
+
   const [alias, setAlias] = useState('')
   const [fullName, setFullName] = useState('')
+  const [position, setPosition] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
@@ -36,6 +41,7 @@ export default function ProfilePage() {
     const metadata = user.user_metadata as Record<string, unknown> | null
     setAlias((metadata?.alias as string) || '')
     setFullName((metadata?.full_name as string) || '')
+    setPosition((metadata?.position as string) || '')
   }, [user])
 
   if (authLoading) {
@@ -72,10 +78,26 @@ export default function ProfilePage() {
           alias: trimmedAlias,
           name: trimmedAlias,
           full_name: trimmedFullName,
+          position: position || currentMetadata.position,
         },
       })
 
       if (error) throw error
+
+      if (user.id && position) {
+        await supabase
+          .from('match_registrations')
+          .update({ position })
+          .eq('user_id', user.id)
+      }
+      if (position && trimmedAlias) {
+        await supabase
+          .from('match_registrations')
+          .update({ position })
+          .is('user_id', null)
+          .ilike('name', trimmedAlias)
+      }
+
       setMessage('Perfil actualizado correctamente.')
       setMessageType('success')
     } catch {
@@ -151,6 +173,32 @@ export default function ProfilePage() {
               />
               <p className="mt-1 text-xs text-muted-foreground">
                 Tu apodo en la cancha. Si es igual a tu nombre completo, el dashboard te pedirá que lo personalices.
+              </p>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Shield className="size-3.5" />
+                Posición en la cancha
+              </label>
+              <Select value={position} onValueChange={(v) => { if (v) setPosition(v); }}>
+                <SelectTrigger className="w-full" aria-label="Seleccionar posición">
+                  <SelectValue placeholder="Selecciona tu posición…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHARED_POSITIONS.map((pos) => {
+                    const Icon = pos.icon;
+                    return (
+                      <SelectItem key={pos.value} value={pos.value}>
+                        <Icon className="size-4" aria-hidden="true" />
+                        {pos.label}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Ayuda a los capitanes a reconocer tu puesto al inscribirte.
               </p>
             </div>
           </div>

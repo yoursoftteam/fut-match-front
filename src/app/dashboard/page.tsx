@@ -11,15 +11,19 @@ import MisPrediccionesSection from '@/components/MisPrediccionesSection'
 import SaveFrecuenteButton from '@/components/SaveFrecuenteButton'
 import MatchGroupedList from '@/components/MatchGroupedList'
 import { ConfirmDialog } from '@/components/ConfirmDialog'
+import { POSITIONS, type PositionOption } from '@/lib/positions'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { formatLocalTime } from '@/lib/date-utils'
-import { getLocalTimeInputValue } from '@/lib/date-utils'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { getLocalTimeInputValue, formatLocalTime } from '@/lib/date-utils'
 import { supabase } from '@/lib/supabase'
+
+type UserMetadata = { alias?: string; full_name?: string; name?: string; position?: string };
 
 interface RegisteredMatchCardItem {
   registrationId: string
   match: Match
+  position?: string | null
 }
 
 function isUuid(value: string): boolean {
@@ -99,6 +103,17 @@ export default function DashboardPage() {
     }
     return false;
   });
+  const SHARED_POSITIONS = POSITIONS as readonly PositionOption[];
+  const [selectedPosition, setSelectedPosition] = useState("");
+  const [savedPosition, setSavedPosition] = useState("");
+  const [positionSaving, setPositionSaving] = useState(false);
+  const [positionMessage, setPositionMessage] = useState<string | null>(null);
+  const [positionDismissed, setPositionDismissed] = useState(() => {
+    if (typeof window !== "undefined") {
+      return localStorage.getItem("dashboard-position-dismissed") === "true";
+    }
+    return false;
+  });
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -119,7 +134,7 @@ export default function DashboardPage() {
       try {
         setRegisteredMatchesLoading(true)
 
-        const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+        const metadata = user.user_metadata as UserMetadata | null
         const preferredName = (
           metadata?.alias ||
           metadata?.name ||
@@ -130,7 +145,7 @@ export default function DashboardPage() {
 
         const { data: byUserIdData, error: byUserIdError } = await supabase
           .from('match_registrations')
-          .select('id, match_id, registered_at')
+          .select('id, match_id, registered_at, position')
           .eq('user_id', user.id)
           .order('registered_at', { ascending: false })
 
@@ -140,12 +155,13 @@ export default function DashboardPage() {
           id: string
           match_id: string
           registered_at: string
+          position: string | null
         }> = []
 
         if (preferredName.length >= 2) {
           const { data: byNameData, error: byNameError } = await supabase
             .from('match_registrations')
-            .select('id, match_id, registered_at')
+            .select('id, match_id, registered_at, position')
             .is('user_id', null)
             .ilike('name', preferredName)
             .order('registered_at', { ascending: false })
@@ -154,8 +170,8 @@ export default function DashboardPage() {
           legacyByNameData = (byNameData || []) as typeof legacyByNameData
         }
 
-        const combinedRows = [
-          ...(((byUserIdData || []) as Array<{ id: string; match_id: string; registered_at: string }>)),
+        const combinedRows: Array<{ id: string; match_id: string; registered_at: string; position: string | null }> = [
+          ...((byUserIdData || []) as Array<{ id: string; match_id: string; registered_at: string; position: string | null }>),
           ...legacyByNameData,
         ]
 
@@ -180,7 +196,7 @@ export default function DashboardPage() {
           const match = byMatchId.get(row.match_id)
           if (!match) continue
           seen.add(row.match_id)
-          orderedMatches.push({ registrationId: row.id, match })
+          orderedMatches.push({ registrationId: row.id, match, position: row.position })
         }
 
         if (!cancelled) {
@@ -224,13 +240,48 @@ export default function DashboardPage() {
       return
     }
 
-    const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+    const metadata = user.user_metadata as UserMetadata | null
     const baseAlias = (metadata?.alias || metadata?.name || metadata?.full_name || '').trim()
 
     setSavedAlias(metadata?.alias?.trim() || null)
     setAliasDraft(baseAlias)
     setAliasMessage(null)
   }, [user])
+
+  useEffect(() => {
+    if (!user) {
+      setSelectedPosition("");
+      setPositionMessage(null);
+      return;
+    }
+    const metadata = user.user_metadata as UserMetadata | null;
+    setSelectedPosition(metadata?.position?.trim() || "");
+    setSavedPosition(metadata?.position?.trim() || "");
+    setPositionMessage(null);
+  }, [user]);
+
+  const handleSavePosition = async () => {
+    if (!user || !selectedPosition) return;
+    setPositionSaving(true);
+    setPositionMessage(null);
+    try {
+      const currentMetadata = (user.user_metadata ?? {}) as Record<string, unknown>;
+      const { error } = await supabase.auth.updateUser({
+        data: { ...currentMetadata, position: selectedPosition },
+      });
+      if (error) throw error;
+      setPositionDismissed(true);
+      setSavedPosition(selectedPosition);
+      if (typeof window !== "undefined") {
+        localStorage.setItem("dashboard-position-dismissed", "true");
+      }
+      setPositionMessage("Posición guardada correctamente.");
+    } catch {
+      setPositionMessage("No pudimos guardar tu posición. Intenta nuevamente.");
+    } finally {
+      setPositionSaving(false);
+    }
+  };
 
   const handleQuickUnregister = async (registrationId: string, matchId: string) => {
     if (!user) {
@@ -245,7 +296,7 @@ export default function DashboardPage() {
       let effectiveRegistrationId = registrationId
 
       if (!isUuid(effectiveRegistrationId)) {
-        const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+        const metadata = user.user_metadata as UserMetadata | null
         const preferredName = (
           metadata?.alias ||
           metadata?.name ||
@@ -365,7 +416,7 @@ export default function DashboardPage() {
   const isInitialMatchesLoading = matchesLoading && recentMatches.length === 0
   const isRefreshingMatches = matchesLoading && recentMatches.length > 0
 
-  const metadata = user.user_metadata as { alias?: string; full_name?: string; name?: string } | null
+  const metadata = user.user_metadata as UserMetadata | null
   const resolvedAlias = (savedAlias || metadata?.alias || '').trim()
   const fullName = (metadata?.full_name || '').trim()
   const needsAlias = !resolvedAlias || (!!fullName && resolvedAlias === fullName)
@@ -381,6 +432,10 @@ export default function DashboardPage() {
   if (userName.length > 0) {
     userName = userName.charAt(0).toUpperCase() + userName.slice(1)
   }
+
+  const savedPositionValue = savedPosition || metadata?.position || '';
+  const currentPosition = SHARED_POSITIONS.find((p) => p.value === savedPositionValue);
+  const PositionIcon = currentPosition?.icon ?? null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -411,6 +466,39 @@ export default function DashboardPage() {
           </section>
         )}
 
+        {!savedPosition && !positionDismissed && (
+          <section className="mb-6 rounded-2xl border border-primary/35 bg-primary/10 p-4 sm:p-5">
+            <p className="text-sm font-semibold text-foreground">¿Cuál es tu posición?</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Selecciona dónde juegas para que los capitanes te reconozcan al inscribirte.
+            </p>
+            <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+              <Select value={selectedPosition} onValueChange={(v) => { if (v) setSelectedPosition(v); }}>
+                <SelectTrigger className="sm:max-w-sm w-full" aria-label="Seleccionar posición">
+                  <SelectValue placeholder="Elige tu posición…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {SHARED_POSITIONS.map((pos) => {
+                    const Icon = pos.icon;
+                    return (
+                      <SelectItem key={pos.value} value={pos.value}>
+                        <Icon className="size-4" aria-hidden="true" />
+                        {pos.label}
+                      </SelectItem>
+                    );
+                  })}
+                </SelectContent>
+              </Select>
+              <Button type="button" onClick={handleSavePosition} disabled={positionSaving || !selectedPosition}>
+                {positionSaving ? 'Guardando...' : 'Guardar posición'}
+              </Button>
+            </div>
+            {positionMessage && (
+              <p className="mt-2 text-xs text-foreground">{positionMessage}</p>
+            )}
+          </section>
+        )}
+
         {/* Welcome */}
         <section className="mb-8">
           <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
@@ -421,6 +509,12 @@ export default function DashboardPage() {
               <h1 className="text-3xl sm:text-4xl font-heading font-bold text-foreground leading-tight">
                 Hola, <span className="text-primary">{userName}</span>
               </h1>
+              {currentPosition && PositionIcon && (
+                <div className="mt-2 flex items-center gap-1.5 text-sm text-muted-foreground">
+                  <PositionIcon className="size-4" aria-hidden="true" />
+                  <span>{currentPosition.label}</span>
+                </div>
+              )}
               <p className="text-muted-foreground mt-1 text-sm">
                 Gestiona tus partidos, predicciones y demuestra tu nivel.
               </p>
@@ -695,7 +789,7 @@ export default function DashboardPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
-              {registeredMatches.map(({ registrationId, match }) => {
+              {registeredMatches.map(({ registrationId, match, position }) => {
                 const regCount = registrationCounts[match.id] || 0;
                 const isFull = regCount >= match.max_players;
                 return (
@@ -708,6 +802,18 @@ export default function DashboardPage() {
                         <h3 className="text-base font-heading font-bold text-card-foreground leading-tight truncate">
                         {match.title}
                       </h3>
+                      {position && (
+                        <span className="mt-1 inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-xs text-primary">
+                          {(() => {
+                            const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === position);
+                            if (p) {
+                              const Icon = p.icon;
+                              return <><Icon className="size-3" aria-hidden="true" />{p.label}</>;
+                            }
+                            return position;
+                          })()}
+                        </span>
+                      )}
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
                       <InlineShareButton matchId={match.id} />
