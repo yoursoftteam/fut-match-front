@@ -227,13 +227,24 @@ export async function POST(request: NextRequest) {
       standingsByGroup[gn] = calculateStandings(gm)
     }
 
-    const { data: thirdData } = await supabase
-      .from('bet_best_third_qualifiers')
-      .select('group_name, team_id')
+    const { data: pools } = await supabase
+      .from('bet_pools')
+      .select('id')
+      .eq('tournament_id', tournament_id)
+      .limit(1)
 
-    const thirdQualifiers = new Map<string, string>()
-    for (const t of (thirdData || []) as Array<{ group_name: string; team_id: string }>) {
-      thirdQualifiers.set(t.group_name, t.team_id)
+    const somePoolId = (pools && pools.length > 0) ? (pools[0] as { id: string }).id : null
+    let thirdQualifiers = new Map<string, string>()
+
+    if (somePoolId) {
+      const { data: thirdData } = await supabase
+        .from('bet_best_third_qualifiers')
+        .select('group_name, team_id')
+        .eq('pool_id', somePoolId)
+
+      for (const t of (thirdData || []) as Array<{ group_name: string; team_id: string }>) {
+        thirdQualifiers.set(t.group_name, t.team_id)
+      }
     }
 
     const generated: Array<{
@@ -291,24 +302,13 @@ export async function POST(request: NextRequest) {
 
     const qualifiedSet = new Map<string, { team_id: string; team_name: string; flag_svg_url?: string }>()
 
-    for (const [gn, teams] of Object.entries(standingsByGroup)) {
-      const top2 = teams.slice(0, 2)
-      for (const t of top2) {
+    for (const teams of Object.values(standingsByGroup)) {
+      for (const t of teams) {
         if (!qualifiedSet.has(t.team_id)) {
           qualifiedSet.set(t.team_id, {
             team_id: t.team_id,
             team_name: t.team_name,
             flag_svg_url: t.flag_svg_url,
-          })
-        }
-      }
-
-      if (teams.length > 2 && thirdQualifiers.has(gn) && thirdQualifiers.get(gn) === teams[2].team_id) {
-        if (!qualifiedSet.has(teams[2].team_id)) {
-          qualifiedSet.set(teams[2].team_id, {
-            team_id: teams[2].team_id,
-            team_name: teams[2].team_name,
-            flag_svg_url: teams[2].flag_svg_url,
           })
         }
       }
