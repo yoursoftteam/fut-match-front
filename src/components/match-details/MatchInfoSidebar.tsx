@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { FileTextIcon } from "lucide-react";
+import { FileTextIcon, PencilIcon, ShirtIcon, Trash2Icon, UserXIcon, BookmarkPlusIcon, BookmarkMinusIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
@@ -161,34 +161,45 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
             </div>
           )}
 
+          {!expanded && isCreator && !showForm && !matchData.rules && (
+            <span className="mt-1 inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wider text-amber-400">
+              <FileTextIcon className="h-3 w-3" aria-hidden="true" />
+              Sin reglas
+            </span>
+          )}
           {/* Always-visible on mobile: status + actions + share */}
           <p className={`mt-3 text-sm ${colorStatus}`}>{tituloStatus}</p>
           {isCreator && !showForm && (
             <div className="mt-3 flex flex-col gap-2">
-              <button type="button" onClick={openForm} className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition">Editar partido</button>
-              <button type="button" onClick={onOpenTeamBuilder} className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Armar equipos</button>
+              <button type="button" onClick={openForm} className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition inline-flex items-center justify-center gap-2"><PencilIcon className="h-4 w-4" aria-hidden="true" />Editar partido</button>
+              <button type="button" onClick={onOpenTeamBuilder} className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 inline-flex items-center justify-center gap-2"><ShirtIcon className="h-4 w-4" aria-hidden="true" />Armar equipos</button>
               <button
                 type="button"
                 onClick={() => setShowClearRegistrationsConfirm(true)}
                 disabled={clearingRegistrations || registrations.length === 0}
-                className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center gap-2"
               >
+                <UserXIcon className="h-4 w-4" aria-hidden="true" />
                 {clearingRegistrations ? "Eliminando inscritos..." : `Eliminar inscritos (${registrations.length})`}
               </button>
               {existingTemplateId ? (
-                <button type="button" disabled={loadingFrec} onClick={async () => { const ok = await deleteTemplateByMatchId(matchData.id); if (ok) setExistingTemplateId(null) }} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
+                <button type="button" disabled={loadingFrec} onClick={async () => { const ok = await deleteTemplateByMatchId(matchData.id); if (ok) setExistingTemplateId(null) }} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10 inline-flex items-center justify-center gap-2">
+                  <BookmarkMinusIcon className="h-4 w-4" aria-hidden="true" />
                   {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
                 </button>
               ) : matchData.source_template_id ? (
-                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
+                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10 inline-flex items-center justify-center gap-2">
+                  <BookmarkPlusIcon className="h-4 w-4" aria-hidden="true" />
                   {showSaveFrecuente ? "Cancelar" : "Guardar como nueva plantilla"}
                 </button>
               ) : (
-                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
+                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10 inline-flex items-center justify-center gap-2">
+                  <BookmarkPlusIcon className="h-4 w-4" aria-hidden="true" />
                   {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
                 </button>
               )}
-              <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center gap-2">
+                <Trash2Icon className="h-4 w-4" aria-hidden="true" />
                 {deletingMatch ? "Eliminando..." : "Eliminar partido"}
               </button>
             </div>
@@ -202,7 +213,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           )}
         </div>
 
-        {/* ── DESKTOP (max-lg:hidden) ── sin cambios respecto al original ── */}
+        {/* ── DESKTOP (max-lg:hidden) ── */}
         <div className="max-lg:hidden p-6">
           <h1 className="text-2xl font-bold text-foreground">{matchData.title}</h1>
           <p className="mt-2 text-sm text-muted-foreground">Fecha: {formattedDate}</p>
@@ -237,30 +248,35 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           <p className={`mt-3 text-sm ${colorStatus}`}>{tituloStatus}</p>
           {isCreator && !showForm && (
             <div className="mt-4 flex flex-col gap-2">
-              <button type="button" onClick={openForm} className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition">Editar partido</button>
-              <button type="button" onClick={onOpenTeamBuilder} className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700">Armar equipos</button>
+              <button type="button" onClick={openForm} className="btn-primary-fm rounded px-4 py-2 text-sm font-semibold transition inline-flex items-center justify-center gap-2"><PencilIcon className="h-4 w-4" aria-hidden="true" />Editar partido</button>
+              <button type="button" onClick={onOpenTeamBuilder} className="rounded border border-blue-600 bg-blue-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-blue-700 inline-flex items-center justify-center gap-2"><ShirtIcon className="h-4 w-4" aria-hidden="true" />Armar equipos</button>
               <button
                 type="button"
                 onClick={() => setShowClearRegistrationsConfirm(true)}
                 disabled={clearingRegistrations || registrations.length === 0}
-                className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-300 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center gap-2"
               >
+                <UserXIcon className="h-4 w-4" aria-hidden="true" />
                 {clearingRegistrations ? "Eliminando inscritos..." : `Eliminar inscritos (${registrations.length})`}
               </button>
               {existingTemplateId ? (
-                <button type="button" disabled={loadingFrec} onClick={async () => { const ok = await deleteTemplateByMatchId(matchData.id); if (ok) setExistingTemplateId(null) }} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
+                <button type="button" disabled={loadingFrec} onClick={async () => { const ok = await deleteTemplateByMatchId(matchData.id); if (ok) setExistingTemplateId(null) }} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10 inline-flex items-center justify-center gap-2">
+                  <BookmarkMinusIcon className="h-4 w-4" aria-hidden="true" />
                   {loadingFrec ? "Eliminando..." : "Remover de frecuentes"}
                 </button>
               ) : matchData.source_template_id ? (
-                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
+                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10 inline-flex items-center justify-center gap-2">
+                  <BookmarkPlusIcon className="h-4 w-4" aria-hidden="true" />
                   {showSaveFrecuente ? "Cancelar" : "Guardar como nueva plantilla"}
                 </button>
               ) : (
-                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10">
+                <button type="button" onClick={() => setShowSaveFrecuente(!showSaveFrecuente)} className="rounded border border-red-400/30 text-red-400 px-4 py-2 text-sm font-semibold transition hover:bg-red-500/10 inline-flex items-center justify-center gap-2">
+                  <BookmarkPlusIcon className="h-4 w-4" aria-hidden="true" />
                   {showSaveFrecuente ? "Cancelar" : "Guardar como frecuente"}
                 </button>
               )}
-              <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60">
+              <button type="button" onClick={() => setShowDeleteConfirm(true)} disabled={deletingMatch} className="rounded border border-red-500/40 px-4 py-2 text-sm font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 inline-flex items-center justify-center gap-2">
+                <Trash2Icon className="h-4 w-4" aria-hidden="true" />
                 {deletingMatch ? "Eliminando..." : "Eliminar partido"}
               </button>
             </div>
