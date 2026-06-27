@@ -234,7 +234,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     const somePoolId = (pools && pools.length > 0) ? (pools[0] as { id: string }).id : null
-    let thirdQualifiers = new Map<string, string>()
+    const thirdQualifiers = new Map<string, string>()
 
     if (somePoolId) {
       const { data: thirdData } = await supabase
