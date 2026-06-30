@@ -154,7 +154,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
                     <div className="pt-2">
                       <Separator />
                       <div className="mt-4">
-                        <MatchShareSection matchData={matchData} />
+                        <MatchShareSection matchData={matchData} registrations={registrations} />
                       </div>
                     </div>
                   )}
@@ -294,7 +294,7 @@ export function MatchInfoSidebar({ onOpenTeamBuilder, editing }: MatchInfoSideba
           {isCreator && matchData && (
             <div className="mt-6 space-y-4">
               <Separator />
-              <MatchShareSection matchData={matchData} />
+              <MatchShareSection matchData={matchData} registrations={registrations} />
             </div>
           )}
         </div>
