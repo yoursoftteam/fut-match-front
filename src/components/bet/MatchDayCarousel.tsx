@@ -142,7 +142,7 @@ export function MatchDayCarousel({
         <div className="flex items-center gap-2 rounded-lg border border-blue-500/20 bg-blue-500/5 px-4 py-2.5 text-sm">
           <Info className="size-4 shrink-0 text-blue-400" aria-hidden="true" />
           <span className="text-muted-foreground">
-            Los puntos calculados por clasificados se reflejan al finalizar todos los grupos
+            Los puntos obtenidos por los equipos clasificados ya han sido integrados en el puntaje total
           </span>
         </div>
       )}

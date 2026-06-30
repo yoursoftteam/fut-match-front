@@ -9,12 +9,14 @@ import { PoolMatches } from './PoolMatches'
 import { GroupStandingsModal } from './GroupStandingsModal'
 import { ShareActions } from '@/components/ShareLink'
 import { PoolRules } from './PoolRules'
+import { GroupClassificationSummary } from './GroupClassificationSummary'
+import { MyPointsSummaryModal } from './MyPointsSummaryModal'
 import { MatchDayCarousel, type CarouselMatchData } from './MatchDayCarousel'
-import { ArrowLeft, Calendar, FileText, Globe, Lock, Trophy, Users } from 'lucide-react'
+import { ArrowLeft, BarChart3, Calendar, FileText, Globe, LayoutGrid, Lock, Trophy, Users } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { Match, Team } from '@/types/bet'
 
-type Tab = 'ranking' | 'matches' | 'tournament' | 'rules'
+type Tab = 'ranking' | 'matches' | 'groups' | 'tournament' | 'rules'
 
 interface PoolDetailData {
   id: string
@@ -52,6 +54,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     predictions: Record<string, { home_score_predicted: number; away_score_predicted: number } | null>
   } | null>(null)
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null)
+  const [showPointsSummary, setShowPointsSummary] = useState(false)
   const [groupStandings, setGroupStandings] = useState<{
     matches: GroupStandingsMatch[]
     predictions: Map<string, { home_score_predicted: number; away_score_predicted: number }>
@@ -245,6 +248,7 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
     () => [
       { id: 'ranking', label: 'Ranking', icon: Trophy },
       { id: 'matches', label: 'Partidos', icon: Calendar },
+      ...(isPredictions ? [] : [{ id: 'groups' as const, label: 'Clasificados' as const, icon: LayoutGrid as typeof Trophy }]),
       ...(isPredictions ? [] : [{ id: 'tournament' as const, label: 'Predicciones' as const, icon: Globe as typeof Trophy }]),
       { id: 'rules', label: 'Reglas', icon: FileText },
     ],
@@ -317,6 +321,14 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
                 url: inviteUrl,
               }}
             />
+            <button
+              type="button"
+              onClick={() => setShowPointsSummary(true)}
+              className="flex w-full items-center justify-center gap-1.5 rounded-lg border border-border bg-card px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-muted"
+            >
+              <BarChart3 className="size-3.5" />
+              Ver resumen de mis puntos
+            </button>
             <div className="flex items-center gap-3 text-xs text-muted-foreground flex-nowrap">
               <span className="flex items-center gap-1 whitespace-nowrap">
                 {pool.visibility === 'public' ? <Globe className="size-3.5" /> : <Lock className="size-3.5" />}
@@ -414,10 +426,19 @@ export function PoolDetailView({ poolId }: PoolDetailViewProps) {
           <PoolMatches poolId={pool.id} tournamentId={pool.tournament_id} showGroupTable={!isPredictions} />
         )}
 
+        {tab === 'groups' && <GroupClassificationSummary poolId={pool.id} tournamentId={pool.tournament_id} />}
+
         {tab === 'tournament' && <TournamentPredictions poolId={pool.id} />}
 
         {tab === 'rules' && <PoolRules competitionType={pool.competition_type} config={pool.config_active} />}
 
+      {showPointsSummary && (
+        <MyPointsSummaryModal
+          poolId={pool.id}
+          open={showPointsSummary}
+          onClose={() => setShowPointsSummary(false)}
+        />
+      )}
       {selectedGroup && groupStandings && (
         <GroupStandingsModal
           groupName={selectedGroup}
