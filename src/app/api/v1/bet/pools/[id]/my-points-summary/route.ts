@@ -68,6 +68,18 @@ export async function GET(
       return NextResponse.json({ success: false, data: null, error: { code: 'UNAUTHORIZED', message: 'Invalid or expired token' } }, { status: 401 })
     }
 
+    const { data: pool } = await supabase
+      .from('bet_pools')
+      .select('id, competition_type')
+      .eq('id', poolId)
+      .single()
+
+    if (!pool) {
+      return NextResponse.json({ success: false, data: null, error: { code: 'NOT_FOUND', message: 'Pool not found' } }, { status: 404 })
+    }
+
+    const isPredictions = pool.competition_type === 'predictions'
+
     const { data: membership } = await supabase
       .from('bet_pool_members')
       .select('id')
@@ -169,8 +181,10 @@ export async function GET(
     }
 
     const groupPredictionMap = new Map<string, number>()
-    for (const detail of safeDetails.filter(d => d.source_type === 'group_prediction')) {
-      groupPredictionMap.set(detail.source_id, detail.points)
+    if (!isPredictions) {
+      for (const detail of safeDetails.filter(d => d.source_type === 'group_prediction')) {
+        groupPredictionMap.set(detail.source_id, detail.points)
+      }
     }
 
     const matchEntries = Array.from(matchEntriesMap.values()).sort((a, b) => {
@@ -190,7 +204,9 @@ export async function GET(
     }))
 
     const result: PointsSummaryResponse = {
-      total_points: safeDetails.reduce((sum, d) => sum + d.points, 0),
+      total_points: safeDetails
+        .filter(d => !isPredictions || d.source_type !== 'group_prediction')
+        .reduce((sum, d) => sum + d.points, 0),
       sections: {
         matches: {
           points: matchEntries.reduce((sum, e) => sum + e.points, 0),
