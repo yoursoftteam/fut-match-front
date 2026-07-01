@@ -32,14 +32,13 @@ import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 import type { Tournament, Match } from '@/types/bet'
 
-const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
 const EDGE_FN_URL = `${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/update-match-result`
 const LOCAL_API_URL = '/api/v1/admin/update-match-result'
 
 const STAGE_LABELS: Record<string, string> = {
   group_stage: 'Fase de Grupos',
-  round_of_32: 'Octavos de Final',
-  round_of_16: 'Octavos de Final',
+  round_of_32: '32avos de Final',
+  round_of_16: '16avos de Final',
   quarter_finals: 'Cuartos de Final',
   semi_finals: 'Semifinales',
   third_place: 'Tercer Puesto',
@@ -76,10 +75,8 @@ interface MatchEdit {
 }
 
 export default function AdminPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, loading: authLoading, isAdmin } = useAuth()
   const [activeTab, setActiveTab] = useState('scores')
-
-  const isAdmin = user?.id === ADMIN_USER_ID
 
   if (authLoading) {
     return (
@@ -700,6 +697,12 @@ interface ClassificationData {
 }
 
 function ClassificationTab() {
+  const getAuthHeaders = async (): Promise<Record<string, string>> => {
+    const { data: { session } } = await supabase.auth.getSession()
+    const token = session?.access_token
+    return token ? { Authorization: `Bearer ${token}` } : {}
+  }
+
   const [pools, setPools] = useState<Array<{ id: string; name: string }>>([])
   const [selectedPool, setSelectedPool] = useState<string | null>(null)
   const [data, setData] = useState<ClassificationData | null>(null)
@@ -710,16 +713,25 @@ function ClassificationTab() {
   const [calcResult, setCalcResult] = useState<any>(null)
   const [rawResponse, setRawResponse] = useState<string | null>(null)
 
-  const [tournamentId, setTournamentId] = useState<string | null>(null)
-  const [r32Matches, setR32Matches] = useState<Array<{
+  const KO_STAGES = ['round_of_32', 'round_of_16', 'quarter_finals', 'semi_finals', 'third_place', 'final'] as const
+  const emptyKO: Record<string, Array<{
     match_id: string; fifa_match_number: number; kickoff_at: string; venue: string;
-    home_placeholder: string; away_placeholder: string;
+    stage: string; home_placeholder: string; away_placeholder: string;
     home_team_id: string | null; away_team_id: string | null;
-  }>>([])
-  const [qualifiedTeams, setQualifiedTeams] = useState<Array<{ team_id: string; team_name: string; flag_svg_url?: string }>>([])
-  const [generatingR32, setGeneratingR32] = useState(false)
-  const [savingR32, setSavingR32] = useState(false)
-  const [r32Summary, setR32Summary] = useState<{ total: number; resolved: number; partial: number; unresolved: number } | null>(null)
+    home_score_official?: number; away_score_official?: number; status: string;
+  }>> = Object.fromEntries(KO_STAGES.map(s => [s, []]))
+
+  const [tournamentId, setTournamentId] = useState<string | null>(null)
+  const [knockoutMatches, setKnockoutMatches] = useState<Record<string, Array<{
+    match_id: string; fifa_match_number: number; kickoff_at: string; venue: string;
+    stage: string; home_placeholder: string; away_placeholder: string;
+    home_team_id: string | null; away_team_id: string | null;
+    home_score_official?: number; away_score_official?: number; status: string;
+  }>>>(emptyKO)
+  const [allTeams, setAllTeams] = useState<Array<{ team_id: string; team_name: string; flag_svg_url?: string }>>([])
+  const [generating, setGenerating] = useState<Record<string, boolean>>({})
+  const [savingKO, setSavingKO] = useState<Record<string, boolean>>({})
+  const [summary, setSummary] = useState<Record<string, { total: number; resolved: number; partial: number; unresolved: number } | null>>({})
 
   useEffect(() => {
     supabase
@@ -732,12 +744,13 @@ function ClassificationTab() {
   useEffect(() => {
     if (!selectedPool) { setData(null); return }
     setLoading(true)
-    fetch(`/api/v1/bet/admin/classification?pool_id=${selectedPool}`)
-      .then((r) => r.json())
-      .then((res) => {
-        if (res.success) setData(res.data)
-      })
-      .finally(() => setLoading(false))
+    ;(async () => {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch(`/api/v1/bet/admin/classification?pool_id=${selectedPool}`, { headers: authHeaders })
+      const json = await res.json()
+      if (json.success) setData(json.data)
+      setLoading(false)
+    })()
   }, [selectedPool])
 
   useEffect(() => {
@@ -751,46 +764,50 @@ function ClassificationTab() {
     if (!tournamentId) return
     supabase
       .from('bet_matches')
-      .select('id, fifa_match_number, kickoff_at, venue, home_placeholder, away_placeholder, home_team_id, away_team_id')
+      .select('id, fifa_match_number, kickoff_at, venue, stage, home_placeholder, away_placeholder, home_team_id, away_team_id, home_score_official, away_score_official, status')
       .eq('tournament_id', tournamentId)
-      .eq('stage', 'round_of_32')
+      .in('stage', KO_STAGES as unknown as string[])
       .order('fifa_match_number', { ascending: true })
-      .then(({ data: r32 }) => {
-        if (!r32 || r32.length === 0) return
-        const hasTeams = (r32 as any[]).some((m) => m.home_team_id || m.away_team_id)
-        if (!hasTeams) return
-        setR32Matches((r32 as any[]).map((m) => ({
-          match_id: m.id, fifa_match_number: m.fifa_match_number,
-          kickoff_at: m.kickoff_at, venue: m.venue,
-          home_placeholder: m.home_placeholder, away_placeholder: m.away_placeholder,
-          home_team_id: m.home_team_id, away_team_id: m.away_team_id,
-        })))
-        const resolved = (r32 as any[]).filter((m) => m.home_team_id && m.away_team_id).length
-        const partial = (r32 as any[]).filter((m) => m.home_team_id || m.away_team_id).length - resolved
-        setR32Summary({ total: r32.length, resolved, partial, unresolved: r32.length - resolved - partial })
+      .then(({ data: matches }) => {
+        if (!matches || matches.length === 0) return
+        const grouped: Record<string, any[]> = {}
+        for (const m of matches as any[]) {
+          if (!grouped[m.stage]) grouped[m.stage] = []
+          grouped[m.stage].push({ ...m, match_id: m.id })
+        }
+        setKnockoutMatches((prev) => ({ ...prev, ...grouped }))
+        const newSummary: Record<string, any> = {}
+        for (const [stage, stageMatches] of Object.entries(grouped)) {
+          const resolved = stageMatches.filter((m: any) => m.home_team_id && m.away_team_id).length
+          const partial = stageMatches.filter((m: any) => m.home_team_id || m.away_team_id).length - resolved
+          newSummary[stage] = { total: stageMatches.length, resolved, partial, unresolved: stageMatches.length - resolved - partial }
+        }
+        setSummary(newSummary)
       })
   }, [tournamentId])
 
   useEffect(() => {
-    if (!data || !tournamentId) return
-    const allTeams: Array<{ team_id: string; team_name: string; flag_svg_url?: string }> = []
-    for (const teams of Object.values(data.groupTeams)) {
-      for (const t of teams as any[]) {
-        const teamId = t.team_id || t.id
-        if (teamId && !allTeams.some((qt) => qt.team_id === teamId)) {
-          allTeams.push({ team_id: teamId, team_name: t.team_name, flag_svg_url: t.flag_svg_url })
+    if (!tournamentId) return
+    supabase
+      .from('bet_teams')
+      .select('id, name, flag_svg_url')
+      .order('name')
+      .then(({ data: teams }) => {
+        if (teams) {
+          setAllTeams((teams as any[]).map((t) => ({
+            team_id: t.id, team_name: t.name, flag_svg_url: t.flag_svg_url,
+          })))
         }
-      }
-    }
-    if (allTeams.length > 0) setQualifiedTeams(allTeams)
-  }, [data, tournamentId])
+      })
+  }, [tournamentId])
 
   const handleSetBestThird = async (groupName: string, teamId: string) => {
     setSaving(true)
     setStatusMsg(null)
+    const authHeaders = await getAuthHeaders()
     const res = await fetch('/api/v1/bet/admin/classification', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'set_best_third', pool_id: selectedPool, group_name: groupName, team_id: teamId }),
     })
     const json = await res.json()
@@ -810,9 +827,10 @@ function ClassificationTab() {
   const handleRemoveBestThird = async (groupName: string) => {
     setSaving(true)
     setStatusMsg(null)
+    const authHeaders = await getAuthHeaders()
     const res = await fetch('/api/v1/bet/admin/classification', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'remove_best_third', pool_id: selectedPool, group_name: groupName }),
     })
     const json = await res.json()
@@ -828,67 +846,88 @@ function ClassificationTab() {
     setSaving(false)
   }
 
-  const handleGenerateR32 = async () => {
+  const handleGenerate = async (stage: string) => {
     if (!tournamentId) return
-    setGeneratingR32(true)
-    setR32Summary(null)
+    setGenerating((prev) => ({ ...prev, [stage]: true }))
     try {
+      const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/v1/bet/admin/generate-round-of-32', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'generate', tournament_id: tournamentId }),
       })
       const json = await res.json()
       if (json.success) {
-        setR32Matches(json.data.matches.map((m: any) => ({
-          match_id: m.match_id, fifa_match_number: m.fifa_match_number,
-          kickoff_at: m.kickoff_at, venue: m.venue,
-          home_placeholder: m.home_placeholder, away_placeholder: m.away_placeholder,
-          home_team_id: m.home_team_id, away_team_id: m.away_team_id,
-        })))
-        setQualifiedTeams(json.data.qualified)
-        setR32Summary(json.data.summary)
+        setKnockoutMatches((prev) => {
+          const updated = { ...prev }
+          updated[stage] = json.data.matches.map((m: any) => ({
+            match_id: m.match_id, fifa_match_number: m.fifa_match_number,
+            kickoff_at: m.kickoff_at, venue: m.venue, stage,
+            home_placeholder: m.home_placeholder, away_placeholder: m.away_placeholder,
+            home_team_id: m.home_team_id, away_team_id: m.away_team_id,
+            home_score_official: null, away_score_official: null, status: 'scheduled',
+          }))
+          return updated
+        })
+        if (json.data.summary) {
+          setSummary((prev) => ({ ...prev, [stage]: json.data.summary }))
+        }
+        if (json.data.qualified) {
+          setAllTeams(json.data.qualified)
+        }
       }
     } catch (e) {
       console.error(e)
     } finally {
-      setGeneratingR32(false)
+      setGenerating((prev) => ({ ...prev, [stage]: false }))
     }
   }
 
-  const handleR32Edit = (matchId: string, field: 'home_team_id' | 'away_team_id', value: string) => {
-    setR32Matches((prev) => prev.map((m) => m.match_id === matchId ? { ...m, [field]: value || null } : m))
+  const handleKOEdit = (stage: string, idx: number, field: string, value: string) => {
+    setKnockoutMatches((prev) => {
+      const updated = { ...prev }
+      const matches = [...(updated[stage] || [])]
+      if (matches[idx]) {
+        matches[idx] = { ...matches[idx], [field]: value || null }
+      }
+      updated[stage] = matches
+      return updated
+    })
   }
 
-  const handleSaveR32 = async () => {
+  const handleSaveKO = async (stage: string) => {
     if (!tournamentId) return
-    setSavingR32(true)
+    const matches = knockoutMatches[stage]
+    if (!matches || matches.length === 0) return
+    setSavingKO((prev) => ({ ...prev, [stage]: true }))
     try {
+      const authHeaders = await getAuthHeaders()
       const res = await fetch('/api/v1/bet/admin/generate-round-of-32', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'save_matches',
           tournament_id: tournamentId,
-          matches: r32Matches.map((m) => ({ match_id: m.match_id, home_team_id: m.home_team_id, away_team_id: m.away_team_id })),
+          matches: matches.map((m) => ({ match_id: m.match_id, home_team_id: m.home_team_id, away_team_id: m.away_team_id })),
         }),
       })
       const json = await res.json()
-      if (json.success) setStatusMsg(`Partidos de octavos guardados (${json.data.updated})`)
+      if (json.success) setStatusMsg(`Partidos de ${STAGE_LABELS[stage] || stage} guardados (${json.data.updated})`)
       else setStatusMsg(`Error: ${json.error}`)
     } catch (e) {
-      setStatusMsg(`Error: ${e}`)
+      setStatusMsg(`Error: ${e instanceof Error ? e.message : e}`)
     } finally {
-      setSavingR32(false)
+      setSavingKO((prev) => ({ ...prev, [stage]: false }))
     }
   }
 
   const handleCalculateAll = async () => {
     setSaving(true)
     setStatusMsg(null)
+    const authHeaders = await getAuthHeaders()
     const res = await fetch('/api/v1/bet/admin/classification', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'calculate_classification', pool_id: selectedPool, group_name: null }),
     })
     const json = await res.json()
@@ -903,9 +942,10 @@ function ClassificationTab() {
   const handleCalculateBestThird = async () => {
     setSaving(true)
     setStatusMsg(null)
+    const authHeaders = await getAuthHeaders()
     const res = await fetch('/api/v1/bet/admin/classification', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: { ...authHeaders, 'Content-Type': 'application/json' },
       body: JSON.stringify({ action: 'calculate_best_third', pool_id: selectedPool }),
     })
     const json = await res.json()
@@ -1082,113 +1122,139 @@ function ClassificationTab() {
             </CardContent>
           </Card>
 
-          {/* OCTAVOS DE FINAL */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Trophy className="size-4 text-muted-foreground" />
-                  <h2 className="text-sm font-semibold">Octavos de Final</h2>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handleGenerateR32}
-                  disabled={generatingR32}
-                >
-                  {generatingR32 ? (
-                    <><Loader2 className="size-3.5 animate-spin" /> Generando…</>
-                  ) : (
-                    'Generar Octavos'
+          {/* FASES ELIMINATORIAS */}
+          {KO_STAGES.map((stage) => {
+            const stageMatches = knockoutMatches[stage]
+            const stageSummary = summary[stage]
+            const stageLabel = STAGE_LABELS[stage] || stage
+            const isGenerating = generating[stage]
+            const isSaving = savingKO[stage]
+
+            return (
+              <Card key={stage} className="overflow-hidden">
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="size-4 text-muted-foreground" />
+                      <h2 className="text-sm font-semibold">{stageLabel}</h2>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={() => handleGenerate(stage)}
+                      disabled={isGenerating}
+                    >
+                      {isGenerating ? (
+                        <><Loader2 className="size-3.5 animate-spin" /> Generando…</>
+                      ) : (
+                        `Generar ${stageLabel}`
+                      )}
+                    </Button>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {stageSummary && (
+                    <div className="flex gap-4 text-xs">
+                      <span className="text-emerald-400">✓ {stageSummary.resolved} completos</span>
+                      {stageSummary.partial > 0 && <span className="text-amber-400">~ {stageSummary.partial} parciales</span>}
+                      {stageSummary.unresolved > 0 && <span className="text-destructive">✗ {stageSummary.unresolved} sin resolver</span>}
+                    </div>
                   )}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {r32Summary && (
-                <div className="flex gap-4 text-xs">
-                  <span className="text-emerald-400">✓ {r32Summary.resolved} completos</span>
-                  {r32Summary.partial > 0 && <span className="text-amber-400">~ {r32Summary.partial} parciales</span>}
-                  {r32Summary.unresolved > 0 && <span className="text-destructive">✗ {r32Summary.unresolved} sin resolver</span>}
-                </div>
-              )}
 
-              {r32Matches.length > 0 && (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left text-sm">
-                    <thead>
-                      <tr className="border-b border-border text-muted-foreground text-xs">
-                        <th className="pb-2 pr-2 font-semibold">#</th>
-                        <th className="pb-2 pr-2 font-semibold">Local</th>
-                        <th className="pb-2 pr-2 font-semibold"></th>
-                        <th className="pb-2 pr-2 font-semibold">Visitante</th>
-                        <th className="pb-2 pr-2 font-semibold">Sede</th>
-                        <th className="pb-2 font-semibold"></th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {r32Matches.map((m) => (
-                        <tr key={m.match_id} className="border-b border-border/40 last:border-0">
-                          <td className="py-2 pr-2 text-muted-foreground font-mono text-xs">{m.fifa_match_number}</td>
-                          <td className="py-2 pr-2">
-                            <div className="flex items-center gap-1.5">
-                              <span className="text-[0.625rem] text-muted-foreground truncate max-w-[60px]">{m.home_placeholder}</span>
-                              <select
-                                value={m.home_team_id || ''}
-                                onChange={(e) => handleR32Edit(m.match_id, 'home_team_id', e.target.value)}
-                                className="rounded border border-border bg-muted px-1.5 py-1 text-xs max-w-[130px]"
-                              >
-                                <option value="">—</option>
-                                {qualifiedTeams.map((qt) => (
-                                  <option key={qt.team_id} value={qt.team_id}>{qt.team_name}</option>
-                                ))}
-                              </select>
-                            </div>
-                          </td>
-                          <td className="py-2 pr-2 text-muted-foreground text-xs">vs</td>
-                          <td className="py-2 pr-2">
-                            <div className="flex items-center gap-1.5">
-                              <select
-                                value={m.away_team_id || ''}
-                                onChange={(e) => handleR32Edit(m.match_id, 'away_team_id', e.target.value)}
-                                className="rounded border border-border bg-muted px-1.5 py-1 text-xs max-w-[130px]"
-                              >
-                                <option value="">—</option>
-                                {qualifiedTeams.map((qt) => (
-                                  <option key={qt.team_id} value={qt.team_id}>{qt.team_name}</option>
-                                ))}
-                              </select>
-                              <span className="text-[0.625rem] text-muted-foreground truncate max-w-[60px]">{m.away_placeholder}</span>
-                            </div>
-                          </td>
-                          <td className="py-2 pr-2 text-xs text-muted-foreground truncate max-w-[100px]">{m.venue || '—'}</td>
-                          <td className="py-2">
-                            {m.home_team_id && m.away_team_id ? (
-                              <Check className="size-3.5 text-emerald-400" />
-                            ) : (
-                              <AlertCircle className="size-3.5 text-amber-400" />
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              )}
+                  {stageMatches && stageMatches.length > 0 ? (
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left text-sm">
+                        <thead>
+                          <tr className="border-b border-border text-muted-foreground text-xs">
+                            <th className="pb-2 pr-2 font-semibold">#</th>
+                            <th className="pb-2 pr-2 font-semibold">Local</th>
+                            <th className="pb-2 pr-2 font-semibold"></th>
+                            <th className="pb-2 pr-2 font-semibold">Visitante</th>
+                            <th className="pb-2 pr-2 font-semibold">Marcador</th>
+                            <th className="pb-2 pr-2 font-semibold">Sede</th>
+                            <th className="pb-2 font-semibold"></th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {stageMatches.map((m, idx) => (
+                            <tr key={m.match_id || `ko-${stage}-${idx}`} className="border-b border-border/40 last:border-0">
+                              <td className="py-2 pr-2 text-muted-foreground font-mono text-xs">{m.fifa_match_number}</td>
+                              <td className="py-2 pr-2">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-[0.625rem] text-muted-foreground truncate max-w-[60px]">{m.home_placeholder}</span>
+                                  <select
+                                    value={m.home_team_id || ''}
+                                    onChange={(e) => handleKOEdit(stage, idx, 'home_team_id', e.target.value)}
+                                    className="rounded border border-border bg-muted px-1.5 py-1 text-xs max-w-[130px]"
+                                  >
+                                    <option value="">—</option>
+                                    {allTeams.map((t) => (
+                                      <option key={t.team_id} value={t.team_id}>{t.team_name}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </td>
+                              <td className="py-2 pr-2 text-muted-foreground text-xs">vs</td>
+                              <td className="py-2 pr-2">
+                                <div className="flex items-center gap-1.5">
+                                  <select
+                                    value={m.away_team_id || ''}
+                                    onChange={(e) => handleKOEdit(stage, idx, 'away_team_id', e.target.value)}
+                                    className="rounded border border-border bg-muted px-1.5 py-1 text-xs max-w-[130px]"
+                                  >
+                                    <option value="">—</option>
+                                    {allTeams.map((t) => (
+                                      <option key={t.team_id} value={t.team_id}>{t.team_name}</option>
+                                    ))}
+                                  </select>
+                                  <span className="text-[0.625rem] text-muted-foreground truncate max-w-[60px]">{m.away_placeholder}</span>
+                                </div>
+                              </td>
+                              <td className="py-2 pr-2">
+                                <div className="flex items-center gap-1">
+                                  <span className="text-xs tabular-nums font-mono">
+                                    {m.home_score_official ?? '–'}
+                                  </span>
+                                  <span className="text-[0.625rem] text-muted-foreground">:</span>
+                                  <span className="text-xs tabular-nums font-mono">
+                                    {m.away_score_official ?? '–'}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="py-2 pr-2 text-xs text-muted-foreground truncate max-w-[100px]">{m.venue || '—'}</td>
+                              <td className="py-2">
+                                {m.home_team_id && m.away_team_id ? (
+                                  <Check className="size-3.5 text-emerald-400" />
+                                ) : (
+                                  <AlertCircle className="size-3.5 text-amber-400" />
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  ) : (
+                    <p className="py-4 text-center text-xs text-muted-foreground">
+                      No hay partidos cargados para esta fase. Presiona "Generar {stageLabel}" para crearlos.
+                    </p>
+                  )}
 
-              {r32Matches.length > 0 && (
-                <div className="flex justify-end">
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={handleSaveR32}
-                    disabled={savingR32}
-                  >
-                    {savingR32 ? <><Loader2 className="size-3.5 animate-spin" /> Guardando…</> : 'Guardar cambios'}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  {stageMatches && stageMatches.length > 0 && (
+                    <div className="flex justify-end">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => handleSaveKO(stage)}
+                        disabled={isSaving}
+                      >
+                        {isSaving ? <><Loader2 className="size-3.5 animate-spin" /> Guardando…</> : 'Guardar cambios'}
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )
+          })}
 
           <Card>
             <CardHeader>
