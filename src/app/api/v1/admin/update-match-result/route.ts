@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-admin'
+import { getServiceClient, requireAdmin } from '@/lib/supabase-admin'
 
 export const runtime = 'edge'
 
@@ -8,6 +8,9 @@ export async function POST(request: NextRequest) {
   if (!supabase) {
     return NextResponse.json({ error: 'Service client not available' }, { status: 500 })
   }
+
+  const auth = await requireAdmin(request, supabase)
+  if (!auth.success) return auth.response
 
   const { match_id, home_score, away_score } = await request.json()
 

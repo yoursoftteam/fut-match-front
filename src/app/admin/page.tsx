@@ -1,12 +1,10 @@
 'use client'
 
-import { ShieldCheck, Trophy, Users, Settings } from 'lucide-react'
+import { ShieldCheck, Trophy, Users, Settings, UserPlus } from 'lucide-react'
 import Link from 'next/link'
 import { Card } from '@/components/ui/card'
 import { useAuth } from '@/hooks/useAuth'
 import { Loader2 } from 'lucide-react'
-
-const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
 
 const sections = [
   {
@@ -15,11 +13,16 @@ const sections = [
     href: '/admin/bet',
     icon: Trophy,
   },
+  {
+    title: 'Administradores',
+    description: 'Gestiona quiénes tienen acceso al panel de administración',
+    href: '/admin/admins',
+    icon: UserPlus,
+  },
 ]
 
 export default function AdminDashboard() {
-  const { user, loading } = useAuth()
-  const isAdmin = user?.id === ADMIN_USER_ID
+  const { user, loading, isAdmin } = useAuth()
 
   if (loading) {
     return (
