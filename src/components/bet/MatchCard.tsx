@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils'
 
 const STAGE_LABELS: Record<string, string> = {
   group_stage: 'Grupo',
-  round_of_32: '32avos',
-  round_of_16: '16avos',
+  round_of_32: '16avos',
+  round_of_16: 'Octavos',
   quarter_finals: 'Cuartos',
   semi_finals: 'Semifinal',
   third_place: '3er puesto',

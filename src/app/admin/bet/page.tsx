@@ -37,8 +37,8 @@ const LOCAL_API_URL = '/api/v1/admin/update-match-result'
 
 const STAGE_LABELS: Record<string, string> = {
   group_stage: 'Fase de Grupos',
-  round_of_32: '32avos de Final',
-  round_of_16: '16avos de Final',
+  round_of_32: '16avos de Final',
+  round_of_16: 'Octavos de Final',
   quarter_finals: 'Cuartos de Final',
   semi_finals: 'Semifinales',
   third_place: 'Tercer Puesto',
@@ -732,14 +732,30 @@ function ClassificationTab() {
   const [generating, setGenerating] = useState<Record<string, boolean>>({})
   const [savingKO, setSavingKO] = useState<Record<string, boolean>>({})
   const [summary, setSummary] = useState<Record<string, { total: number; resolved: number; partial: number; unresolved: number } | null>>({})
+  const [tournaments, setTournaments] = useState<Array<{ id: string; name: string }>>([])
+  const [selectedTournament, setSelectedTournament] = useState<string | null>(null)
 
   useEffect(() => {
     supabase
-      .from('bet_pools')
+      .from('bet_tournaments')
       .select('id, name')
       .order('name')
-      .then(({ data: d }) => setPools((d as Array<{ id: string; name: string }>) || []))
+      .then(({ data: d }) => setTournaments((d as Array<{ id: string; name: string }>) || []))
   }, [])
+
+  useEffect(() => {
+    if (!selectedTournament) { setPools([]); setSelectedPool(null); return }
+    supabase
+      .from('bet_pools')
+      .select('id, name')
+      .eq('tournament_id', selectedTournament)
+      .order('name')
+      .then(({ data: d }) => {
+        const list = (d as Array<{ id: string; name: string }>) || []
+        setPools(list)
+        setSelectedPool(list.length === 1 ? list[0].id : null)
+      })
+  }, [selectedTournament])
 
   useEffect(() => {
     if (!selectedPool) { setData(null); return }
@@ -971,18 +987,35 @@ function ClassificationTab() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-2">
-        <Users className="size-4 text-muted-foreground" />
-        <Select value={selectedPool} onValueChange={setSelectedPool}>
-          <SelectTrigger className="w-64" aria-label="Seleccionar polla">
-            <SelectValue placeholder="Seleccionar una polla" />
-          </SelectTrigger>
-          <SelectContent>
-            {pools.map((p) => (
-              <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
+          <Search className="size-4 text-muted-foreground" />
+          <Select value={selectedTournament} onValueChange={setSelectedTournament}>
+            <SelectTrigger className="w-64" aria-label="Seleccionar torneo">
+              <SelectValue placeholder="Seleccionar torneo" />
+            </SelectTrigger>
+            <SelectContent>
+              {tournaments.map((t) => (
+                <SelectItem key={t.id} value={t.id}>{t.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        {selectedTournament && (
+          <div className="flex items-center gap-2">
+            <Users className="size-4 text-muted-foreground" />
+            <Select value={selectedPool} onValueChange={setSelectedPool}>
+              <SelectTrigger className="w-64" aria-label="Seleccionar polla">
+                <SelectValue placeholder="Seleccionar una polla" />
+              </SelectTrigger>
+              <SelectContent>
+                {pools.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
       </div>
 
       {loading && (
@@ -990,7 +1023,11 @@ function ClassificationTab() {
       )}
 
       {!selectedPool && !loading && (
-        <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">Selecciona una polla para gestionar clasificados</CardContent></Card>
+        <Card><CardContent className="py-12 text-center text-sm text-muted-foreground">
+          {!selectedTournament
+            ? 'Selecciona un torneo para ver sus pollas'
+            : 'Selecciona una polla para gestionar clasificados'}
+        </CardContent></Card>
       )}
 
       {data && (

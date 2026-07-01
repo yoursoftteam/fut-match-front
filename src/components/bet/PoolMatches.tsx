@@ -25,8 +25,8 @@ interface PoolMatchesProps {
 
 const STAGE_LABELS: Record<string, string> = {
   group_stage: 'Fase de grupos',
-  round_of_32: '32avos de final',
-  round_of_16: '16avos de final',
+  round_of_32: '16avos de final',
+  round_of_16: 'Octavos de final',
   quarter_finals: 'Cuartos de final',
   semi_finals: 'Semifinales',
   third_place: 'Tercer puesto',
@@ -35,7 +35,7 @@ const STAGE_LABELS: Record<string, string> = {
 
 const FILTER_LABELS: Record<string, string> = {
   round_of_32: '16avos',
-  round_of_16: '8avos',
+  round_of_16: 'Octavos',
   quarter_finals: 'Cuartos',
   semi_finals: 'Semi',
   final: 'Final',
