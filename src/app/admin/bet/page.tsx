@@ -1235,7 +1235,7 @@ function ClassificationTab() {
                     </div>
                   ) : (
                     <p className="py-4 text-center text-xs text-muted-foreground">
-                      No hay partidos cargados para esta fase. Presiona "Generar {stageLabel}" para crearlos.
+                      No hay partidos cargados para esta fase. Presiona &ldquo;Generar {stageLabel}&rdquo; para crearlos.
                     </p>
                   )}
 
