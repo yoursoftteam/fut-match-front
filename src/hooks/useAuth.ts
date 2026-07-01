@@ -7,12 +7,16 @@ import { User } from '@supabase/supabase-js'
 export function useAuth() {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const [isAdmin, setIsAdmin] = useState(false)
+  const [adminLoaded, setAdminLoaded] = useState(false)
 
   useEffect(() => {
     if (!hasSupabaseEnv()) {
       const timer = setTimeout(() => {
         setUser(null)
         setLoading(false)
+        setIsAdmin(false)
+        setAdminLoaded(true)
       }, 0)
       return () => clearTimeout(timer)
     }
@@ -44,6 +48,27 @@ export function useAuth() {
     }
   }, [])
 
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false)
+      setAdminLoaded(true)
+      return
+    }
+    supabase
+      .from('admin_users')
+      .select('id')
+      .eq('user_id', user.id)
+      .maybeSingle()
+      .then(({ data, error }) => {
+        if (error) {
+          setIsAdmin(user.id === process.env.NEXT_PUBLIC_ADMIN_USER_ID)
+        } else {
+          setIsAdmin(!!data)
+        }
+        setAdminLoaded(true)
+      })
+  }, [user])
+
   const signIn = async (email: string, password: string) => {
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
@@ -68,6 +93,8 @@ export function useAuth() {
   return {
     user,
     loading,
+    isAdmin,
+    adminLoaded,
     signIn,
     signUp,
     signOut,

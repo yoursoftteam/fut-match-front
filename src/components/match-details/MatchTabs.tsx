@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Share2, Trash2 } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
@@ -14,7 +14,7 @@ import { ShareActions } from "@/components/ShareLink";
 import { PaymentStatus } from "./PaymentStatus";
 import { PaymentSummary } from "./PaymentSummary";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { buildConvocatoriaSummary, buildMatchShareSummary } from "./MatchShareSection";
+import { buildMatchShareSummary } from "@/lib/convocatoria-format";
 import RulesModal from "./RulesModal";
 
 type PanelTab = "register" | "players" | "teams";
@@ -522,68 +522,12 @@ export function PlayersPanel() {
   const { matchData, registrations, registrationsLoading, isCreator } = useMatchDetailsContext();
   const { showModal, target, loading, openModal, closeModal, handleUnregister, message } = useMatchUnregister();
   const { titulares, suplentes } = useMatchPricing();
-  const [convocatoriaOpen, setConvocatoriaOpen] = useState(false);
-  const convocatoriaRef = useRef<HTMLDivElement>(null);
-  const registrationLink =
-    typeof window !== "undefined" && matchData
-      ? `${window.location.origin}/match/${matchData.id}`
-      : matchData
-        ? `/match/${matchData.id}`
-        : "";
-  const convocatoriaText = useMemo(() => {
-    if (!matchData) return "";
-    return buildConvocatoriaSummary(matchData, registrations, registrationLink);
-  }, [matchData, registrations, registrationLink]);
-
-  useEffect(() => {
-    if (!convocatoriaOpen) return;
-
-    const handleClickOutside = (event: MouseEvent) => {
-      if (!convocatoriaRef.current) return;
-      if (!convocatoriaRef.current.contains(event.target as Node)) {
-        setConvocatoriaOpen(false);
-      }
-    };
-
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [convocatoriaOpen]);
 
   return (
     <>
     <div id="panel-players" role="tabpanel" aria-labelledby="tab-players">
-      <div ref={convocatoriaRef} className="relative mb-3 flex items-center justify-between gap-3">
+      <div className="mb-3 flex items-center justify-between gap-3">
         <h2 className="text-xl font-bold text-foreground">Jugadores inscritos ({registrations.length})</h2>
-        <button
-          type="button"
-          onClick={() => setConvocatoriaOpen((prev) => !prev)}
-          aria-label="Compartir convocatoria"
-          aria-expanded={convocatoriaOpen}
-          className="inline-flex size-9 shrink-0 items-center justify-center rounded-full border border-border bg-muted/30 text-foreground transition-colors hover:bg-muted"
-        >
-          <Share2 className="size-4" />
-        </button>
-
-        <div
-          className={`absolute right-0 top-11 z-20 w-[260px] rounded-xl border border-border bg-card p-3 shadow-xl transition-all duration-200 ${
-            convocatoriaOpen
-              ? "pointer-events-auto translate-y-0 opacity-100"
-              : "pointer-events-none -translate-y-1 opacity-0"
-          }`}
-        >
-          <ShareActions
-            copyText={convocatoriaText}
-            copyTooltip="Copiar convocatoria"
-            copiedStatusText="Convocatoria copiada al portapapeles"
-            whatsappText={convocatoriaText}
-            emailSubject={`Convocatoria - ${matchData?.title || "Partido"}`}
-            emailBody={convocatoriaText}
-            nativeShare={{
-              title: `Convocatoria - ${matchData?.title || "Partido"}`,
-              text: convocatoriaText,
-            }}
-          />
-        </div>
       </div>
       {message && (
         <div

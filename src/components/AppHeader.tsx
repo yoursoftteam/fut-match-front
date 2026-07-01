@@ -8,15 +8,12 @@ import { outfit } from "@/lib/fonts";
 import { Menu, X, LogOut, User, ShieldCheck } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger, SheetClose } from "@/components/ui/sheet";
 
-const ADMIN_USER_ID = process.env.NEXT_PUBLIC_ADMIN_USER_ID
-
 export function AppHeader() {
   const router = useRouter();
   const pathname = usePathname();
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, signOut, isAdmin } = useAuth();
   const isAuthPage = pathname === "/auth";
   const isLoggedIn = Boolean(user) && !isAuthPage;
-  const isAdmin = isLoggedIn && user?.id === ADMIN_USER_ID;
 
   const handleSignOut = async () => {
     await signOut();

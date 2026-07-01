@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getServiceClient } from '@/lib/supabase-admin'
+import { getServiceClient, requireAdmin } from '@/lib/supabase-admin'
 
 export const runtime = 'edge'
 
@@ -163,6 +163,9 @@ export async function POST(request: NextRequest) {
     if (!supabase) {
       return NextResponse.json({ success: false, error: 'Server config error' }, { status: 500 })
     }
+
+    const auth = await requireAdmin(request, supabase)
+    if (!auth.success) return auth.response
 
     const body = await request.json()
     const { action, tournament_id, matches } = body

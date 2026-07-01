@@ -12,7 +12,7 @@ import { useMatchPushSubscription } from "@/hooks/useMatchPushSubscription";
 type PanelTab = "register" | "players" | "teams";
 
 function MatchDetailsInner({ editParam }: { editParam?: string | null }) {
-  const { loading, error, matchData, isCreator, matchId } = useMatchDetailsContext();
+  const { loading, error, matchData, isCreator, matchId, registrations } = useMatchDetailsContext();
   useMatchPricing();
   const editing = useMatchEditing();
   useMatchPushSubscription(matchData ? matchId : null);
@@ -46,7 +46,7 @@ function MatchDetailsInner({ editParam }: { editParam?: string | null }) {
             <RegistrationPanel />
 
             <div className="border-t border-border/80 pt-6">
-              <MatchShareSection matchData={matchData} />
+              <MatchShareSection matchData={matchData} registrations={registrations} />
             </div>
 
             <div className="border-t border-border/80 pt-6">
