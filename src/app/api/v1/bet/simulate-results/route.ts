@@ -1,11 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
 export const runtime = "edge";
 
-import { getServiceClient } from '@/lib/supabase-admin'
+import { getServiceClient, requireAdmin } from '@/lib/supabase-admin'
 import { Match } from '@/types/bet'
 import { simulateMatchResult } from '@/lib/simulate-results'
-
-const ADMIN_USER_ID = process.env.ADMIN_USER_ID
 
 export async function POST(request: NextRequest) {
   try {
@@ -16,30 +14,8 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       )
     }
-    const authHeader = request.headers.get('authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado' },
-        { status: 401 }
-      )
-    }
-
-    const token = authHeader.slice(7)
-    const { data: { user }, error: authError } = await supabase.auth.getUser(token)
-
-    if (authError || !user) {
-      return NextResponse.json(
-        { success: false, error: 'No autorizado' },
-        { status: 401 }
-      )
-    }
-
-    if (user.id !== ADMIN_USER_ID) {
-      return NextResponse.json(
-        { success: false, error: 'Solo el administrador puede ejecutar esta acción' },
-        { status: 403 }
-      )
-    }
+    const auth = await requireAdmin(request, supabase)
+    if (!auth.success) return auth.response
 
     const now = new Date().toISOString()
 
