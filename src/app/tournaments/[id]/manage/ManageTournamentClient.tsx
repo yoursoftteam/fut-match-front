@@ -9,6 +9,7 @@ import { useTournamentManage } from "@/hooks/useTournamentManage"
 import { TournamentAdminBento } from "@/components/tournaments/TournamentAdminBento"
 import { TournamentDynamicLinksCard } from "@/components/tournaments/TournamentDynamicLinksCard"
 import { TournamentSchedulePicker } from "@/components/tournaments/TournamentSchedulePicker"
+import RichTextRenderer from "@/components/rich-editor/RichTextRenderer"
 import type { TournamentScheduleDay } from "@/lib/tournament-schema"
 
 interface ManageTournamentClientProps {
@@ -219,6 +220,20 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
             </Link>
             <h1 className="text-2xl font-heading font-bold text-foreground sm:text-3xl">{tournament.name}</h1>
             <p className="mt-1 text-sm text-muted-foreground">Panel admin para mover el torneo sin fricción.</p>
+            {tournament.registration_deadline && (
+              <p className="mt-2 text-xs text-muted-foreground">
+                Cierre de inscripciones:{" "}
+                <span className="font-semibold text-foreground">
+                  {new Date(tournament.registration_deadline).toLocaleString("es-CO", {
+                    dateStyle: "long",
+                    timeStyle: "short",
+                  })}
+                </span>
+                {new Date(tournament.registration_deadline) < new Date() && (
+                  <span className="ml-1 text-red-400">(cerrada)</span>
+                )}
+              </p>
+            )}
             <Link
               href={`/tournaments/${tournament.id}/fixture`}
               className="mt-3 inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-primary/15"
@@ -274,6 +289,15 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
                   }}
                 />
               </div>
+            )}
+
+            {tournament.rules_text && (
+              <section className="card p-5 sm:p-6">
+                <h2 className="text-lg font-heading font-bold text-foreground">Reglas del torneo</h2>
+                <div className="mt-3 text-sm text-muted-foreground leading-relaxed">
+                  <RichTextRenderer html={tournament.rules_text} />
+                </div>
+              </section>
             )}
 
             <section className="card p-5 sm:p-6">

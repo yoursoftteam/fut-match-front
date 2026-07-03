@@ -1,6 +1,6 @@
 "use client"
 
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { CheckCircle2, ChevronLeft, ChevronRight, Loader2, Trophy } from "lucide-react"
 import { useTournaments } from "@/hooks/useTournaments"
@@ -12,6 +12,7 @@ import {
 } from "@/lib/tournament-schema"
 import { TournamentDynamicLinksCard } from "@/components/tournaments/TournamentDynamicLinksCard"
 import { TournamentSchedulePicker } from "@/components/tournaments/TournamentSchedulePicker"
+import RichEditor from "@/components/rich-editor/RichEditor"
 
 type Step = 1 | 2 | 3
 
@@ -24,6 +25,7 @@ interface TournamentWizardState {
   max_teams: number
   min_players_per_team: number
   starts_at: string
+  registration_deadline: string
   rules_text: string
   rules_pdf_url: string
   tournament_type: "league" | "groups"
@@ -44,6 +46,7 @@ const initialState: TournamentWizardState = {
   max_teams: 16,
   min_players_per_team: 7,
   starts_at: "",
+  registration_deadline: "",
   rules_text: "",
   rules_pdf_url: "",
   tournament_type: "league",
@@ -53,6 +56,33 @@ const initialState: TournamentWizardState = {
   has_knockout: true,
   knockout_phase: "quarterfinals",
   scheduled_days: [],
+}
+
+const STORAGE_KEY = "tournament-create-wizard"
+
+function loadSavedState(): TournamentWizardState | null {
+  if (typeof window === "undefined") return null
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    if (!raw) return null
+    return JSON.parse(raw) as TournamentWizardState
+  } catch {
+    return null
+  }
+}
+
+function saveState(state: TournamentWizardState) {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
+  } catch { /* quota exceeded */ }
+}
+
+function clearSavedState() {
+  if (typeof window === "undefined") return
+  try {
+    localStorage.removeItem(STORAGE_KEY)
+  } catch { /* ignore */ }
 }
 
 function stepClass(currentStep: Step, target: Step) {
@@ -66,8 +96,35 @@ export function TournamentCreateWizard() {
   const [form, setForm] = useState<TournamentWizardState>(initialState)
   const [createdTournament, setCreatedTournament] = useState<Tournament | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [focusField, setFocusField] = useState<string | null>(null)
 
   const { createTournament, loading, error } = useTournaments()
+
+  useEffect(() => {
+    const saved = loadSavedState()
+    if (saved) {
+      setForm({ ...initialState, ...saved })
+    }
+  }, [])
+
+  useEffect(() => {
+    saveState(form)
+  }, [form])
+
+  useEffect(() => {
+    if (!focusField) return
+    const el = document.getElementById(focusField)
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" })
+      el.focus({ preventScroll: true })
+    }
+    setFocusField(null)
+  }, [step, focusField])
+
+  const goToField = (targetStep: Step, fieldId: string) => {
+    setStep(targetStep)
+    setFocusField(fieldId)
+  }
 
   const normalizedPayload: CreateTournamentInput = useMemo(() => {
     const base: CreateTournamentInput = {
@@ -80,6 +137,7 @@ export function TournamentCreateWizard() {
       max_teams: Number(form.max_teams),
       min_players_per_team: Number(form.min_players_per_team),
       starts_at: form.starts_at ? new Date(form.starts_at).toISOString() : "",
+      registration_deadline: form.registration_deadline ? new Date(form.registration_deadline).toISOString() : "",
       rules_text: form.rules_text,
       rules_pdf_url: form.rules_pdf_url,
       league_mode: form.league_mode,
@@ -138,6 +196,7 @@ export function TournamentCreateWizard() {
     const created = await createTournament(parsed.data)
     if (!created) return
 
+    clearSavedState()
     setCreatedTournament(created)
   }
 
@@ -212,15 +271,34 @@ export function TournamentCreateWizard() {
               </div>
 
               <div>
-                <label htmlFor="registration_fee" className="mb-1.5 block text-sm font-medium text-foreground">Inscripción por equipo</label>
+                <label htmlFor="registration_deadline" className="mb-1.5 block text-sm font-medium text-foreground">Cierre de inscripciones</label>
                 <input
-                  id="registration_fee"
-                  type="number"
-                  min={0}
-                  value={form.registration_fee}
-                  onChange={(e) => setForm((prev) => ({ ...prev, registration_fee: Number(e.target.value) }))}
+                  id="registration_deadline"
+                  type="datetime-local"
+                  value={form.registration_deadline}
+                  onChange={(e) => setForm((prev) => ({ ...prev, registration_deadline: e.target.value }))}
                   className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
                 />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div>
+                <label htmlFor="registration_fee" className="mb-1.5 block text-sm font-medium text-foreground">Valor inscripción por equipo</label>
+                <div className="relative">
+                  <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                  <input
+                    id="registration_fee"
+                    type="text"
+                    inputMode="numeric"
+                    value={form.registration_fee ? Number(form.registration_fee).toLocaleString("es-CO") : "0"}
+                    onChange={(e) => {
+                      const raw = e.target.value.replace(/[^0-9]/g, "")
+                      setForm((prev) => ({ ...prev, registration_fee: raw ? Number(raw) : 0 }))
+                    }}
+                    className="w-full rounded-lg border border-border bg-background px-8 py-3 text-foreground"
+                  />
+                </div>
               </div>
             </div>
 
@@ -228,6 +306,12 @@ export function TournamentCreateWizard() {
               value={form.scheduled_days}
               onChange={(scheduled_days) => setForm((prev) => ({ ...prev, scheduled_days }))}
             />
+
+            {form.scheduled_days.length > 0 && form.scheduled_days.every((d) => d.times.length === 0) && (
+              <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                Seleccionaste días pero no agregaste horarios. Puedes hacerlo ahora o dejarlo para después desde la gestión del torneo.
+              </p>
+            )}
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
               <div>
@@ -256,14 +340,13 @@ export function TournamentCreateWizard() {
             </div>
 
             <div>
-              <label htmlFor="rules_text" className="mb-1.5 block text-sm font-medium text-foreground">Reglas (texto)</label>
-              <textarea
-                id="rules_text"
+              <span className="mb-1.5 block text-sm font-medium text-foreground">Reglas del torneo</span>
+              <RichEditor
                 value={form.rules_text}
-                onChange={(e) => setForm((prev) => ({ ...prev, rules_text: e.target.value }))}
-                rows={4}
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                onChange={(html) => setForm((prev) => ({ ...prev, rules_text: html }))}
                 placeholder="Duración, sanciones, desempates..."
+                minHeight={140}
+                id="rules_text"
               />
             </div>
 
@@ -416,33 +499,219 @@ export function TournamentCreateWizard() {
         )}
 
         {step === 3 && (
-          <div className="space-y-4 text-sm">
+          <div className="space-y-5 text-sm">
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Información general</p>
+
             <div className="rounded-xl border border-border bg-background/70 p-4">
-              <p className="text-xs uppercase tracking-widest text-muted-foreground">Nombre</p>
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Nombre</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "name")}
+                  className="text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
+              </div>
               <p className="mt-1 font-semibold text-foreground">{form.name || "-"}</p>
+            </div>
+
+            <div className="rounded-xl border border-border bg-background/70 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Fecha de inicio</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "starts_at")}
+                  className="text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
+              </div>
+              <p className="mt-1 font-semibold text-foreground">
+                {form.starts_at
+                  ? new Date(form.starts_at).toLocaleString("es-CO", { dateStyle: "long", timeStyle: "short" })
+                  : "Sin definir"}
+              </p>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-border bg-background/70 p-4">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Formato</p>
-                <p className="mt-1 font-semibold text-foreground">{form.tournament_type === "league" ? "Liga" : "Grupos"}</p>
-              </div>
-              <div className="rounded-xl border border-border bg-background/70 p-4">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Inscripción</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Valor inscripción</p>
                 <p className="mt-1 font-semibold text-foreground">${form.registration_fee.toLocaleString("es-CO")}</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "registration_fee")}
+                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
               </div>
               <div className="rounded-xl border border-border bg-background/70 p-4">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Equipos</p>
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Máx. equipos</p>
                 <p className="mt-1 font-semibold text-foreground">{form.max_teams}</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "max_teams")}
+                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
+              </div>
+              <div className="rounded-xl border border-border bg-background/70 p-4">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Mín. jugadores</p>
+                <p className="mt-1 font-semibold text-foreground">{form.min_players_per_team}</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "min_players")}
+                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
               </div>
               <div className="rounded-xl border border-border bg-background/70 p-4">
                 <p className="text-xs uppercase tracking-widest text-muted-foreground">Estado inicial</p>
                 <p className="mt-1 font-semibold text-foreground">{form.status === "open" ? "Abierto" : "Borrador"}</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "status")}
+                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
               </div>
               <div className="rounded-xl border border-border bg-background/70 p-4 col-span-2">
-                <p className="text-xs uppercase tracking-widest text-muted-foreground">Cronograma</p>
-                <p className="mt-1 text-xs text-muted-foreground">Opcional. Si no lo completas ahora, podrás configurarlo después.</p>
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">Cierre inscripciones</p>
+                  <button
+                    type="button"
+                    onClick={() => goToField(1, "registration_deadline")}
+                    className="text-xs font-semibold text-primary hover:text-primary/80 transition"
+                  >
+                    Editar
+                  </button>
+                </div>
+                <p className="mt-1 font-semibold text-foreground">
+                  {form.registration_deadline
+                    ? new Date(form.registration_deadline).toLocaleString("es-CO", { dateStyle: "long", timeStyle: "short" })
+                    : "Sin definir"}
+                </p>
               </div>
+            </div>
+
+            <div className={`rounded-xl border p-4 col-span-2 ${
+              form.scheduled_days.length === 0
+                ? "border-amber-500/40 bg-amber-500/8"
+                : "border-border bg-background/70"
+            }`}>
+              <div className="flex items-center justify-between gap-3">
+                <p className={`text-xs uppercase tracking-widest ${
+                  form.scheduled_days.length === 0 ? "text-amber-400" : "text-muted-foreground"
+                }`}>Cronograma</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(1, "starts_at")}
+                  className="text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
+              </div>
+              {form.scheduled_days.length === 0 ? (
+                <p className="mt-1 text-xs text-amber-300">Sin configurar — los horarios se asignarán manualmente después</p>
+              ) : form.scheduled_days.every((d) => d.times.length === 0) ? (
+                <p className="mt-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-300">
+                  Seleccionaste días pero no agregaste horarios. Puedes hacerlo ahora o dejarlo para después desde la gestión del torneo.
+                </p>
+              ) : (
+                <p className="mt-1 text-xs text-muted-foreground">{form.scheduled_days.length} día(s) configurado(s)</p>
+              )}
+            </div>
+
+            {form.rules_text && (
+              <div className="rounded-xl border border-border bg-background/70 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">Reglas</p>
+                  <button
+                    type="button"
+                    onClick={() => goToField(1, "rules_text")}
+                    className="text-xs font-semibold text-primary hover:text-primary/80 transition"
+                  >
+                    Editar
+                  </button>
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground leading-relaxed [&_ol]:list-decimal [&_ul]:list-disc [&_li]:ml-4" dangerouslySetInnerHTML={{ __html: form.rules_text }} />
+              </div>
+            )}
+
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Formato</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-border bg-background/70 p-4">
+                <p className="text-xs uppercase tracking-widest text-muted-foreground">Tipo</p>
+                <p className="mt-1 font-semibold text-foreground">{form.tournament_type === "league" ? "Liga" : "Grupos"}</p>
+                <button
+                  type="button"
+                  onClick={() => goToField(2, "tournament_type")}
+                  className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                >
+                  Editar
+                </button>
+              </div>
+
+              {form.tournament_type === "league" ? (
+                <div className="rounded-xl border border-border bg-background/70 p-4">
+                  <p className="text-xs uppercase tracking-widest text-muted-foreground">Vueltas</p>
+                  <p className="mt-1 font-semibold text-foreground">{form.league_mode === "single_leg" ? "Solo ida" : "Ida y vuelta"}</p>
+                  <button
+                    type="button"
+                    onClick={() => goToField(2, "league_mode")}
+                    className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                  >
+                    Editar
+                  </button>
+                </div>
+              ) : (
+                <>
+                  <div className="rounded-xl border border-border bg-background/70 p-4">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Grupos</p>
+                    <p className="mt-1 font-semibold text-foreground">{form.groups_count}</p>
+                    <button
+                      type="button"
+                      onClick={() => goToField(2, "groups_count")}
+                      className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                  <div className="rounded-xl border border-border bg-background/70 p-4">
+                    <p className="text-xs uppercase tracking-widest text-muted-foreground">Clasifican por grupo</p>
+                    <p className="mt-1 font-semibold text-foreground">{form.qualifiers_per_group}</p>
+                    <button
+                      type="button"
+                      onClick={() => goToField(2, "qualifiers_per_group")}
+                      className="mt-2 text-xs font-semibold text-primary hover:text-primary/80 transition"
+                    >
+                      Editar
+                    </button>
+                  </div>
+                  <div className="rounded-xl border border-border bg-background/70 p-4 col-span-2">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-xs uppercase tracking-widest text-muted-foreground">Knockout</p>
+                      <button
+                        type="button"
+                        onClick={() => goToField(2, "has_knockout")}
+                        className="text-xs font-semibold text-primary hover:text-primary/80 transition"
+                      >
+                        Editar
+                      </button>
+                    </div>
+                    <p className="mt-1 font-semibold text-foreground">
+                      {form.has_knockout
+                        ? `Sí · ${form.knockout_phase === "round_of_16" ? "Octavos" : form.knockout_phase === "quarterfinals" ? "Cuartos" : form.knockout_phase === "semifinals" ? "Semifinales" : "Final"}`
+                        : "No"}
+                    </p>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         )}

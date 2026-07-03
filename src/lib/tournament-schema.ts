@@ -36,6 +36,7 @@ export interface Tournament {
   max_teams: number
   min_players_per_team: number
   starts_at: string | null
+  registration_deadline: string | null
   rules_text: string | null
   rules_pdf_url: string | null
   league_mode: LeagueMode | null
@@ -98,6 +99,7 @@ export const createTournamentInputSchema = z
   max_teams: z.number().int().min(2, "Debe permitir mínimo 2 equipos").max(128),
   min_players_per_team: z.number().int().min(5, "Mínimo 5 jugadores por equipo").max(30),
   starts_at: z.string().datetime().optional().or(z.literal("")),
+  registration_deadline: z.string().datetime().optional().or(z.literal("")),
   rules_text: z.string().trim().max(4000).optional().or(z.literal("")),
   rules_pdf_url: z.string().trim().url("URL de reglas inválida").optional().or(z.literal("")),
   league_mode: leagueModeSchema.optional(),
@@ -115,20 +117,7 @@ export const createTournamentInputSchema = z
     .max(7)
     .optional(),
   })
-  .superRefine((data, ctx) => {
-    if (data.scheduled_days) {
-      for (const [index, day] of data.scheduled_days.entries()) {
-        if (day.times.length === 0) {
-          ctx.addIssue({
-            code: z.ZodIssueCode.custom,
-            path: ["scheduled_days", index, "times"],
-            message: "Agrega al menos un horario para este día",
-          })
-        }
-      }
-    }
-
-    if (data.tournament_type === "league") {
+  .superRefine((data, ctx) => {    if (data.tournament_type === "league") {
       if (!data.league_mode) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,

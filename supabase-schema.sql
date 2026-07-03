@@ -506,6 +506,7 @@ CREATE TABLE IF NOT EXISTS tournaments (
   max_teams INTEGER NOT NULL CHECK (max_teams > 1),
   min_players_per_team INTEGER NOT NULL CHECK (min_players_per_team > 0),
   starts_at TIMESTAMP WITH TIME ZONE,
+  registration_deadline TIMESTAMP WITH TIME ZONE,
   rules_text TEXT,
   rules_pdf_url TEXT,
   league_mode TEXT CHECK (league_mode IN ('single_leg', 'home_away')),
@@ -524,7 +525,8 @@ ALTER TABLE tournaments
   ADD COLUMN IF NOT EXISTS qualifiers_per_group INTEGER,
   ADD COLUMN IF NOT EXISTS has_knockout BOOLEAN,
   ADD COLUMN IF NOT EXISTS knockout_phase TEXT CHECK (knockout_phase IN ('round_of_16', 'quarterfinals', 'semifinals', 'final')),
-  ADD COLUMN IF NOT EXISTS scheduled_days JSONB;
+  ADD COLUMN IF NOT EXISTS scheduled_days JSONB,
+  ADD COLUMN IF NOT EXISTS registration_deadline TIMESTAMP WITH TIME ZONE;
 
 CREATE TABLE IF NOT EXISTS tournament_teams (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

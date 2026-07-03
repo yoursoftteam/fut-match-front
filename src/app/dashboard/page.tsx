@@ -122,6 +122,10 @@ export default function DashboardPage() {
     }
     return false;
   });
+  const [confirmDeleteTournamentId, setConfirmDeleteTournamentId] = useState<string | null>(null)
+  const [deleteTournamentNameInput, setDeleteTournamentNameInput] = useState('')
+  const [deletingTournamentId, setDeletingTournamentId] = useState<string | null>(null)
+  const [deleteTournamentError, setDeleteTournamentError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -400,11 +404,6 @@ export default function DashboardPage() {
   }
 
   if (!user) return null
-
-  const [confirmDeleteTournamentId, setConfirmDeleteTournamentId] = useState<string | null>(null)
-  const [deleteTournamentNameInput, setDeleteTournamentNameInput] = useState('')
-  const [deletingTournamentId, setDeletingTournamentId] = useState<string | null>(null)
-  const [deleteTournamentError, setDeleteTournamentError] = useState<string | null>(null)
 
   const handleDeleteMatch = async (matchId: string) => {
     setDeletingMatchId(matchId)

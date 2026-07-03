@@ -120,6 +120,7 @@ export function useTournaments(): UseTournamentsState & UseTournamentsActions {
           max_teams: parsed.data.max_teams,
           min_players_per_team: parsed.data.min_players_per_team,
           starts_at: normalizeOptionalText(parsed.data.starts_at),
+          registration_deadline: normalizeOptionalText(parsed.data.registration_deadline),
           rules_text: normalizeOptionalText(parsed.data.rules_text),
           rules_pdf_url: normalizeOptionalText(parsed.data.rules_pdf_url),
           league_mode:
