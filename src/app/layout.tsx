@@ -37,7 +37,7 @@ export default function RootLayout({
           </a>
           <AppHeader />
           <MobileBackButton />
-          <main id="main-content" className="flex-grow scroll-mt-24 tabular-nums">
+          <main id="main-content" className="flex-grow scroll-mt-24 tabular-nums" style={{ marginLeft: 'var(--sidebar-width, 0px)', transition: 'margin-left 0.2s ease' }}>
             {children}
           </main>
           <footer className="bg-card py-6 px-4 border-t border-border">
