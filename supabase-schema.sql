@@ -241,9 +241,7 @@ DECLARE
   v_max_players INTEGER;
   v_total INTEGER;
   v_goalkeepers INTEGER;
-  v_field_players INTEGER;
   v_reserved_goalkeeper_slots INTEGER;
-  v_max_field_players INTEGER;
   v_max_substitute_slots CONSTANT INTEGER := 10;
 BEGIN
   SELECT m.max_players INTO v_max_players
@@ -255,9 +253,8 @@ BEGIN
 
   SELECT
     COUNT(*),
-    COUNT(*) FILTER (WHERE is_goalkeeper),
-    COUNT(*) FILTER (WHERE NOT is_goalkeeper)
-  INTO v_total, v_goalkeepers, v_field_players
+    COUNT(*) FILTER (WHERE is_goalkeeper)
+  INTO v_total, v_goalkeepers
   FROM match_registrations
   WHERE match_id = NEW.match_id;
 
@@ -266,19 +263,12 @@ BEGIN
     RAISE EXCEPTION 'No hay cupos disponibles, ni siquiera como suplente.';
   END IF;
 
-  -- Position restrictions only apply while filling titular slots.
-  IF v_total < v_max_players THEN
+  -- Keep goalkeeper cap only for titular filling stage.
+  IF v_total < v_max_players AND NEW.is_goalkeeper THEN
     v_reserved_goalkeeper_slots := LEAST(2, v_max_players);
-    v_max_field_players := GREATEST(0, v_max_players - v_reserved_goalkeeper_slots);
 
-    IF NEW.is_goalkeeper THEN
-      IF v_goalkeepers >= v_reserved_goalkeeper_slots THEN
-        RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
-      END IF;
-    ELSE
-      IF v_field_players >= v_max_field_players THEN
-        RAISE EXCEPTION 'Los cupos de jugadores de campo están completos. Se reservan 2 cupos para arqueros.';
-      END IF;
+    IF v_goalkeepers >= v_reserved_goalkeeper_slots THEN
+      RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
     END IF;
   END IF;
 

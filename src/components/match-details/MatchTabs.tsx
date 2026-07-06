@@ -93,6 +93,7 @@ export function RegistrationPanel() {
   const {
     isTitularFull,
     isSubstituteFull,
+    isFieldPlayerFull,
     goalkeepersRemaining,
     maxGoalkeepers,
     maxFieldPlayers,
@@ -315,6 +316,12 @@ export function RegistrationPanel() {
         </div>
       )}
 
+      {isFieldPlayerFull && !isTitularFull && !isSubstituteFull && (
+        <div className="mb-4 rounded border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-300">
+          Los cupos de jugadores de campo están completos. Quedan cupos disponibles para arquero. Si te inscribes como jugador de campo, entrarás como suplente.
+        </div>
+      )}
+
       {isTitularFull && isSubstituteFull && (
         <div className="mb-4 rounded border border-red-500/40 bg-red-500/10 p-3 text-sm text-red-300">
           Ya no hay cupos disponibles en este partido (ni titulares ni suplentes).
@@ -337,14 +344,14 @@ export function RegistrationPanel() {
         <button
           type="button"
           onClick={handleQuickAction}
-          className={`w-full rounded py-2 px-4 font-semibold transition ${ownRegistration ? "bg-red-600 text-white hover:bg-red-700" : isTitularFull && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
+          className={`w-full rounded py-2 px-4 font-semibold transition ${ownRegistration ? "bg-red-600 text-white hover:bg-red-700" : (isTitularFull || isFieldPlayerFull) && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
           disabled={quickActionLoading || (!ownRegistration && isTitularFull && isSubstituteFull)}
         >
           {quickActionLoading
             ? (ownRegistration ? "Procesando baja..." : "Inscribiendo...")
             : ownRegistration
               ? "Cancelar inscripción"
-              : (isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : isTitularFull ? "Inscribirme como suplente" : "Inscribirme")}
+              : (isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : (isTitularFull || isFieldPlayerFull) ? "Inscribirme como suplente" : "Inscribirme")}
         </button>
       )}
 
@@ -362,10 +369,10 @@ export function RegistrationPanel() {
         <button
           type="button"
           onClick={() => setShowForm(true)}
-          className={`w-full rounded py-2 px-4 font-semibold transition ${isTitularFull && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
+          className={`w-full rounded py-2 px-4 font-semibold transition ${(isTitularFull || isFieldPlayerFull) && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
           disabled={isTitularFull && isSubstituteFull}
         >
-          {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : isTitularFull ? "Inscribirme como suplente" : "Inscribirme"}
+          {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : (isTitularFull || isFieldPlayerFull) ? "Inscribirme como suplente" : "Inscribirme"}
         </button>
         )
       ) : (
