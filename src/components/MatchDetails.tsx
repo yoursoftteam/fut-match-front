@@ -97,6 +97,10 @@ function MatchDetailsInner({ editParam }: { editParam?: string | null }) {
                 onOpen={() => setShowTeamBuilder(true)}
               />
             )}
+
+            <div className="border-t border-border/80 pt-6 mt-6">
+              <MatchShareSection matchData={matchData} registrations={registrations} />
+            </div>
           </div>
         </section>
       </div>
