@@ -90,6 +90,7 @@ interface RegistrationEntry {
   name: string;
   isGoalkeeper: boolean;
   position: string;
+  nameError?: string | null;
 }
 
 interface UseMatchRegistrationReturn {
@@ -108,17 +109,22 @@ interface UseMatchRegistrationReturn {
   resetForm: () => void;
 }
 
+function clearNameErrors(entries: RegistrationEntry[]): RegistrationEntry[] {
+  return entries.map((e) => ({ ...e, nameError: null }));
+}
+
 function createRegistrationEntry(): RegistrationEntry {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     name: "",
     isGoalkeeper: false,
     position: "",
+    nameError: null,
   };
 }
 
 export function useMatchRegistration(): UseMatchRegistrationReturn {
-  const { matchId, refreshRegistrations } = useMatchDetailsContext();
+  const { matchId, refreshRegistrations, user, registrations } = useMatchDetailsContext();
   const { registerForMatch } = useMatches();
 
   const [entries, setEntries] = useState<RegistrationEntry[]>([createRegistrationEntry()]);
@@ -141,17 +147,18 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
   const addEntry = useCallback((afterEntryId?: string) => {
     setEntries((prev) => {
       const nextEntry = createRegistrationEntry();
+      const cleared = clearNameErrors(prev);
 
       if (!afterEntryId) {
-        return [...prev, nextEntry];
+        return [...cleared, nextEntry];
       }
 
-      const idx = prev.findIndex((entry) => entry.id === afterEntryId);
+      const idx = cleared.findIndex((entry) => entry.id === afterEntryId);
       if (idx === -1) {
-        return [...prev, nextEntry];
+        return [...cleared, nextEntry];
       }
 
-      return [...prev.slice(0, idx + 1), nextEntry, ...prev.slice(idx + 1)];
+      return [...cleared.slice(0, idx + 1), nextEntry, ...cleared.slice(idx + 1)];
     });
   }, []);
 
@@ -161,15 +168,38 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
         return [createRegistrationEntry()];
       }
 
-      return prev.filter((entry) => entry.id !== entryId);
+      return clearNameErrors(prev.filter((entry) => entry.id !== entryId));
     });
   }, []);
 
   const updateEntryName = useCallback((entryId: string, value: string) => {
-    setEntries((prev) => prev.map((entry) => (
-      entry.id === entryId ? { ...entry, name: value } : entry
-    )));
-  }, []);
+    setEntries((prev) => {
+      const trimmedValue = value.trim();
+      const trimmedLower = trimmedValue.toLowerCase();
+
+      let nameError: string | null = null;
+
+      if (trimmedValue.length >= 2) {
+        const existingNames = new Set(registrations.map((r) => r.name.trim().toLowerCase()));
+
+        if (existingNames.has(trimmedLower)) {
+          nameError =
+            "Ya hay un jugador inscrito con ese nombre. Para evitar confusiones, usa nombre completo (nombre y apellido).";
+        } else {
+          const duplicateInForm = prev.some(
+            (e) => e.id !== entryId && e.name.trim().toLowerCase() === trimmedLower,
+          );
+          if (duplicateInForm) {
+            nameError = "Este nombre ya está en la lista.";
+          }
+        }
+      }
+
+      return prev.map((entry) =>
+        entry.id === entryId ? { ...entry, name: value, nameError } : entry,
+      );
+    });
+  }, [registrations]);
 
   const updateEntryGoalkeeper = useCallback((entryId: string, isGoalkeeper: boolean) => {
     setEntries((prev) => prev.map((entry) => (
@@ -186,8 +216,13 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
   const handleEntryKeyDown = useCallback((e: React.KeyboardEvent<HTMLInputElement>, entryId: string) => {
     if (e.key !== "Enter") return;
     e.preventDefault();
+
+    const currentEntry = entries.find((entry) => entry.id === entryId);
+    if (!currentEntry?.name.trim()) return;
+    if (currentEntry?.nameError) return;
+
     addEntry(entryId);
-  }, [addEntry]);
+  }, [addEntry, entries]);
 
   const normalizeEntries = useCallback(() => (
     entries

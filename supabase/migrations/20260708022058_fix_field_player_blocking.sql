@@ -1,4 +1,5 @@
--- Restore 2 reserved goalkeeper titular slots while keeping 10 substitute slots.
+-- Fix: field players were being blocked when titular field slots were full
+-- even though substitute slots were available. Now they can register as substitutes.
 CREATE OR REPLACE FUNCTION validate_match_registration()
 RETURNS TRIGGER
 LANGUAGE plpgsql
