@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Copy, ExternalLink, Link2, Wallet } from "lucide-react"
+import { Copy, ExternalLink, Globe, Link2, Wallet } from "lucide-react"
 
 interface TournamentDynamicLinksCardProps {
   tournamentId: string
@@ -15,6 +15,7 @@ export function TournamentDynamicLinksCard({ tournamentId }: TournamentDynamicLi
       return {
         register: `/tournaments/${tournamentId}/register`,
         payment: `/tournaments/${tournamentId}/register?mode=pay`,
+        portal: `/tournaments/${tournamentId}`,
       }
     }
 
@@ -22,6 +23,7 @@ export function TournamentDynamicLinksCard({ tournamentId }: TournamentDynamicLi
     return {
       register: `${origin}/tournaments/${tournamentId}/register`,
       payment: `${origin}/tournaments/${tournamentId}/register?mode=pay`,
+      portal: `${origin}/tournaments/${tournamentId}`,
     }
   }, [tournamentId])
 
@@ -47,6 +49,12 @@ export function TournamentDynamicLinksCard({ tournamentId }: TournamentDynamicLi
       label: "Pago directo",
       value: links.payment,
       icon: Wallet,
+    },
+    {
+      key: "portal",
+      label: "Portal público",
+      value: links.portal,
+      icon: Globe,
     },
   ] as const
 

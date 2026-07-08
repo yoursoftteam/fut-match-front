@@ -155,6 +155,9 @@ export function TournamentCreateWizard() {
     if (step === 1) {
       if (!form.name.trim()) return "Dale un nombre al torneo"
       if (!form.starts_at) return "Define la fecha de inicio"
+      if (form.registration_deadline && form.starts_at && new Date(form.registration_deadline) > new Date(form.starts_at)) {
+        return "El cierre de inscripciones no puede ser después de la fecha de inicio"
+      }
       if (form.max_teams < 2) return "Debe haber al menos 2 equipos"
       if (form.min_players_per_team < 5) return "Mínimo 5 jugadores por equipo"
       return null

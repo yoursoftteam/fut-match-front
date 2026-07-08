@@ -5,8 +5,8 @@ import { supabase } from '@/lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { User, Mail, AtSign, Save, ArrowLeft, Shield } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
+import { Mail, AtSign, Save, ArrowLeft, Shield, X } from 'lucide-react'
 import Link from 'next/link'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { POSITIONS, type PositionOption } from '@/lib/positions'
@@ -15,7 +15,7 @@ export default function ProfilePage() {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
 
-  const SHARED_POSITIONS = POSITIONS as readonly PositionOption[];
+  const SHARED_POSITIONS = POSITIONS as readonly PositionOption[]
 
   const [alias, setAlias] = useState('')
   const [fullName, setFullName] = useState('')
@@ -24,11 +24,21 @@ export default function ProfilePage() {
   const [message, setMessage] = useState<string | null>(null)
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
 
+  const hasChanges = useMemo(() => {
+    if (!user) return false
+    const metadata = user.user_metadata as Record<string, unknown> | null
+    return (
+      alias !== ((metadata?.alias as string) || '') ||
+      fullName !== ((metadata?.full_name as string) || '') ||
+      position !== ((metadata?.position as string) || '')
+    )
+  }, [user, alias, fullName, position])
+
   useEffect(() => {
-    if (!message) return
+    if (!message || messageType === 'error') return
     const t = setTimeout(() => setMessage(null), 3000)
     return () => clearTimeout(t)
-  }, [message])
+  }, [message, messageType])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -46,11 +56,26 @@ export default function ProfilePage() {
 
   if (authLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-2 border-primary border-r-transparent mx-auto mb-4" />
-          <p className="text-muted-foreground text-sm">Cargando…</p>
-        </div>
+      <div className="min-h-screen bg-background">
+        <main className="max-w-xl mx-auto px-4 py-8 sm:py-10">
+          <div className="h-4 w-32 animate-pulse rounded bg-muted mb-6" />
+          <div className="rounded-2xl border border-border bg-card p-6 sm:p-8 space-y-5">
+            <div className="flex items-center gap-3">
+              <div className="size-16 rounded-full bg-muted animate-pulse" />
+              <div className="space-y-2">
+                <div className="h-5 w-28 animate-pulse rounded bg-muted" />
+                <div className="h-3 w-40 animate-pulse rounded bg-muted" />
+              </div>
+            </div>
+            {[...Array(4)].map((_, i) => (
+              <div key={i} className="space-y-2">
+                <div className="h-3 w-24 animate-pulse rounded bg-muted" />
+                <div className="h-10 w-full animate-pulse rounded-lg bg-muted" />
+              </div>
+            ))}
+            <div className="h-10 w-full animate-pulse rounded-lg bg-muted" />
+          </div>
+        </main>
       </div>
     )
   }
@@ -58,12 +83,17 @@ export default function ProfilePage() {
   if (!user) return null
 
   const email = user.email ?? ''
+  const metadata = user.user_metadata as Record<string, unknown> | null
+  const initialAlias = (metadata?.alias as string) || ''
+  const initialName = (metadata?.full_name as string) || ''
+  const initial = (initialAlias || initialName || email[0] || '?').charAt(0).toUpperCase()
 
   const handleSave = async () => {
     const trimmedAlias = alias.trim()
     const trimmedFullName = fullName.trim()
     if (trimmedAlias.length < 2) {
       setMessage('El alias debe tener al menos 2 caracteres.')
+      setMessageType('error')
       return
     }
 
@@ -78,7 +108,7 @@ export default function ProfilePage() {
           alias: trimmedAlias,
           name: trimmedAlias,
           full_name: trimmedFullName,
-          position: position || currentMetadata.position,
+          position: position || null,
         },
       })
 
@@ -108,9 +138,15 @@ export default function ProfilePage() {
     }
   }
 
+  const handleDiscard = () => {
+    setAlias(initialAlias)
+    setFullName(initialName)
+    setPosition((metadata?.position as string) || '')
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <main className="max-w-lg mx-auto px-4 py-8 sm:py-10">
+      <main className="max-w-xl mx-auto px-4 py-8 sm:py-10">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors mb-6"
@@ -120,32 +156,37 @@ export default function ProfilePage() {
         </Link>
 
         <section className="rounded-2xl border border-border bg-card p-6 sm:p-8">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="size-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0">
-              <User className="size-5 text-primary" />
+          {/* Avatar + header */}
+          <div className="flex items-center gap-4 mb-8">
+            <div className="size-16 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center shrink-0">
+              <span className="text-xl font-heading font-bold text-primary">{initial}</span>
             </div>
-            <div>
-              <h1 className="text-lg font-heading font-bold text-foreground leading-tight">
+            <div className="min-w-0">
+              <h1 className="text-xl font-heading font-bold text-foreground leading-tight">
                 Mi Perfil
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground mt-0.5">
                 Administra tu información personal
               </p>
             </div>
           </div>
 
           <div className="space-y-5">
+            {/* Email (read-only) */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <Mail className="size-3.5" />
                 Correo electrónico
               </label>
-              <Input value={email} disabled className="opacity-60" />
+              <div className="rounded-lg border border-border bg-muted/40 px-3 py-2.5 text-sm text-foreground">
+                {email}
+              </div>
             </div>
 
+            {/* Nombre completo */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                <User className="size-3.5" />
+                <AtSign className="size-3.5" />
                 Nombre completo
               </label>
               <Input
@@ -159,10 +200,11 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            {/* Alias */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
-                <AtSign className="size-3.5" />
-                Alias
+                <Save className="size-3.5" />
+                Alias <span className="text-red-400">*</span>
               </label>
               <Input
                 value={alias}
@@ -172,28 +214,30 @@ export default function ProfilePage() {
                 maxLength={30}
               />
               <p className="mt-1 text-xs text-muted-foreground">
-                Tu apodo en la cancha. Si es igual a tu nombre completo, el dashboard te pedirá que lo personalices.
+                Tu apodo en la cancha. Mínimo 2 caracteres.
               </p>
             </div>
 
+            {/* Posición */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
                 <Shield className="size-3.5" />
                 Posición en la cancha
               </label>
-              <Select value={position} onValueChange={(v) => { if (v) setPosition(v); }}>
+              <Select value={position} onValueChange={(v) => { setPosition(v && v !== '__none__' ? v : ''); }}>
                 <SelectTrigger className="w-full" aria-label="Seleccionar posición">
                   <SelectValue placeholder="Selecciona tu posición…" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">Sin posición</SelectItem>
                   {SHARED_POSITIONS.map((pos) => {
-                    const Icon = pos.icon;
+                    const Icon = pos.icon
                     return (
                       <SelectItem key={pos.value} value={pos.value}>
                         <Icon className="size-4" aria-hidden="true" />
                         {pos.label}
                       </SelectItem>
-                    );
+                    )
                   })}
                 </SelectContent>
               </Select>
@@ -203,24 +247,42 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <div className="mt-6 flex flex-col gap-2">
-            <Button type="button" onClick={handleSave} disabled={saving}>
+          {/* Actions */}
+          <div className="mt-6 flex items-center gap-3">
+            <Button type="button" onClick={handleSave} disabled={saving || !hasChanges} className="flex-1">
               <Save className="size-4" />
               {saving ? 'Guardando...' : 'Guardar cambios'}
             </Button>
-            {message && (
-              <div
-                className={`rounded-lg p-3 text-sm text-center transition-opacity duration-300 ${
-                  messageType === 'success'
-                    ? 'bg-green-900/60 text-green-200 border border-green-700/40'
-                    : 'bg-red-900/60 text-red-200 border border-red-700/40'
-                }`}
-              >
-                {message}
-              </div>
+            {hasChanges && (
+              <Button type="button" variant="outline" onClick={handleDiscard} disabled={saving} className="shrink-0">
+                <X className="size-4" />
+                Cancelar
+              </Button>
             )}
           </div>
         </section>
+
+        {/* Toast flotante */}
+        {message && (
+          <div
+            className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-xl px-5 py-3 text-sm font-semibold shadow-lg border transition-all duration-300 ${
+              messageType === 'success'
+                ? 'bg-green-900 text-green-100 border-green-700/50'
+                : 'bg-red-900 text-red-100 border-red-700/50'
+            }`}
+          >
+            <div className="flex items-center gap-3">
+              <span>{message}</span>
+              <button
+                type="button"
+                onClick={() => setMessage(null)}
+                className="size-5 flex items-center justify-center rounded-full hover:bg-white/10 transition-colors cursor-pointer shrink-0"
+              >
+                <X className="size-3.5" />
+              </button>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   )

@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { AlertTriangle, ArrowLeft, CheckCircle2, Loader2, RefreshCcw } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Loader2, RefreshCcw, Save } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { useTournamentManage } from "@/hooks/useTournamentManage"
@@ -73,6 +73,189 @@ function ScheduleEditor({
   )
 }
 
+function TournamentMaxTeamsInput({
+  value,
+  onSave,
+  saving,
+}: {
+  value: number
+  onSave: (value: number) => Promise<boolean>
+  saving: boolean
+}) {
+  const [local, setLocal] = useState(value)
+  const [saved, setSaved] = useState(false)
+  const [error, setError] = useState(false)
+
+  useEffect(() => {
+    setLocal(value)
+    setSaved(false)
+    setError(false)
+  }, [value])
+
+  const isDirty = local !== value
+
+  const handleSave = async () => {
+    if (local < 2) {
+      setError(true)
+      return
+    }
+    setError(false)
+    setSaved(false)
+    const ok = await onSave(local)
+    if (ok) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
+  }
+
+  const handleCancel = () => {
+    setLocal(value)
+    setError(false)
+  }
+
+  return (
+    <div className="flex items-center gap-1.5">
+      <input
+        type="number"
+        min={2}
+        value={local}
+        onChange={(e) => {
+          setLocal(Number(e.target.value))
+          setError(false)
+        }}
+        className={`w-24 rounded-lg border px-3 py-2 text-sm text-foreground bg-background ${
+          error ? "border-red-500" : "border-border"
+        }`}
+      />
+      {isDirty ? (
+        <>
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="btn-primary-fm inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-bold disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            Guardar
+          </button>
+          <button
+            type="button"
+            onClick={handleCancel}
+            disabled={saving}
+            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted transition"
+          >
+            Cancelar
+          </button>
+        </>
+      ) : saved ? (
+        <span className="inline-flex items-center gap-1 text-xs text-green-500">
+          <Check className="size-3.5" />
+          Guardado
+        </span>
+      ) : null}
+    </div>
+  )
+}
+
+function InlineDateEditor({
+  label,
+  value,
+  onSave,
+  saving,
+  helperText,
+  validationError,
+}: {
+  label: string
+  value: string | null
+  onSave: (value: string | null) => Promise<boolean>
+  saving: boolean
+  helperText?: string
+  validationError?: string | null
+}) {
+  const dateValue = value ? value.slice(0, 10) : ""
+  const [local, setLocal] = useState(dateValue)
+  const [saved, setSaved] = useState(false)
+
+  useEffect(() => {
+    setLocal(value ? value.slice(0, 10) : "")
+    setSaved(false)
+  }, [value])
+
+  const isDirty = local !== dateValue
+
+  const handleSave = async () => {
+    setSaved(false)
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const now = new Date()
+    const offset = -now.getTimezoneOffset()
+    const sign = offset >= 0 ? "+" : "-"
+    const pad = (n: number) => String(Math.abs(n)).padStart(2, "0")
+    const tzSuffix = `${sign}${pad(Math.floor(offset / 60))}:${pad(offset % 60)}`
+    const newValue = local ? `${local}T23:59:59${tzSuffix}` : null
+    const ok = await onSave(newValue)
+    if (ok) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
+  }
+
+  const handleClear = async () => {
+    setLocal("")
+    setSaved(false)
+    const ok = await onSave(null)
+    if (ok) {
+      setSaved(true)
+      setTimeout(() => setSaved(false), 2000)
+    }
+  }
+
+  return (
+    <div className="min-w-48 space-y-1.5">
+      <label htmlFor={`date-${label.toLowerCase().replace(/\s+/g, "-")}`} className="text-sm font-medium text-foreground">{label}</label>
+      <div className="flex items-center gap-2">
+        <input
+          id={`date-${label.toLowerCase().replace(/\s+/g, "-")}`}
+          type="date"
+          value={local}
+          onChange={(e) => setLocal(e.target.value)}
+          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+        />
+        {isDirty ? (
+          <button
+            type="button"
+            onClick={() => void handleSave()}
+            disabled={saving}
+            className="btn-primary-fm inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-bold disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+            Guardar
+          </button>
+        ) : saved ? (
+          <span className="inline-flex items-center gap-1 text-xs text-green-500">
+            <Check className="size-3.5" />
+            Guardado
+          </span>
+        ) : local && !helperText?.includes("obligatorio") ? (
+          <button
+            type="button"
+            onClick={() => void handleClear()}
+            disabled={saving}
+            className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition disabled:opacity-60"
+          >
+            {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
+            Quitar fecha
+          </button>
+        ) : null}
+      </div>
+      {validationError ? (
+        <p className="text-xs text-red-400 leading-relaxed">{validationError}</p>
+      ) : helperText ? (
+        <p className="text-xs text-muted-foreground leading-relaxed">{helperText}</p>
+      ) : null}
+    </div>
+  )
+}
+
 export default function ManageTournamentClient({ tournamentId }: ManageTournamentClientProps) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -87,8 +270,21 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
     refresh,
     updateStatus,
     updateSchedule,
+    updateMaxTeams,
+    updateDateField,
   } = useTournamentManage(tournamentId)
   const [updatingStatus, setUpdatingStatus] = useState(false)
+  const [updatingMaxTeams, setUpdatingMaxTeams] = useState(false)
+  const [updatingDate, setUpdatingDate] = useState(false)
+  const [dateValidationError, setDateValidationError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (tournament?.registration_deadline && tournament?.starts_at && new Date(tournament.registration_deadline) > new Date(tournament.starts_at)) {
+      setDateValidationError("El cierre de inscripciones no puede ser después de la fecha de inicio")
+    } else {
+      setDateValidationError(null)
+    }
+  }, [tournament?.registration_deadline, tournament?.starts_at])
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -97,6 +293,12 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
   }, [authLoading, router, user])
 
   const onChangeStatus = async (value: "draft" | "open" | "in_progress" | "finished") => {
+    if (value === "finished") {
+      const confirmed = window.confirm(
+        "¿Estás seguro de marcar el torneo como Finalizado?\n\nNo se podrán inscribir más equipos ni modificar resultados."
+      )
+      if (!confirmed) return
+    }
     setUpdatingStatus(true)
     await updateStatus(value)
     setUpdatingStatus(false)
@@ -209,8 +411,8 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
   return (
     <div className="min-h-screen bg-background">
       <main className="mx-auto w-full max-w-6xl space-y-5 px-4 py-6 sm:py-8">
-        <header className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-          <div>
+        <div className="flex items-start justify-between gap-4">
+          <div className="min-w-0">
             <Link
               href="/dashboard"
               className="mb-2 inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
@@ -218,62 +420,119 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
               <ArrowLeft className="size-4" />
               Volver
             </Link>
-            <h1 className="text-2xl font-heading font-bold text-foreground sm:text-3xl">{tournament.name}</h1>
-            <p className="mt-1 text-sm text-muted-foreground">Panel admin para mover el torneo sin fricción.</p>
-            {tournament.registration_deadline && (
-              <p className="mt-2 text-xs text-muted-foreground">
-                Cierre de inscripciones:{" "}
-                <span className="font-semibold text-foreground">
-                  {new Date(tournament.registration_deadline).toLocaleString("es-CO", {
-                    dateStyle: "long",
-                    timeStyle: "short",
-                  })}
-                </span>
-                {new Date(tournament.registration_deadline) < new Date() && (
-                  <span className="ml-1 text-red-400">(cerrada)</span>
-                )}
-              </p>
-            )}
-            <Link
-              href={`/tournaments/${tournament.id}/fixture`}
-              className="mt-3 inline-flex items-center gap-2 rounded-lg border border-primary/40 bg-primary/10 px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-primary/15"
-            >
-              Ver fixture y tabla de posiciones
-            </Link>
+            <h1 className="text-2xl font-heading font-bold text-foreground sm:text-3xl truncate">{tournament.name}</h1>
           </div>
-
-          <div className="flex items-center gap-2">
-            <label id="status-config" htmlFor="status" className="text-sm font-medium text-foreground">Estado</label>
-            <select
-              id="status"
-              value={tournament.status}
-              onChange={(e) => void onChangeStatus(e.target.value as "draft" | "open" | "in_progress" | "finished")}
-              disabled={updatingStatus}
-              className="rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-            >
-              {statusOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            <button
-              type="button"
-              onClick={() => void refresh()}
-              className="inline-flex items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
-            >
-              <RefreshCcw className="size-4" />
-              Refrescar
-            </button>
-          </div>
-        </header>
+          <button
+            type="button"
+            onClick={() => void refresh()}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border px-3 py-2 text-sm font-semibold text-foreground transition hover:bg-muted"
+          >
+            <RefreshCcw className="size-4" />
+            Refrescar
+          </button>
+        </div>
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
         <TournamentAdminBento tournament={tournament} teamsCount={teams.length} paidCount={paidCount} />
 
+        <section id="status-config" className="card p-5 sm:p-6">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Configuración</p>
+            <h2 className="mt-1 text-lg font-heading font-bold text-foreground">Ajustes del torneo</h2>
+          </div>
+          <div className="mt-5 flex flex-wrap gap-6">
+            {/* Estado */}
+            <div className="min-w-48 space-y-1.5">
+              <label htmlFor="status" className="text-sm font-medium text-foreground">Estado del torneo</label>
+              <div className="flex items-center gap-2">
+                <select
+                  id="status"
+                  value={tournament.status}
+                  onChange={(e) => void onChangeStatus(e.target.value as "draft" | "open" | "in_progress" | "finished")}
+                  disabled={updatingStatus}
+                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+                >
+                  {statusOptions.map((option) => (
+                    <option key={option.value} value={option.value}>
+                      {option.label}
+                    </option>
+                  ))}
+                </select>
+                {updatingStatus ? (
+                  <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                ) : null}
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {tournament.status === "draft" && "Solo tú puedes verlo. Pasa a Abierto para iniciar inscripciones."}
+                {tournament.status === "open" && "El torneo está visible y aceptando equipos."}
+                {tournament.status === "in_progress" && "El torneo está en juego. Ya no se aceptan más equipos."}
+                {tournament.status === "finished" && "Torneo finalizado. Resultados visibles."}
+              </p>
+            </div>
+
+            {/* Cupo de equipos */}
+            <div className="min-w-48 space-y-1.5">
+              <label htmlFor="max-teams" className="text-sm font-medium text-foreground">Cupo máximo de equipos</label>
+              <div className="flex items-center gap-2">
+                <TournamentMaxTeamsInput
+                  value={tournament.max_teams}
+                  onSave={async (val) => {
+                    setUpdatingMaxTeams(true)
+                    const ok = await updateMaxTeams(val)
+                    setUpdatingMaxTeams(false)
+                    return ok
+                  }}
+                  saving={updatingMaxTeams}
+                />
+              </div>
+              <p className="text-xs text-muted-foreground leading-relaxed">
+                {teams.length}/{tournament.max_teams} equipos inscritos.
+                {teams.length >= tournament.max_teams && " Cupo completo."}
+              </p>
+            </div>
+
+            {/* Fecha de inicio */}
+            <InlineDateEditor
+              label="Inicio del torneo"
+              value={tournament.starts_at}
+              onSave={async (val) => {
+                setUpdatingDate(true)
+                const ok = await updateDateField("starts_at", val)
+                setUpdatingDate(false)
+                return ok
+              }}
+              saving={updatingDate}
+              helperText={
+                tournament.starts_at && new Date(tournament.starts_at) < new Date()
+                  ? "La fecha ya pasó."
+                  : "Fecha en que comienza el torneo."
+              }
+            />
+
+            {/* Cierre de inscripciones */}
+            <InlineDateEditor
+              label="Cierre de inscripciones"
+              value={tournament.registration_deadline}
+              onSave={async (val) => {
+                setUpdatingDate(true)
+                const ok = await updateDateField("registration_deadline", val)
+                setUpdatingDate(false)
+                return ok
+              }}
+              saving={updatingDate}
+              validationError={dateValidationError}
+              helperText={
+                tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date()
+                  ? "La fecha ya pasó."
+                  : "Fecha límite para inscribir equipos."
+              }
+            />
+          </div>
+        </section>
+
         <section className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
-          <div className="space-y-5 order-2 lg:order-1">
+          <div className="space-y-5 order-1 lg:order-1">
             <div id="share-links-section">
               <TournamentDynamicLinksCard tournamentId={tournamentId} />
             </div>
@@ -349,7 +608,7 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
             </section>
           </div>
 
-          <div className="order-1 lg:order-2">
+          <div className="order-2 lg:order-2">
             <section className="card space-y-4 p-5 sm:p-6 lg:sticky lg:top-24">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
@@ -384,7 +643,7 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className={`text-sm font-semibold ${step.done ? "text-foreground" : "text-amber-300"}`}>
+                        <p className={`text-sm font-semibold ${step.done ? "text-foreground" : "text-muted-foreground"}`}>
                           {step.done ? "Listo" : "Pendiente"} · {step.title}
                         </p>
                         {!step.done ? <p className="mt-1 text-xs text-muted-foreground">{step.hintWhenMissing}</p> : null}
@@ -392,7 +651,7 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
                       {step.done ? (
                         <CheckCircle2 className="mt-0.5 size-4 text-primary" />
                       ) : (
-                        <AlertTriangle className="mt-0.5 size-4 text-amber-300" />
+                        <AlertTriangle className="mt-0.5 size-4 text-muted-foreground" />
                       )}
                     </div>
                     {!step.done && step.actionHref && step.actionLabel ? (
@@ -408,7 +667,7 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
               </div>
 
               {pendingSteps.length > 0 ? (
-                <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 text-sm text-amber-200">
+                <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
                   Faltan {pendingSteps.length} paso(s): {pendingSteps.map((step) => step.title).join(", ")}.
                 </div>
               ) : (

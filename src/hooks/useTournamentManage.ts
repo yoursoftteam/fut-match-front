@@ -19,6 +19,8 @@ interface UseTournamentManageActions {
   refresh: () => Promise<void>
   updateStatus: (status: Tournament["status"]) => Promise<boolean>
   updateSchedule: (input: { scheduled_days: TournamentScheduleDay[] }) => Promise<boolean>
+  updateMaxTeams: (max_teams: number) => Promise<boolean>
+  updateDateField: (field: "starts_at" | "registration_deadline", value: string | null) => Promise<boolean>
 }
 
 export function useTournamentManage(tournamentId: string): UseTournamentManageState & UseTournamentManageActions {
@@ -130,6 +132,62 @@ export function useTournamentManage(tournamentId: string): UseTournamentManageSt
     [tournamentId, user]
   )
 
+  const updateMaxTeams = useCallback(
+    async (max_teams: number): Promise<boolean> => {
+      if (!user) {
+        setError("Debes iniciar sesión para editar el torneo")
+        return false
+      }
+
+      try {
+        const { data, error: updateError } = await supabase
+          .from("tournaments")
+          .update({ max_teams })
+          .eq("id", tournamentId)
+          .select("*")
+          .single()
+
+        if (updateError) throw updateError
+
+        setTournament(data as Tournament)
+        return true
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "No se pudo actualizar la cantidad de equipos"
+        setError(message)
+        return false
+      }
+    },
+    [tournamentId, user]
+  )
+
+  const updateDateField = useCallback(
+    async (field: "starts_at" | "registration_deadline", value: string | null): Promise<boolean> => {
+      if (!user) {
+        setError("Debes iniciar sesión para editar el torneo")
+        return false
+      }
+
+      try {
+        const { data, error: updateError } = await supabase
+          .from("tournaments")
+          .update({ [field]: value })
+          .eq("id", tournamentId)
+          .select("*")
+          .single()
+
+        if (updateError) throw updateError
+
+        setTournament(data as Tournament)
+        return true
+      } catch (err) {
+        const message = err instanceof Error ? err.message : `No se pudo actualizar la fecha`
+        setError(message)
+        return false
+      }
+    },
+    [tournamentId, user]
+  )
+
   useEffect(() => {
     void refresh()
   }, [refresh])
@@ -145,5 +203,7 @@ export function useTournamentManage(tournamentId: string): UseTournamentManageSt
     refresh,
     updateStatus,
     updateSchedule,
+    updateMaxTeams,
+    updateDateField,
   }
 }

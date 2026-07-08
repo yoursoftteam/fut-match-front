@@ -3,6 +3,7 @@
 import { useAuth } from '@/hooks/useAuth'
 import { useMatches, type Match } from '@/hooks/useMatches'
 import { useTournaments } from '@/hooks/useTournaments'
+import type { Tournament } from '@/lib/tournament-schema'
 import Link from 'next/link'
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useEffect, useState } from 'react'
@@ -29,6 +30,24 @@ interface RegisteredMatchCardItem {
 
 function isUuid(value: string): boolean {
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value)
+}
+
+interface TournamentProgress {
+  teamsCount: number
+  matchesCount: number
+  unscheduledCount: number
+}
+
+function getTournamentConfigProgress(t: Tournament, progress?: TournamentProgress): { completed: number; total: number; pct: number } {
+  const steps = [
+    t.status !== 'draft',
+    Boolean(t.scheduled_days?.length && t.scheduled_days.some((d) => d.times.length > 0)),
+    (progress?.teamsCount ?? 0) >= 2,
+    (progress?.matchesCount ?? 0) > 0,
+    progress ? (progress.matchesCount === 0 || progress.unscheduledCount === 0) : false,
+  ]
+  const completed = steps.filter(Boolean).length
+  return { completed, total: steps.length, pct: Math.round((completed / steps.length) * 100) }
 }
 
 function getMatchStatus(dateStr: string): { label: string; cls: string } | null {
@@ -91,6 +110,7 @@ export default function DashboardPage() {
   const [deleteTournamentNameInput, setDeleteTournamentNameInput] = useState('')
   const [deletingTournamentId, setDeletingTournamentId] = useState<string | null>(null)
   const [deleteTournamentError, setDeleteTournamentError] = useState<string | null>(null)
+  const [tournamentProgress, setTournamentProgress] = useState<Map<string, TournamentProgress>>(new Map())
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -103,6 +123,42 @@ export default function DashboardPage() {
       void listMyTournaments()
     }
   }, [user, listMyTournaments])
+
+  useEffect(() => {
+    if (tournaments.length === 0) return
+    let cancelled = false
+    const ids = tournaments.map((t) => t.id)
+    const loadProgress = async () => {
+      const [teamsRes, matchesRes] = await Promise.all([
+        supabase.from('tournament_teams').select('tournament_id').in('tournament_id', ids),
+        supabase.from('tournament_matches').select('tournament_id, starts_at').in('tournament_id', ids),
+      ])
+      if (cancelled) return
+      const teamCounts = new Map<string, number>()
+      for (const row of teamsRes.data ?? []) {
+        teamCounts.set(row.tournament_id, (teamCounts.get(row.tournament_id) ?? 0) + 1)
+      }
+      const matchCounts = new Map<string, number>()
+      const unscheduledCounts = new Map<string, number>()
+      for (const row of matchesRes.data ?? []) {
+        matchCounts.set(row.tournament_id, (matchCounts.get(row.tournament_id) ?? 0) + 1)
+        if (!row.starts_at) {
+          unscheduledCounts.set(row.tournament_id, (unscheduledCounts.get(row.tournament_id) ?? 0) + 1)
+        }
+      }
+      const m = new Map<string, TournamentProgress>()
+      for (const id of ids) {
+        m.set(id, {
+          teamsCount: teamCounts.get(id) ?? 0,
+          matchesCount: matchCounts.get(id) ?? 0,
+          unscheduledCount: unscheduledCounts.get(id) ?? 0,
+        })
+      }
+      if (!cancelled) setTournamentProgress(m)
+    }
+    void loadProgress()
+    return () => { cancelled = true }
+  }, [tournaments])
 
   useEffect(() => {
     if (!user) {
@@ -549,7 +605,6 @@ export default function DashboardPage() {
               createdCount={uniqueOwnedMatches.length}
               registeredCount={registeredMatches.length}
               upcomingCount={upcomingMatches.length + upcomingRegisteredMatches.length}
-              predictionsCount={0}
             />
 
             {/* Quick Actions */}
@@ -560,12 +615,12 @@ export default function DashboardPage() {
               <div className="flex flex-col gap-2">
                 <Link
                   href="/create"
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-primary/40 group cursor-pointer"
+                  className="flex items-center gap-3 rounded-xl border-2 border-primary/40 bg-primary/5 h-14 px-4 transition-colors hover:bg-primary/10 group cursor-pointer"
                 >
-                  <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
-                    <Plus className="size-4 text-primary" />
+                  <div className="size-9 rounded-lg bg-primary border border-primary/30 flex items-center justify-center shrink-0 group-hover:brightness-110 transition-all">
+                    <Plus className="size-5 text-primary-foreground" />
                   </div>
-                  <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
+                  <span className="text-sm font-bold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
                     Armar partido
                   </span>
                   <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Nuevo en 2 min</span>
@@ -602,16 +657,16 @@ export default function DashboardPage() {
 
                 <Link
                   href="/bet/pools/new"
-                  className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-accent/40 group cursor-pointer"
+                  className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-colors hover:border-primary/40 group cursor-pointer"
                 >
-                  <div className="size-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
-                    <Trophy className="size-4 text-accent" />
+                  <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+                    <Trophy className="size-4 text-primary" />
                   </div>
-                  <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-accent transition-colors leading-none">
+                  <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none">
                     Crear Polla
                   </span>
                   <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Apuesta con amigos</span>
-                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-accent transition-colors shrink-0 -ml-1" />
+                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 -ml-1" />
                 </Link>
               </div>
             </section>
@@ -619,9 +674,20 @@ export default function DashboardPage() {
             {/* Próximos partidos (in the overview) */}
             {upcomingRegisteredMatches.length > 0 && (
               <section>
-                <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground mb-4">
-                  Próximos partidos
-                </h2>
+                <div className="flex items-center justify-between mb-4">
+                  <h2 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                    Próximos partidos
+                  </h2>
+                  {upcomingRegisteredMatches.length > 3 && (
+                    <Link
+                      href="/matches"
+                      className="inline-flex items-center gap-1 text-primary hover:text-primary/80 transition-colors text-sm font-semibold cursor-pointer"
+                    >
+                      Ver todos ({upcomingRegisteredMatches.length})
+                      <ChevronRight className="w-4 h-4" />
+                    </Link>
+                  )}
+                </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
                   {upcomingRegisteredMatches.map(({ registrationId, match }) => (
                     <MatchCard
@@ -751,7 +817,7 @@ export default function DashboardPage() {
                     href="/matches"
                     className="inline-flex items-center gap-1 text-primary hover:text-primary/80 transition-colors text-sm font-semibold cursor-pointer"
                   >
-                    Ver todos
+                    Ir a Mis Partidos
                     <ChevronRight className="w-4 h-4" />
                   </Link>
                 )}
@@ -879,10 +945,28 @@ export default function DashboardPage() {
                         {tournament.max_teams} equipos máx.
                       </p>
 
+                      {/* Config progress bar */}
+                      {(() => {
+                        const p = getTournamentConfigProgress(tournament, tournamentProgress.get(tournament.id))
+                        return (
+                          <div className="flex items-center gap-2.5">
+                            <div className="flex-1 h-2 rounded-full bg-muted overflow-hidden">
+                              <div
+                                className={`h-full rounded-full transition-all ${p.pct === 100 ? 'bg-green-500' : 'bg-muted-foreground/30'}`}
+                                style={{ width: `${p.pct}%` }}
+                              />
+                            </div>
+                            <span className={`text-[10px] font-semibold leading-none shrink-0 ${p.pct === 100 ? 'text-green-500' : 'text-muted-foreground'}`}>
+                              {p.pct < 100 ? `${p.completed}/${p.total}` : 'Completo'}
+                            </span>
+                          </div>
+                        )
+                      })()}
+
                       <div className="mt-1 grid grid-cols-2 gap-2">
                         <Link
                           href={`/tournaments/${tournament.id}/manage`}
-                          className="inline-flex items-center justify-center rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition"
+                          className="inline-flex items-center justify-center rounded-lg bg-green-600 px-3 py-2 text-xs font-semibold text-white hover:bg-green-700 transition col-span-2"
                         >
                           Gestionar
                         </Link>
@@ -900,9 +984,9 @@ export default function DashboardPage() {
                         </Link>
                         <Link
                           href={`/tournaments/${tournament.id}/register`}
-                          className="col-span-2 inline-flex items-center justify-center rounded-lg border border-primary/40 px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition"
+                          className="inline-flex items-center justify-center rounded-lg border border-primary/40 px-3 py-2 text-xs font-semibold text-foreground hover:border-primary hover:text-primary transition col-span-2"
                         >
-                          Ver portal público
+                          {tournament.status === 'in_progress' ? 'Ver avance' : tournament.status === 'finished' ? 'Ver resultados' : 'Ver portal público'}
                         </Link>
                         <button
                           type="button"
@@ -911,7 +995,7 @@ export default function DashboardPage() {
                             setDeleteTournamentNameInput('')
                           }}
                           disabled={deletingTournamentId === tournament.id}
-                          className="col-span-2 inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60"
+                          className="inline-flex items-center justify-center gap-2 rounded-lg border border-red-500/30 px-3 py-2 text-xs font-semibold text-red-400 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-60 col-span-2"
                         >
                           <Trash2 className="size-3.5" />
                           {deletingTournamentId === tournament.id ? 'Eliminando...' : 'Eliminar torneo'}

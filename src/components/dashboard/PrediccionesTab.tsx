@@ -2,7 +2,7 @@
 
 import { usePools } from '@/hooks/usePools'
 import { useRouter } from 'next/navigation'
-import { Target, Trophy, ChevronRight, Plus } from 'lucide-react'
+import { Target, Trophy, ChevronRight } from 'lucide-react'
 
 function ItemCard({ item }: { item: { id: string; name: string; competition_type: string; member_count: number } }) {
   const router = useRouter()
@@ -50,6 +50,14 @@ export function PrediccionesTab() {
 
   return (
     <div className="space-y-10">
+      <div>
+        <p className="text-xs font-semibold uppercase tracking-widest text-primary mb-1">
+          Predicciones
+        </p>
+        <h2 className="text-2xl font-heading font-bold text-foreground">
+          Tus predicciones y pollas
+        </h2>
+      </div>
 
       {/* Creación */}
       <section>
@@ -75,16 +83,16 @@ export function PrediccionesTab() {
           <button
             type="button"
             onClick={() => router.push('/bet/pools/new')}
-            className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-all hover:border-accent/40 group cursor-pointer w-full"
+            className="flex items-center gap-3 rounded-xl border border-border bg-card h-12 px-4 transition-all hover:border-primary/40 group cursor-pointer w-full"
           >
-            <div className="size-8 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center shrink-0 group-hover:bg-accent/20 transition-colors">
-              <Trophy className="size-4 text-accent" />
+            <div className="size-8 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center shrink-0 group-hover:bg-primary/20 transition-colors">
+              <Trophy className="size-4 text-primary" />
             </div>
-            <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-accent transition-colors leading-none text-left">
+            <span className="text-sm font-semibold text-card-foreground flex-1 min-w-0 group-hover:text-primary transition-colors leading-none text-left">
               Crear Polla
             </span>
             <span className="text-xs text-muted-foreground shrink-0 hidden sm:block">Apuesta con amigos</span>
-            <ChevronRight className="size-4 text-muted-foreground group-hover:text-accent transition-colors shrink-0 -ml-1" />
+            <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary transition-colors shrink-0 -ml-1" />
           </button>
         </div>
       </section>

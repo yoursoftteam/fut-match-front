@@ -31,6 +31,9 @@ const NAV_ITEMS = [
   { label: 'Mis Partidos', icon: Swords, href: '/dashboard?tab=partidos' },
   { label: 'Torneos', icon: Trophy, href: '/dashboard?tab=torneos' },
   { label: 'Predicciones', icon: Target, href: '/dashboard?tab=predicciones' },
+]
+
+const CTA_ITEMS = [
   { label: 'Armar Partido', icon: Plus, href: '/create' },
 ]
 
@@ -112,6 +115,30 @@ export function DashboardSidebar({
                 <Icon className="size-5" />
               </div>
               {expanded && <span className="text-sm font-medium leading-none">{item.label}</span>}
+            </Link>
+          )
+        })}
+
+        <div className="border-t border-border my-2" />
+
+        {CTA_ITEMS.map((item) => {
+          const Icon = item.icon
+          return (
+            <Link
+              key={item.label}
+              href={item.href}
+              onClick={onMobileClose}
+              className={`
+                flex items-center gap-3 rounded-xl transition-colors cursor-pointer
+                ${expanded ? 'px-3 py-2.5' : 'px-0 py-2.5 justify-center'}
+                bg-primary/10 text-primary hover:bg-primary/20
+              `}
+              title={item.label}
+            >
+              <div className="flex items-center justify-center shrink-0 text-primary">
+                <Icon className="size-5" />
+              </div>
+              {expanded && <span className="text-sm font-semibold leading-none">{item.label}</span>}
             </Link>
           )
         })}

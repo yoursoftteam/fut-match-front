@@ -117,7 +117,16 @@ export const createTournamentInputSchema = z
     .max(7)
     .optional(),
   })
-  .superRefine((data, ctx) => {    if (data.tournament_type === "league") {
+  .superRefine((data, ctx) => {
+    if (data.starts_at && data.registration_deadline && new Date(data.registration_deadline) > new Date(data.starts_at)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        path: ["registration_deadline"],
+        message: "El cierre de inscripciones no puede ser después de la fecha de inicio",
+      })
+    }
+
+    if (data.tournament_type === "league") {
       if (!data.league_mode) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
