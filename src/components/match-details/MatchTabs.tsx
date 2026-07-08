@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Trash2 } from "lucide-react";
+import Link from "next/link";
+import { AlertTriangle, Check, Plus, Trash2, Zap } from "lucide-react";
 import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
@@ -247,7 +248,32 @@ export function RegistrationPanel() {
         return;
       }
 
-      const { error } = await registerForMatch(matchId, normalizedAuthName, false, {
+      const normalizedNameLower = normalizedAuthName.toLowerCase();
+      const hasNameCollision = registrations.some(
+        (r) => r.name.trim().toLowerCase() === normalizedNameLower,
+      );
+
+      let finalName = normalizedAuthName;
+      if (hasNameCollision) {
+        const metadata = user.user_metadata as { full_name?: string } | null;
+        const fullName = metadata?.full_name?.trim();
+        if (fullName && fullName.split(" ").length > 1) {
+          if (registrations.some((r) => r.name.trim().toLowerCase() === fullName.toLowerCase())) {
+            setQuickActionMessage(
+              `Ya hay un jugador inscrito como "${fullName}". Contacta al organizador para resolverlo.`,
+            );
+            return;
+          }
+          finalName = fullName;
+        } else {
+          setQuickActionMessage(
+            "Ya hay un jugador inscrito con ese nombre. Para evitar confusiones, actualiza tu perfil para incluir tu apellido.",
+          );
+          return;
+        }
+      }
+
+      const { error } = await registerForMatch(matchId, finalName, false, {
         trackCurrentUser: true,
       });
       if (error) {
@@ -366,14 +392,52 @@ export function RegistrationPanel() {
             Inscribir a otros
           </button>
         ) : (
-        <button
-          type="button"
-          onClick={() => setShowForm(true)}
-          className={`w-full rounded py-2 px-4 font-semibold transition ${(isTitularFull || isFieldPlayerFull) && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
-          disabled={isTitularFull && isSubstituteFull}
-        >
-          {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : (isTitularFull || isFieldPlayerFull) ? "Inscribirme como suplente" : "Inscribirme"}
-        </button>
+          <>
+            {!user && (
+              <div className="mb-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
+                <div className="flex items-start gap-2.5">
+                  <Zap className="mt-0.5 size-5 shrink-0 text-primary" />
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-bold text-foreground">
+                      Inscribite más rápido
+                    </p>
+                    <ul className="mt-1.5 space-y-1">
+                      <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Check size={12} className="shrink-0 text-primary" />
+                        <span>Guardá tu posición favorita</span>
+                      </li>
+                      <li className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                        <Check size={12} className="shrink-0 text-primary" />
+                        <span>Registrate con 1 click</span>
+                      </li>
+                    </ul>
+                    <div className="mt-2.5 flex flex-wrap gap-2">
+                      <Link
+                        href="/auth?mode=signin"
+                        className="inline-flex items-center rounded-md bg-primary px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-primary/90"
+                      >
+                        Iniciar sesión
+                      </Link>
+                      <Link
+                        href="/auth?mode=signup"
+                        className="inline-flex items-center rounded-md border border-primary/30 px-3 py-1.5 text-xs font-semibold text-primary transition hover:bg-primary/10"
+                      >
+                        Crear cuenta
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowForm(true)}
+              className={`w-full rounded py-2 px-4 font-semibold transition ${(isTitularFull || isFieldPlayerFull) && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
+              disabled={isTitularFull && isSubstituteFull}
+            >
+              {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : (isTitularFull || isFieldPlayerFull) ? "Inscribirme como suplente" : "Inscribirme"}
+            </button>
+          </>
         )
       ) : (
         <form onSubmit={handleSubmitWithToast} className="space-y-4">
@@ -402,11 +466,27 @@ export function RegistrationPanel() {
                   value={entry.name}
                   onChange={(e) => updateEntryName(entry.id, e.target.value)}
                   onKeyDown={(e) => handleEntryKeyDown(e, entry.id)}
-                  className="w-full rounded border border-border bg-background px-4 py-3 text-foreground"
+                  className={`w-full rounded border bg-background px-4 py-3 text-foreground ${
+                    entry.nameError ? "border-red-500" : "border-border"
+                  }`}
                   placeholder="Ingresa el nombre..."
+                  aria-invalid={!!entry.nameError}
+                  aria-describedby={entry.nameError ? `register-name-error-${entry.id}` : undefined}
                 />
+                {entry.nameError && (
+                  <div
+                    id={`register-name-error-${entry.id}`}
+                    className="mt-1.5 flex items-start gap-1.5 rounded-md border border-red-500/30 bg-red-950/40 px-2.5 py-1.5"
+                    role="alert"
+                  >
+                    <AlertTriangle size={14} className="mt-0.5 shrink-0 text-red-400" />
+                    <p className="text-xs font-medium leading-snug text-red-300">
+                      {entry.nameError}
+                    </p>
+                  </div>
+                )}
 
-                <div className="mt-3 flex flex-wrap items-center gap-3">
+                <div className="mt-3 flex items-center gap-3">
                   <input
                     id={`register-gk-${entry.id}`}
                     type="checkbox"
@@ -420,27 +500,55 @@ export function RegistrationPanel() {
                       ? "Portero (ya se encuentran inscritos los porteros)"
                       : "Portero"}
                   </label>
-                  {!entry.isGoalkeeper && (
-                    <div className="w-full sm:w-auto sm:min-w-[180px]">
+                </div>
+                {!entry.isGoalkeeper && (
+                  <div className="mt-2">
+                    <label className="text-xs font-medium text-muted-foreground">
+                      Posición en cancha
+                    </label>
+                    <div className="mt-1 sm:max-w-[220px]">
                       <Select value={entry.position} onValueChange={(v) => { if (v) updateEntryPosition(entry.id, v); }}>
-                        <SelectTrigger className="w-full text-xs" aria-label="Seleccionar posición">
-                          <SelectValue placeholder="Posición…" />
+                        <SelectTrigger
+                          className={`w-full text-sm transition-colors ${
+                            entry.position
+                              ? "border-primary/50 text-foreground"
+                              : "border-dashed border-primary/30 text-muted-foreground hover:border-primary/60 hover:text-foreground"
+                          }`}
+                          aria-label="Seleccionar posición"
+                        >
+                          <SelectValue placeholder="Elegí tu puesto">
+                            {entry.position && (() => {
+                              const pos = (POSITIONS as readonly PositionOption[]).find((p) => p.value === entry.position);
+                              if (pos) {
+                                const Icon = pos.icon;
+                                return (
+                                  <span className="inline-flex items-center gap-1.5">
+                                    <Icon className="size-4" aria-hidden="true" />
+                                    {pos.label}
+                                  </span>
+                                );
+                              }
+                              return null;
+                            })()}
+                          </SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {(POSITIONS as readonly PositionOption[]).filter((p) => p.value !== "portero").map((pos) => {
                             const Icon = pos.icon;
                             return (
-                              <SelectItem key={pos.value} value={pos.value}>
-                                <Icon className="size-3.5" aria-hidden="true" />
-                                {pos.label}
+                              <SelectItem key={pos.value} value={pos.value} className="text-sm">
+                                <span className="inline-flex items-center gap-2">
+                                  <Icon className="size-4 text-primary" aria-hidden="true" />
+                                  {pos.label}
+                                </span>
                               </SelectItem>
                             );
                           })}
                         </SelectContent>
                       </Select>
                     </div>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             ))}
 
