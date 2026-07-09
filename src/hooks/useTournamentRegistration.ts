@@ -26,7 +26,8 @@ interface TournamentRegistrationState {
 interface TournamentRegistrationActions {
   registerTeamWithSimulatedPayment: (
     input: RegisterTournamentTeamInput,
-    userEmail?: string
+    userEmail?: string,
+    userId?: string
   ) => Promise<TournamentRegistrationResult>
   clearError: () => void
 }
@@ -42,7 +43,7 @@ export function useTournamentRegistration(): TournamentRegistrationState & Tourn
   }, [])
 
   const registerTeamWithSimulatedPayment = useCallback(
-    async (input: RegisterTournamentTeamInput, userEmail?: string): Promise<TournamentRegistrationResult> => {
+    async (input: RegisterTournamentTeamInput, userEmail?: string, userId?: string): Promise<TournamentRegistrationResult> => {
       const parsed = registerTournamentTeamInputSchema.safeParse(input)
       if (!parsed.success) {
         const issue = parsed.error.issues[0]
@@ -141,6 +142,22 @@ export function useTournamentRegistration(): TournamentRegistrationState & Tourn
           // Compensation delete keeps team/payment consistency when payment insert fails.
           await supabase.from("tournament_teams").delete().eq("id", team.id)
           throw paymentError
+        }
+
+        const { error: playerError } = await supabase
+          .from("tournament_team_players")
+          .insert({
+            team_id: team.id,
+            name: parsed.data.captain_name,
+            phone: parsed.data.captain_phone?.trim() || null,
+            email: userEmail?.trim() || null,
+            user_id: userId?.trim() || null,
+          })
+
+        if (playerError) {
+          await supabase.from("tournament_payments").delete().eq("team_id", team.id)
+          await supabase.from("tournament_teams").delete().eq("id", team.id)
+          throw playerError
         }
 
         const payment: TournamentPayment = {

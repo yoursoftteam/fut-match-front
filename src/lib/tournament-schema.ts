@@ -62,6 +62,22 @@ export interface TournamentTeam {
   created_at: string
 }
 
+export interface TournamentTeamPlayer {
+  id: string
+  team_id: string
+  name: string
+  phone: string | null
+  email: string | null
+  user_id: string | null
+  document_type: string | null
+  document_number: string | null
+  blood_type: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  shirt_number: number | null
+  created_at: string
+}
+
 export interface TournamentMatch {
   id: string
   tournament_id: string

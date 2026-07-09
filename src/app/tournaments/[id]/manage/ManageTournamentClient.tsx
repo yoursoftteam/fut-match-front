@@ -2,7 +2,8 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { AlertTriangle, ArrowLeft, Check, CheckCircle2, Loader2, RefreshCcw, Save } from "lucide-react"
+import { AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Flag, Loader2, RefreshCcw, Save, Users } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { useTournamentManage } from "@/hooks/useTournamentManage"
@@ -10,7 +11,7 @@ import { TournamentAdminBento } from "@/components/tournaments/TournamentAdminBe
 import { TournamentDynamicLinksCard } from "@/components/tournaments/TournamentDynamicLinksCard"
 import { TournamentSchedulePicker } from "@/components/tournaments/TournamentSchedulePicker"
 import RichTextRenderer from "@/components/rich-editor/RichTextRenderer"
-import type { TournamentScheduleDay } from "@/lib/tournament-schema"
+import type { TournamentScheduleDay, WeekDay } from "@/lib/tournament-schema"
 
 interface ManageTournamentClientProps {
   tournamentId: string
@@ -32,6 +33,16 @@ interface SetupStep {
   actionLabel?: string
 }
 
+const dayNames: Record<WeekDay, string> = {
+  0: "Domingo",
+  1: "Lunes",
+  2: "Martes",
+  3: "Miércoles",
+  4: "Jueves",
+  5: "Viernes",
+  6: "Sábado",
+}
+
 function ScheduleEditor({
   tournamentId,
   initialValue,
@@ -43,6 +54,8 @@ function ScheduleEditor({
 }) {
   const [scheduledDays, setScheduledDays] = useState<TournamentScheduleDay[]>(initialValue)
   const [updatingSchedule, setUpdatingSchedule] = useState(false)
+
+  const daysWithoutTimes = scheduledDays.filter((d) => d.times.length === 0)
 
   const handleSave = async () => {
     setUpdatingSchedule(true)
@@ -60,11 +73,22 @@ function ScheduleEditor({
 
       <TournamentSchedulePicker value={scheduledDays} onChange={setScheduledDays} />
 
+      {daysWithoutTimes.length > 0 && (
+        <div className="rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3">
+          <p className="text-sm font-semibold text-red-400">Faltan horarios</p>
+          <ul className="mt-1 list-inside list-disc space-y-0.5 text-sm text-red-300">
+            {daysWithoutTimes.map((d) => (
+              <li key={d.day_of_week}>{dayNames[d.day_of_week]}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       <button
         type="button"
         onClick={() => void handleSave()}
         disabled={updatingSchedule}
-        className="btn-primary-fm inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-bold disabled:opacity-60"
+        className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2.5 text-sm font-bold text-white hover:opacity-90 transition disabled:opacity-60"
       >
         {updatingSchedule ? <Loader2 className="size-4 animate-spin" /> : null}
         {updatingSchedule ? "Guardando..." : "Guardar cronograma"}
@@ -123,17 +147,17 @@ function TournamentMaxTeamsInput({
           setLocal(Number(e.target.value))
           setError(false)
         }}
-        className={`w-24 rounded-lg border px-3 py-2 text-sm text-foreground bg-background ${
+        className={`w-20 rounded-lg border px-3 py-2 text-sm text-foreground bg-background ${
           error ? "border-red-500" : "border-border"
         }`}
       />
       {isDirty ? (
-        <>
+        <div className="flex items-center gap-1">
           <button
             type="button"
             onClick={() => void handleSave()}
             disabled={saving}
-            className="btn-primary-fm inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-bold disabled:opacity-60"
+            className="cursor-pointer inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-2 text-xs font-bold text-white hover:opacity-90 transition disabled:opacity-60"
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
             Guardar
@@ -142,13 +166,13 @@ function TournamentMaxTeamsInput({
             type="button"
             onClick={handleCancel}
             disabled={saving}
-            className="inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted transition"
+            className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted transition disabled:opacity-60"
           >
             Cancelar
           </button>
-        </>
+        </div>
       ) : saved ? (
-        <span className="inline-flex items-center gap-1 text-xs text-green-500">
+        <span className="inline-flex items-center gap-1 text-xs text-green-500 shrink-0">
           <Check className="size-3.5" />
           Guardado
         </span>
@@ -159,32 +183,59 @@ function TournamentMaxTeamsInput({
 
 function InlineDateEditor({
   label,
+  icon: Icon,
   value,
   onSave,
   saving,
   helperText,
   validationError,
+  min,
+  max,
 }: {
   label: string
+  icon: React.ComponentType<{ className?: string }>
   value: string | null
   onSave: (value: string | null) => Promise<boolean>
   saving: boolean
   helperText?: string
   validationError?: string | null
+  min?: string
+  max?: string
 }) {
   const dateValue = value ? value.slice(0, 10) : ""
+
+  const validate = (d: string): string | null => {
+    if (min && d && d < min) return "La fecha no puede ser anterior a hoy"
+    if (max && d && d > max) return "El cierre debe ser anterior a la fecha de inicio"
+    return null
+  }
+
   const [local, setLocal] = useState(dateValue)
   const [saved, setSaved] = useState(false)
+  const [localError, setLocalError] = useState<string | null>(null)
 
   useEffect(() => {
     setLocal(value ? value.slice(0, 10) : "")
     setSaved(false)
+    setLocalError(null)
   }, [value])
 
   const isDirty = local !== dateValue
 
   const handleSave = async () => {
     setSaved(false)
+    setLocalError(null)
+    const err = validate(local)
+    if (err) {
+      setLocalError(err)
+      const inputId = `date-${label.toLowerCase().replace(/\s+/g, "-")}`
+      const el = document.getElementById(inputId)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        el.focus({ preventScroll: true })
+      }
+      return
+    }
     const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const now = new Date()
     const offset = -now.getTimezoneOffset()
@@ -210,28 +261,48 @@ function InlineDateEditor({
   }
 
   return (
-    <div className="min-w-48 space-y-1.5">
-      <label htmlFor={`date-${label.toLowerCase().replace(/\s+/g, "-")}`} className="text-sm font-medium text-foreground">{label}</label>
+    <div className="space-y-1.5">
+      <label htmlFor={`date-${label.toLowerCase().replace(/\s+/g, "-")}`} className="text-sm font-medium text-foreground flex items-center gap-1.5">
+        <Icon className="size-4 text-muted-foreground" />
+        {label}
+      </label>
       <div className="flex items-center gap-2">
         <input
           id={`date-${label.toLowerCase().replace(/\s+/g, "-")}`}
           type="date"
           value={local}
           onChange={(e) => setLocal(e.target.value)}
-          className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
+          className={`flex-1 rounded-lg border px-3 py-2 text-sm text-foreground bg-background ${
+            validationError || localError ? "border-red-500" : "border-border"
+          }`}
+          min={min}
+          max={max}
         />
         {isDirty ? (
-          <button
-            type="button"
-            onClick={() => void handleSave()}
-            disabled={saving}
-            className="btn-primary-fm inline-flex items-center gap-1 rounded-lg px-2.5 py-2 text-xs font-bold disabled:opacity-60"
-          >
-            {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
-            Guardar
-          </button>
+          <div className="flex items-center gap-1 shrink-0">
+            <button
+              type="button"
+              onClick={() => void handleSave()}
+              disabled={saving}
+              className="cursor-pointer inline-flex items-center gap-1 rounded-lg bg-primary px-2.5 py-2 text-xs font-bold text-white hover:opacity-90 transition disabled:opacity-60"
+            >
+              {saving ? <Loader2 className="size-3.5 animate-spin" /> : <Save className="size-3.5" />}
+              Guardar
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setLocal(dateValue)
+                setSaved(false)
+              }}
+              disabled={saving}
+              className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-border px-2.5 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted transition disabled:opacity-60"
+            >
+              Cancelar
+            </button>
+          </div>
         ) : saved ? (
-          <span className="inline-flex items-center gap-1 text-xs text-green-500">
+          <span className="inline-flex items-center gap-1 text-xs text-green-500 shrink-0">
             <Check className="size-3.5" />
             Guardado
           </span>
@@ -240,15 +311,15 @@ function InlineDateEditor({
             type="button"
             onClick={() => void handleClear()}
             disabled={saving}
-            className="inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition disabled:opacity-60"
+            className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-red-500/30 px-2.5 py-2 text-xs font-semibold text-red-400 hover:bg-red-500/10 transition disabled:opacity-60 shrink-0"
           >
             {saving ? <Loader2 className="size-3.5 animate-spin" /> : null}
             Quitar fecha
           </button>
         ) : null}
       </div>
-      {validationError ? (
-        <p className="text-xs text-red-400 leading-relaxed">{validationError}</p>
+      {localError || validationError ? (
+        <p className="text-xs text-red-400 leading-relaxed">{localError ?? validationError}</p>
       ) : helperText ? (
         <p className="text-xs text-muted-foreground leading-relaxed">{helperText}</p>
       ) : null}
@@ -259,6 +330,13 @@ function InlineDateEditor({
 export default function ManageTournamentClient({ tournamentId }: ManageTournamentClientProps) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
+  const [nowSlice, setNowSlice] = useState("")
+
+  useEffect(() => {
+    const d = new Date()
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    setNowSlice(d.toISOString().slice(0, 10))
+  }, [])
   const {
     tournament,
     teams,
@@ -358,7 +436,7 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
   const hasSchedule = Boolean(
     tournament.scheduled_days &&
       tournament.scheduled_days.length > 0 &&
-      tournament.scheduled_days.some((day) => day.times.length > 0)
+      tournament.scheduled_days.every((day) => day.times.length > 0)
   )
 
   const setupSteps: SetupStep[] = [
@@ -436,45 +514,55 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
 
         <TournamentAdminBento tournament={tournament} teamsCount={teams.length} paidCount={paidCount} />
 
-        <section id="status-config" className="card p-5 sm:p-6">
+        <section id="status-config" className="card p-5 sm:p-6 space-y-6">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Configuración</p>
-            <h2 className="mt-1 text-lg font-heading font-bold text-foreground">Ajustes del torneo</h2>
+            <h2 className="text-lg font-heading font-bold text-foreground">Ajustes del torneo</h2>
+            <p className="mt-0.5 text-sm text-muted-foreground">Estado, capacidad y fechas clave.</p>
           </div>
-          <div className="mt-5 flex flex-wrap gap-6">
-            {/* Estado */}
-            <div className="min-w-48 space-y-1.5">
-              <label htmlFor="status" className="text-sm font-medium text-foreground">Estado del torneo</label>
-              <div className="flex items-center gap-2">
-                <select
-                  id="status"
-                  value={tournament.status}
-                  onChange={(e) => void onChangeStatus(e.target.value as "draft" | "open" | "in_progress" | "finished")}
-                  disabled={updatingStatus}
-                  className="flex-1 rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"
-                >
-                  {statusOptions.map((option) => (
-                    <option key={option.value} value={option.value}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-                {updatingStatus ? (
-                  <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                ) : null}
-              </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {tournament.status === "draft" && "Solo tú puedes verlo. Pasa a Abierto para iniciar inscripciones."}
-                {tournament.status === "open" && "El torneo está visible y aceptando equipos."}
-                {tournament.status === "in_progress" && "El torneo está en juego. Ya no se aceptan más equipos."}
-                {tournament.status === "finished" && "Torneo finalizado. Resultados visibles."}
-              </p>
-            </div>
 
-            {/* Cupo de equipos */}
-            <div className="min-w-48 space-y-1.5">
-              <label htmlFor="max-teams" className="text-sm font-medium text-foreground">Cupo máximo de equipos</label>
-              <div className="flex items-center gap-2">
+          {/* Grupo: Estado y capacidad */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Estado y capacidad</h3>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <div className="space-y-1.5">
+                <label htmlFor="status" className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  <Flag className="size-4 text-muted-foreground" />
+                  Estado del torneo
+                </label>
+                <div className="flex items-center gap-2">
+                  <Select
+                    value={tournament.status}
+                    onValueChange={(v) => void onChangeStatus(v as "draft" | "open" | "in_progress" | "finished")}
+                    disabled={updatingStatus}
+                  >
+                    <SelectTrigger id="status" className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {statusOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {updatingStatus ? (
+                    <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
+                  ) : null}
+                </div>
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {tournament.status === "draft" && "Solo tú puedes verlo. Pasa a Abierto para iniciar inscripciones."}
+                  {tournament.status === "open" && "El torneo está visible y aceptando equipos."}
+                  {tournament.status === "in_progress" && "El torneo está en juego. Ya no se aceptan más equipos."}
+                  {tournament.status === "finished" && "Torneo finalizado. Resultados visibles."}
+                </p>
+              </div>
+
+              <div className="space-y-1.5">
+                <label htmlFor="max-teams" className="text-sm font-medium text-foreground flex items-center gap-1.5">
+                  <Users className="size-4 text-muted-foreground" />
+                  Cupo máximo de equipos
+                </label>
                 <TournamentMaxTeamsInput
                   value={tournament.max_teams}
                   onSave={async (val) => {
@@ -485,49 +573,60 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
                   }}
                   saving={updatingMaxTeams}
                 />
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  {teams.length}/{tournament.max_teams} equipos inscritos.
+                  {teams.length >= tournament.max_teams && " Cupo completo."}
+                </p>
               </div>
-              <p className="text-xs text-muted-foreground leading-relaxed">
-                {teams.length}/{tournament.max_teams} equipos inscritos.
-                {teams.length >= tournament.max_teams && " Cupo completo."}
-              </p>
             </div>
+          </div>
 
-            {/* Fecha de inicio */}
-            <InlineDateEditor
-              label="Inicio del torneo"
-              value={tournament.starts_at}
-              onSave={async (val) => {
-                setUpdatingDate(true)
-                const ok = await updateDateField("starts_at", val)
-                setUpdatingDate(false)
-                return ok
-              }}
-              saving={updatingDate}
-              helperText={
-                tournament.starts_at && new Date(tournament.starts_at) < new Date()
-                  ? "La fecha ya pasó."
-                  : "Fecha en que comienza el torneo."
-              }
-            />
+          <hr className="border-border/50" />
 
-            {/* Cierre de inscripciones */}
-            <InlineDateEditor
-              label="Cierre de inscripciones"
-              value={tournament.registration_deadline}
-              onSave={async (val) => {
-                setUpdatingDate(true)
-                const ok = await updateDateField("registration_deadline", val)
-                setUpdatingDate(false)
-                return ok
-              }}
-              saving={updatingDate}
-              validationError={dateValidationError}
-              helperText={
-                tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date()
-                  ? "La fecha ya pasó."
-                  : "Fecha límite para inscribir equipos."
-              }
-            />
+          {/* Grupo: Fechas */}
+          <div className="space-y-3">
+            <h3 className="text-xs font-semibold uppercase tracking-widest text-muted-foreground/60">Fechas</h3>
+            <div className="grid gap-5 sm:grid-cols-2">
+              <InlineDateEditor
+                label="Inicio del torneo"
+                icon={Calendar}
+                value={tournament.starts_at}
+                onSave={async (val) => {
+                  setUpdatingDate(true)
+                  const ok = await updateDateField("starts_at", val)
+                  setUpdatingDate(false)
+                  return ok
+                }}
+                saving={updatingDate}
+                min={nowSlice || undefined}
+                helperText={
+                  tournament.starts_at && new Date(tournament.starts_at) < new Date()
+                    ? "La fecha ya pasó."
+                    : "Fecha en que comienza el torneo."
+                }
+              />
+
+              <InlineDateEditor
+                label="Cierre de inscripciones"
+                icon={Calendar}
+                value={tournament.registration_deadline}
+                onSave={async (val) => {
+                  setUpdatingDate(true)
+                  const ok = await updateDateField("registration_deadline", val)
+                  setUpdatingDate(false)
+                  return ok
+                }}
+                saving={updatingDate}
+                validationError={dateValidationError}
+                min={nowSlice || undefined}
+                max={tournament.starts_at ? tournament.starts_at.slice(0, 10) : undefined}
+                helperText={
+                  tournament.registration_deadline && new Date(tournament.registration_deadline) < new Date()
+                    ? "La fecha ya pasó."
+                    : "Fecha límite para inscribir equipos."
+                }
+              />
+            </div>
           </div>
         </section>
 

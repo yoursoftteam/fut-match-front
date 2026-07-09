@@ -245,6 +245,11 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
       return "Ningún nombre puede superar los 100 caracteres.";
     }
 
+    const missingPosition = items.find((entry) => !entry.isGoalkeeper && !entry.position);
+    if (missingPosition) {
+      return `Seleccioná una posición en cancha para ${missingPosition.name || "cada jugador"}.`;
+    }
+
     return null;
   }, []);
 

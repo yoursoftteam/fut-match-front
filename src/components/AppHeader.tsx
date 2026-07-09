@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRouter, usePathname } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { outfit } from "@/lib/fonts";
@@ -11,7 +11,6 @@ import { DashboardSidebar } from "@/components/dashboard/DashboardSidebar";
 import { useEffect, useState } from "react";
 
 export function AppHeader() {
-  const router = useRouter();
   const pathname = usePathname();
   const { user, loading, signOut } = useAuth();
   const isAuthPage = pathname === "/auth";
@@ -55,7 +54,7 @@ export function AppHeader() {
 
   const handleSignOut = async () => {
     await signOut();
-    router.push("/");
+    window.location.href = "/";
   };
 
   const isActive = (href: string) => pathname === href;

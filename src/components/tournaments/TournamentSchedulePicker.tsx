@@ -127,7 +127,11 @@ export function TournamentSchedulePicker({ value, onChange }: TournamentSchedule
           sortedValue.map((day) => {
             const dayLabel = dayOptions.find((o) => o.value === day.day_of_week)?.label ?? "Día"
             return (
-              <div key={day.day_of_week} className="rounded-lg border border-border bg-background px-4 py-3">
+              <div key={day.day_of_week} className={`rounded-lg border bg-background px-4 py-3 ${
+                  day.times.length === 0
+                    ? "border-red-500/40"
+                    : "border-border"
+                }`}>
                 <div className="flex items-center justify-between gap-3">
                   <p className="text-sm font-semibold text-foreground">{dayLabel}</p>
                   <button

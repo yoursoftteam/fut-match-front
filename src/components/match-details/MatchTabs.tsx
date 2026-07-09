@@ -273,6 +273,12 @@ export function RegistrationPanel() {
         }
       }
 
+      const userPosition = (user.user_metadata as Record<string, unknown> | null)?.position as string | undefined
+      if (!userPosition) {
+        setQuickActionMessage("Antes de inscribirte, configurá tu posición en cancha desde tu perfil.")
+        return
+      }
+
       const { error } = await registerForMatch(matchId, finalName, false, {
         trackCurrentUser: true,
       });
@@ -504,7 +510,7 @@ export function RegistrationPanel() {
                 {!entry.isGoalkeeper && (
                   <div className="mt-2">
                     <label className="text-xs font-medium text-muted-foreground">
-                      Posición en cancha
+                      Posición en cancha <span className="text-red-400">*</span>
                     </label>
                     <div className="mt-1 sm:max-w-[220px]">
                       <Select value={entry.position} onValueChange={(v) => { if (v) updateEntryPosition(entry.id, v); }}>

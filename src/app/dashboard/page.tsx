@@ -41,7 +41,7 @@ interface TournamentProgress {
 function getTournamentConfigProgress(t: Tournament, progress?: TournamentProgress): { completed: number; total: number; pct: number } {
   const steps = [
     t.status !== 'draft',
-    Boolean(t.scheduled_days?.length && t.scheduled_days.some((d) => d.times.length > 0)),
+    Boolean(t.scheduled_days?.length && t.scheduled_days.every((d) => d.times.length > 0)),
     (progress?.teamsCount ?? 0) >= 2,
     (progress?.matchesCount ?? 0) > 0,
     progress ? (progress.matchesCount === 0 || progress.unscheduledCount === 0) : false,
@@ -111,6 +111,8 @@ export default function DashboardPage() {
   const [deletingTournamentId, setDeletingTournamentId] = useState<string | null>(null)
   const [deleteTournamentError, setDeleteTournamentError] = useState<string | null>(null)
   const [tournamentProgress, setTournamentProgress] = useState<Map<string, TournamentProgress>>(new Map())
+  const [participatedTournaments, setParticipatedTournaments] = useState<(Tournament & { team_name: string })[]>([])
+  const [participatedLoading, setParticipatedLoading] = useState(false)
 
   useEffect(() => {
     if (!authLoading && !user) {
@@ -159,6 +161,102 @@ export default function DashboardPage() {
     void loadProgress()
     return () => { cancelled = true }
   }, [tournaments])
+
+  useEffect(() => {
+    if (!user?.email || !user?.id) return
+    let cancelled = false
+    const loadParticipated = async () => {
+      setParticipatedLoading(true)
+
+      const [captainRows, playerRows, ownTournaments] = await Promise.all([
+        supabase
+          .from("tournament_teams")
+          .select("id, name, tournament_id")
+          .eq("captain_email", user.email),
+        supabase
+          .from("tournament_team_players")
+          .select("team_id")
+          .eq("user_id", user.id),
+        supabase
+          .from("tournaments")
+          .select("id")
+          .eq("owner_id", user.id),
+      ])
+
+      if (cancelled) return
+
+      // Collect all team IDs and tournament IDs
+      const teamIds = new Set<string>()
+      const tournamentIds = new Set<string>()
+
+      for (const t of captainRows.data ?? []) {
+        teamIds.add(t.id)
+        tournamentIds.add(t.tournament_id)
+      }
+      for (const p of playerRows.data ?? []) {
+        teamIds.add(p.team_id)
+      }
+      for (const t of ownTournaments.data ?? []) {
+        tournamentIds.add(t.id)
+      }
+
+      // Batch-resolve tournaments and teams
+      const [teamsRes, toursRes] = await Promise.all([
+        teamIds.size > 0
+          ? supabase.from("tournament_teams").select("id, name, tournament_id").in("id", [...teamIds])
+          : { data: [] },
+        tournamentIds.size > 0
+          ? supabase.from("tournaments").select("*").in("id", [...tournamentIds])
+          : { data: [] },
+      ])
+
+      if (cancelled) return
+
+      const toursMap = new Map<string, Tournament>()
+      for (const t of (toursRes.data ?? []) as Tournament[]) {
+        toursMap.set(t.id, t)
+      }
+
+      const teamsMap = new Map<string, { name: string; tournament_id: string }>()
+      for (const t of (teamsRes.data ?? []) as { id: string; name: string; tournament_id: string }[]) {
+        teamsMap.set(t.id, t)
+      }
+
+      const seen = new Set<string>()
+      const mapped: (Tournament & { team_name: string })[] = []
+
+      for (const t of captainRows.data ?? []) {
+        const tour = toursMap.get(t.tournament_id)
+        if (tour && !seen.has(tour.id)) {
+          seen.add(tour.id)
+          mapped.push({ ...tour, team_name: t.name })
+        }
+      }
+
+      for (const p of playerRows.data ?? []) {
+        const team = teamsMap.get(p.team_id)
+        if (!team) continue
+        const tour = toursMap.get(team.tournament_id)
+        if (tour && !seen.has(tour.id)) {
+          seen.add(tour.id)
+          mapped.push({ ...tour, team_name: team.name })
+        }
+      }
+
+      for (const t of ownTournaments.data ?? []) {
+        const tour = toursMap.get(t.id)
+        if (tour && !seen.has(tour.id)) {
+          seen.add(tour.id)
+          mapped.push({ ...tour, team_name: "Creador" })
+        }
+      }
+
+      setParticipatedTournaments(mapped)
+      setParticipatedLoading(false)
+    }
+    void loadParticipated()
+    return () => { cancelled = true }
+  }, [user?.email, user?.id])
 
   useEffect(() => {
     if (!user) {
@@ -443,6 +541,7 @@ export default function DashboardPage() {
     try {
       const ok = await deleteTournament(tournamentId)
       if (!ok) throw new Error('delete_failed')
+      setParticipatedTournaments((prev) => prev.filter((t) => t.id !== tournamentId))
     } catch {
       setDeleteTournamentError('No se pudo eliminar el torneo. Intenta nuevamente.')
     } finally {
@@ -1010,22 +1109,72 @@ export default function DashboardPage() {
               {deleteTournamentError && <p className="mt-3 text-sm text-red-400">{deleteTournamentError}</p>}
             </section>
 
-            {/* Torneos donde participo — no disponible por equipo */}
+            {/* Torneos en los que participo */}
             <section>
               <h2 className="text-2xl font-heading font-bold text-foreground mb-1">
                 Torneos en los que participo
               </h2>
               <p className="text-xs text-muted-foreground mt-0.5 mb-4">
-                Inscripción por equipos
+                Torneos donde tienes equipo o eres organizador
               </p>
-              <div className="card p-6 text-center">
-                <div className="size-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
-                  <Users className="size-5 text-muted-foreground" />
+
+              {participatedLoading ? (
+                <div className="space-y-3">
+                  {[...Array(2)].map((_, i) => (
+                    <div key={i} className="h-20 animate-pulse rounded-xl bg-muted" />
+                  ))}
                 </div>
-                <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                  Acá vas a poder ver los torneos en los que te inscribiste con tu equipo.
-                </p>
-              </div>
+              ) : participatedTournaments.length === 0 ? (
+                <div className="card p-6 text-center">
+                  <div className="size-12 rounded-xl bg-muted border border-border flex items-center justify-center mx-auto mb-3">
+                    <Users className="size-5 text-muted-foreground" />
+                  </div>
+                  <p className="text-sm text-muted-foreground max-w-sm mx-auto">
+                    Acá vas a poder ver los torneos en los que te inscribiste con tu equipo.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {participatedTournaments.map((t) => (
+                    <div
+                      key={t.id}
+                      className="card p-4 space-y-3"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <h3 className="font-heading font-bold text-foreground text-sm leading-tight truncate">
+                          {t.name}
+                        </h3>
+                        <span
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
+                            t.status === "open"
+                              ? "bg-green-900/30 text-green-300"
+                              : t.status === "in_progress"
+                                ? "bg-blue-900/30 text-blue-300"
+                                : t.status === "finished"
+                                  ? "bg-muted text-muted-foreground"
+                                  : "bg-yellow-900/30 text-yellow-300"
+                          }`}
+                        >
+                          {t.status === "open" && "Abierto"}
+                          {t.status === "in_progress" && "En juego"}
+                          {t.status === "finished" && "Finalizado"}
+                          {t.status === "draft" && "Borrador"}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Tu equipo: <span className="font-semibold text-foreground">{t.team_name}</span>
+                      </p>
+                      <Link
+                        href={`/tournaments/${t.id}`}
+                        className="inline-flex w-full items-center justify-center gap-1.5 rounded-lg border border-border px-3 py-2 text-xs font-semibold text-foreground hover:bg-muted transition cursor-pointer"
+                      >
+                        Ver detalles del torneo
+                        <ChevronRight className="size-3.5" />
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              )}
             </section>
           </div>
         )}

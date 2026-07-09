@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useRouter } from 'next/navigation'
 import { useEffect, useMemo, useState } from 'react'
-import { Mail, AtSign, Save, ArrowLeft, Shield, X } from 'lucide-react'
+import { Mail, AtSign, Save, ArrowLeft, Shield, X, FileText, Droplets, Heart, PhoneCall, Phone } from 'lucide-react'
 import Link from 'next/link'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { POSITIONS, type PositionOption } from '@/lib/positions'
@@ -19,7 +19,13 @@ export default function ProfilePage() {
 
   const [alias, setAlias] = useState('')
   const [fullName, setFullName] = useState('')
+  const [phone, setPhone] = useState('')
   const [position, setPosition] = useState('')
+  const [documentType, setDocumentType] = useState('CC')
+  const [documentNumber, setDocumentNumber] = useState('')
+  const [bloodType, setBloodType] = useState('')
+  const [emergencyName, setEmergencyName] = useState('')
+  const [emergencyPhone, setEmergencyPhone] = useState('')
   const [saving, setSaving] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const [messageType, setMessageType] = useState<'success' | 'error'>('success')
@@ -30,9 +36,15 @@ export default function ProfilePage() {
     return (
       alias !== ((metadata?.alias as string) || '') ||
       fullName !== ((metadata?.full_name as string) || '') ||
-      position !== ((metadata?.position as string) || '')
+      phone !== ((metadata?.phone as string) || '') ||
+      position !== ((metadata?.position as string) || '') ||
+      documentType !== ((metadata?.document_type as string) || 'CC') ||
+      documentNumber !== ((metadata?.document_number as string) || '') ||
+      bloodType !== ((metadata?.blood_type as string) || '') ||
+      emergencyName !== ((metadata?.emergency_contact_name as string) || '') ||
+      emergencyPhone !== ((metadata?.emergency_contact_phone as string) || '')
     )
-  }, [user, alias, fullName, position])
+  }, [user, alias, fullName, phone, position, documentType, documentNumber, bloodType, emergencyName, emergencyPhone])
 
   useEffect(() => {
     if (!message || messageType === 'error') return
@@ -51,7 +63,13 @@ export default function ProfilePage() {
     const metadata = user.user_metadata as Record<string, unknown> | null
     setAlias((metadata?.alias as string) || '')
     setFullName((metadata?.full_name as string) || '')
+    setPhone((metadata?.phone as string) || '')
     setPosition((metadata?.position as string) || '')
+    setDocumentType((metadata?.document_type as string) || 'CC')
+    setDocumentNumber((metadata?.document_number as string) || '')
+    setBloodType((metadata?.blood_type as string) || '')
+    setEmergencyName((metadata?.emergency_contact_name as string) || '')
+    setEmergencyPhone((metadata?.emergency_contact_phone as string) || '')
   }, [user])
 
   if (authLoading) {
@@ -108,7 +126,13 @@ export default function ProfilePage() {
           alias: trimmedAlias,
           name: trimmedAlias,
           full_name: trimmedFullName,
+          phone: phone.trim() || null,
           position: position || null,
+          document_type: documentType,
+          document_number: documentNumber.trim() || null,
+          blood_type: bloodType || null,
+          emergency_contact_name: emergencyName.trim() || null,
+          emergency_contact_phone: emergencyPhone.trim() || null,
         },
       })
 
@@ -141,7 +165,13 @@ export default function ProfilePage() {
   const handleDiscard = () => {
     setAlias(initialAlias)
     setFullName(initialName)
+    setPhone((metadata?.phone as string) || '')
     setPosition((metadata?.position as string) || '')
+    setDocumentType((metadata?.document_type as string) || 'CC')
+    setDocumentNumber((metadata?.document_number as string) || '')
+    setBloodType((metadata?.blood_type as string) || '')
+    setEmergencyName((metadata?.emergency_contact_name as string) || '')
+    setEmergencyPhone((metadata?.emergency_contact_phone as string) || '')
   }
 
   return (
@@ -218,6 +248,20 @@ export default function ProfilePage() {
               </p>
             </div>
 
+            {/* Teléfono */}
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Phone className="size-3.5" />
+                Teléfono
+              </label>
+              <Input
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Opcional"
+                maxLength={30}
+              />
+            </div>
+
             {/* Posición */}
             <div>
               <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
@@ -225,7 +269,7 @@ export default function ProfilePage() {
                 Posición en la cancha
               </label>
               <Select value={position} onValueChange={(v) => { setPosition(v && v !== '__none__' ? v : ''); }}>
-                <SelectTrigger className="w-full" aria-label="Seleccionar posición">
+                <SelectTrigger className="w-full bg-background px-4 py-3 data-[size=default]:h-auto" aria-label="Seleccionar posición">
                   <SelectValue placeholder="Selecciona tu posición…" />
                 </SelectTrigger>
                 <SelectContent>
@@ -244,6 +288,95 @@ export default function ProfilePage() {
               <p className="mt-1 text-xs text-muted-foreground">
                 Ayuda a los capitanes a reconocer tu puesto al inscribirte.
               </p>
+            </div>
+
+            <hr className="border-border" />
+
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Documentos y datos médicos</p>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                  <FileText className="size-3.5" />
+                  Tipo doc.
+                </label>
+                <Select value={documentType} onValueChange={(v) => setDocumentType(v ?? 'CC')}>
+                  <SelectTrigger className="w-full bg-background px-4 py-3 data-[size=default]:h-auto" aria-label="Tipo de documento">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="CC">CC</SelectItem>
+                    <SelectItem value="CE">CE</SelectItem>
+                    <SelectItem value="NIT">NIT</SelectItem>
+                    <SelectItem value="Pasaporte">Pasaporte</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                  <FileText className="size-3.5" />
+                  Número de documento
+                </label>
+                <Input
+                  value={documentNumber}
+                  onChange={(e) => setDocumentNumber(e.target.value)}
+                  placeholder="Opcional"
+                  maxLength={30}
+                />
+              </div>
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Droplets className="size-3.5" />
+                Grupo sanguíneo
+              </label>
+              <Select value={bloodType} onValueChange={(v) => setBloodType(v && v !== '__none__' ? v : '')}>
+                <SelectTrigger className="w-full bg-background px-4 py-3 data-[size=default]:h-auto" aria-label="Grupo sanguíneo">
+                  <SelectValue placeholder="Selecciona tu grupo…" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="__none__">Sin seleccionar</SelectItem>
+                  <SelectItem value="O+">O+</SelectItem>
+                  <SelectItem value="O-">O-</SelectItem>
+                  <SelectItem value="A+">A+</SelectItem>
+                  <SelectItem value="A-">A-</SelectItem>
+                  <SelectItem value="B+">B+</SelectItem>
+                  <SelectItem value="B-">B-</SelectItem>
+                  <SelectItem value="AB+">AB+</SelectItem>
+                  <SelectItem value="AB-">AB-</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <hr className="border-border" />
+
+            <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Contacto de emergencia</p>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <Heart className="size-3.5" />
+                Nombre del contacto
+              </label>
+              <Input
+                value={emergencyName}
+                onChange={(e) => setEmergencyName(e.target.value)}
+                placeholder="Opcional"
+                maxLength={120}
+              />
+            </div>
+
+            <div>
+              <label className="text-xs font-semibold text-muted-foreground mb-1.5 flex items-center gap-1.5">
+                <PhoneCall className="size-3.5" />
+                Teléfono del contacto
+              </label>
+              <Input
+                value={emergencyPhone}
+                onChange={(e) => setEmergencyPhone(e.target.value)}
+                placeholder="Opcional"
+                maxLength={30}
+              />
             </div>
           </div>
 

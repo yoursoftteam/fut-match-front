@@ -96,7 +96,16 @@ export function TournamentCreateWizard() {
   const [form, setForm] = useState<TournamentWizardState>(initialState)
   const [createdTournament, setCreatedTournament] = useState<Tournament | null>(null)
   const [localError, setLocalError] = useState<string | null>(null)
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({})
   const [focusField, setFocusField] = useState<string | null>(null)
+  const [nowSlice, setNowSlice] = useState("")
+  const [showFreeConfirm, setShowFreeConfirm] = useState(false)
+
+  useEffect(() => {
+    const d = new Date()
+    d.setMinutes(d.getMinutes() - d.getTimezoneOffset())
+    setNowSlice(d.toISOString().slice(0, 16))
+  }, [])
 
   const { createTournament, loading, error } = useTournaments()
 
@@ -151,44 +160,55 @@ export function TournamentCreateWizard() {
     return base
   }, [form])
 
-  const validateCurrentStep = () => {
+  const validateCurrentStep = (): { message: string; field: string } | null => {
+    const now = new Date()
     if (step === 1) {
-      if (!form.name.trim()) return "Dale un nombre al torneo"
-      if (!form.starts_at) return "Define la fecha de inicio"
+      if (!form.name.trim()) return { message: "Dale un nombre al torneo", field: "name" }
+      if (!form.starts_at) return { message: "Define la fecha de inicio", field: "starts_at" }
+      if (new Date(form.starts_at) <= now) return { message: "La fecha de inicio debe ser posterior a hoy", field: "starts_at" }
+      if (form.registration_deadline && new Date(form.registration_deadline) <= now) return { message: "El cierre de inscripciones debe ser posterior a hoy", field: "registration_deadline" }
       if (form.registration_deadline && form.starts_at && new Date(form.registration_deadline) > new Date(form.starts_at)) {
-        return "El cierre de inscripciones no puede ser después de la fecha de inicio"
+        return { message: "El cierre de inscripciones no puede ser después de la fecha de inicio", field: "registration_deadline" }
       }
-      if (form.max_teams < 2) return "Debe haber al menos 2 equipos"
-      if (form.min_players_per_team < 5) return "Mínimo 5 jugadores por equipo"
+      if (form.max_teams < 2) return { message: "Debe haber al menos 2 equipos", field: "max_teams" }
+      if (form.min_players_per_team < 5) return { message: "Mínimo 5 jugadores por equipo", field: "min_players" }
       return null
     }
 
     if (step === 2 && form.tournament_type === "groups") {
-      if (form.groups_count < 2) return "Debe haber mínimo 2 grupos"
-      if (form.qualifiers_per_group < 1) return "Define clasificados por grupo"
+      if (form.groups_count < 2) return { message: "Debe haber mínimo 2 grupos", field: "groups_count" }
+      if (form.qualifiers_per_group < 1) return { message: "Define clasificados por grupo", field: "qualifiers_per_group" }
     }
 
     return null
   }
 
   const goNext = () => {
-    const msg = validateCurrentStep()
-    if (msg) {
-      setLocalError(msg)
+    const err = validateCurrentStep()
+    if (err) {
+      setFieldErrors({ [err.field]: err.message })
+      const el = document.getElementById(err.field)
+      if (el) {
+        el.scrollIntoView({ behavior: "smooth", block: "center" })
+        el.focus({ preventScroll: true })
+      }
       return
     }
 
+    setFieldErrors({})
     setLocalError(null)
     setStep((prev) => (prev < 3 ? ((prev + 1) as Step) : prev))
   }
 
   const goBack = () => {
     setLocalError(null)
+    setFieldErrors({})
     setStep((prev) => (prev > 1 ? ((prev - 1) as Step) : prev))
   }
 
-  const onSubmit = async () => {
+  const doCreate = async () => {
     setLocalError(null)
+    setFieldErrors({})
 
     const parsed = createTournamentInputSchema.safeParse(normalizedPayload)
     if (!parsed.success) {
@@ -201,6 +221,14 @@ export function TournamentCreateWizard() {
 
     clearSavedState()
     setCreatedTournament(created)
+  }
+
+  const onSubmit = async () => {
+    if (form.registration_fee === 0) {
+      setShowFreeConfirm(true)
+      return
+    }
+    await doCreate()
   }
 
   if (createdTournament) {
@@ -256,9 +284,10 @@ export function TournamentCreateWizard() {
                 type="text"
                 value={form.name}
                 onChange={(e) => setForm((prev) => ({ ...prev, name: e.target.value }))}
-                className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.name ? "border-red-500" : "border-border"}`}
                 placeholder="Copa Barrios 2026"
               />
+              {fieldErrors.name && <p className="mt-1 text-xs text-red-400">{fieldErrors.name}</p>}
             </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -269,8 +298,10 @@ export function TournamentCreateWizard() {
                   type="datetime-local"
                   value={form.starts_at}
                   onChange={(e) => setForm((prev) => ({ ...prev, starts_at: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                  min={nowSlice}
+                  className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.starts_at ? "border-red-500" : "border-border"}`}
                 />
+                {fieldErrors.starts_at && <p className="mt-1 text-xs text-red-400">{fieldErrors.starts_at}</p>}
               </div>
 
               <div>
@@ -280,8 +311,11 @@ export function TournamentCreateWizard() {
                   type="datetime-local"
                   value={form.registration_deadline}
                   onChange={(e) => setForm((prev) => ({ ...prev, registration_deadline: e.target.value }))}
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                  max={form.starts_at || undefined}
+                  min={nowSlice}
+                  className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.registration_deadline ? "border-red-500" : "border-border"}`}
                 />
+                {fieldErrors.registration_deadline && <p className="mt-1 text-xs text-red-400">{fieldErrors.registration_deadline}</p>}
               </div>
             </div>
 
@@ -325,8 +359,9 @@ export function TournamentCreateWizard() {
                   min={2}
                   value={form.max_teams}
                   onChange={(e) => setForm((prev) => ({ ...prev, max_teams: Number(e.target.value) }))}
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                  className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.max_teams ? "border-red-500" : "border-border"}`}
                 />
+                {fieldErrors.max_teams && <p className="mt-1 text-xs text-red-400">{fieldErrors.max_teams}</p>}
               </div>
 
               <div>
@@ -337,8 +372,9 @@ export function TournamentCreateWizard() {
                   min={5}
                   value={form.min_players_per_team}
                   onChange={(e) => setForm((prev) => ({ ...prev, min_players_per_team: Number(e.target.value) }))}
-                  className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                  className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.min_players ? "border-red-500" : "border-border"}`}
                 />
+                {fieldErrors.min_players && <p className="mt-1 text-xs text-red-400">{fieldErrors.min_players}</p>}
               </div>
             </div>
 
@@ -441,8 +477,9 @@ export function TournamentCreateWizard() {
                       min={2}
                       value={form.groups_count}
                       onChange={(e) => setForm((prev) => ({ ...prev, groups_count: Number(e.target.value) }))}
-                      className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                      className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.groups_count ? "border-red-500" : "border-border"}`}
                     />
+                    {fieldErrors.groups_count && <p className="mt-1 text-xs text-red-400">{fieldErrors.groups_count}</p>}
                   </div>
 
                   <div>
@@ -455,8 +492,9 @@ export function TournamentCreateWizard() {
                       onChange={(e) =>
                         setForm((prev) => ({ ...prev, qualifiers_per_group: Number(e.target.value) }))
                       }
-                      className="w-full rounded-lg border border-border bg-background px-4 py-3 text-foreground"
+                      className={`w-full rounded-lg border bg-background px-4 py-3 text-foreground ${fieldErrors.qualifiers_per_group ? "border-red-500" : "border-border"}`}
                     />
+                    {fieldErrors.qualifiers_per_group && <p className="mt-1 text-xs text-red-400">{fieldErrors.qualifiers_per_group}</p>}
                   </div>
                 </div>
 
@@ -719,7 +757,11 @@ export function TournamentCreateWizard() {
           </div>
         )}
 
-        {(localError || error) && <p className="mt-4 text-sm text-red-400">{localError ?? error}</p>}
+        {(localError || error) && (
+          <div className="mt-4 rounded-xl border border-red-500/40 bg-red-500/10 px-4 py-3 text-sm font-semibold text-red-400">
+            {localError ?? error}
+          </div>
+        )}
 
         <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-between">
           <button
@@ -754,6 +796,46 @@ export function TournamentCreateWizard() {
           )}
         </div>
       </section>
+
+      {showFreeConfirm && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4"
+          role="presentation"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowFreeConfirm(false)
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            className="w-full max-w-sm rounded-xl border border-border bg-card p-6 shadow-2xl"
+          >
+            <h3 className="text-lg font-bold text-foreground">Torneo gratuito</h3>
+            <p className="mt-3 text-sm text-muted-foreground leading-relaxed">
+              El valor de inscripción está en $0. ¿Estás seguro de crear un torneo gratuito para el público?
+            </p>
+            <div className="mt-5 flex gap-2 justify-end">
+              <button
+                type="button"
+                onClick={() => setShowFreeConfirm(false)}
+                className="cursor-pointer rounded-lg border border-border px-4 py-2 text-sm font-semibold text-muted-foreground hover:bg-muted transition"
+              >
+                Cancelar
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowFreeConfirm(false)
+                  void doCreate()
+                }}
+                className="cursor-pointer rounded-lg bg-primary px-4 py-2 text-sm font-bold text-white hover:opacity-90 transition"
+              >
+                Sí, crear torneo gratis
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

@@ -728,6 +728,11 @@ CREATE POLICY "Owner can delete teams in own tournaments" ON tournament_teams
     )
   );
 
+DROP POLICY IF EXISTS "Captains can read own teams" ON tournament_teams;
+CREATE POLICY "Captains can read own teams" ON tournament_teams
+  FOR SELECT
+  USING (captain_email = auth.email());
+
 DROP POLICY IF EXISTS "Owner can read tournament matches" ON tournament_matches;
 CREATE POLICY "Owner can read tournament matches" ON tournament_matches
   FOR SELECT
@@ -839,6 +844,100 @@ CREATE POLICY "Owner can delete payments in own tournaments" ON tournament_payme
       FROM tournaments t
       WHERE t.id = tournament_payments.tournament_id
         AND t.owner_id = auth.uid()
+    )
+  );
+
+-- Tournament team players
+CREATE TABLE IF NOT EXISTS tournament_team_players (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  team_id UUID REFERENCES tournament_teams(id) ON DELETE CASCADE NOT NULL,
+  name TEXT NOT NULL,
+  phone TEXT,
+  email TEXT,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
+  document_type TEXT,
+  document_number TEXT,
+  blood_type TEXT,
+  emergency_contact_name TEXT,
+  emergency_contact_phone TEXT,
+  shirt_number INTEGER,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_team_players_shirt_number
+  ON tournament_team_players (team_id, shirt_number)
+  WHERE shirt_number IS NOT NULL;
+
+ALTER TABLE tournament_team_players ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Captain can read own team players" ON tournament_team_players;
+CREATE POLICY "Captain can read own team players" ON tournament_team_players
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM tournament_teams t
+      WHERE t.id = tournament_team_players.team_id
+        AND t.captain_email = auth.email()
+    )
+  );
+
+DROP POLICY IF EXISTS "Public can read players in open tournaments" ON tournament_team_players;
+CREATE POLICY "Public can read players in open tournaments" ON tournament_team_players
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM tournament_teams t
+      JOIN tournaments tour ON tour.id = t.tournament_id
+      WHERE t.id = tournament_team_players.team_id
+        AND t.captain_email = auth.email()
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can join a team" ON tournament_team_players;
+CREATE POLICY "Users can join a team" ON tournament_team_players
+  FOR INSERT
+  WITH CHECK (
+    auth.uid() = user_id
+    AND EXISTS (
+      SELECT 1 FROM tournament_teams t
+      JOIN tournaments tour ON tour.id = t.tournament_id
+      WHERE t.id = team_id
+        AND tour.status = 'open'
+    )
+  );
+
+DROP POLICY IF EXISTS "Users can read own player record" ON tournament_team_players;
+CREATE POLICY "Users can read own player record" ON tournament_team_players
+  FOR SELECT
+  USING (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Owner can read players in own tournaments" ON tournament_team_players;
+CREATE POLICY "Owner can read players in own tournaments" ON tournament_team_players
+  FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM tournament_teams t
+      JOIN tournaments tour ON tour.id = t.tournament_id
+      WHERE t.id = tournament_team_players.team_id
+        AND tour.owner_id = auth.uid()
+    )
+  );
+
+DROP POLICY IF EXISTS "Captain can manage team players" ON tournament_team_players;
+CREATE POLICY "Captain can manage team players" ON tournament_team_players
+  FOR ALL
+  USING (
+    EXISTS (
+      SELECT 1 FROM tournament_teams t
+      WHERE t.id = tournament_team_players.team_id
+        AND t.captain_email = auth.email()
+    )
+  )
+  WITH CHECK (
+    EXISTS (
+      SELECT 1 FROM tournament_teams t
+      WHERE t.id = tournament_team_players.team_id
+        AND t.captain_email = auth.email()
     )
   );
 
