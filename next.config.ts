@@ -27,6 +27,8 @@ const csp = [
   `connect-src 'self' ${SUPABASE_URL} ${SUPABASE_WS} https://*.googleapis.com${process.env.NODE_ENV === "development" ? " http://127.0.0.1:54321 ws://127.0.0.1:54321" : ""}`,
   // Evitar iframes de contenido externo.
   "frame-src 'none'",
+  // Service workers y futuros blobs de instalacion PWA.
+  "worker-src 'self' blob:",
   // Fuerza HTTPS en recursos mixtos.
   "upgrade-insecure-requests",
 ].join("; ");
@@ -44,6 +46,8 @@ const securityHeaders = [
   { key: "Strict-Transport-Security", value: "max-age=31536000; includeSubDomains; preload" },
   // CSP principal.
   { key: "Content-Security-Policy", value: csp },
+  // Exponer el manifest tambien por header para clientes PWA estrictos.
+  { key: "Link", value: '</manifest.webmanifest>; rel="manifest"' },
 ];
 
 // Headers que evitan cacheo de respuestas con datos de sesión.

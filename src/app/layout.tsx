@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import Link from "next/link";
 import { MailIcon } from "lucide-react";
 import { AppHeader } from "@/components/AppHeader";
@@ -9,9 +9,53 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 
 export const metadata: Metadata = {
-  title: "Parti2 - El ecosistema definitivo para deportistas",
+  applicationName: "Parti2",
+  title: {
+    default: "Parti2 - El ecosistema definitivo para deportistas",
+    template: "%s | Parti2",
+  },
   description:
     "Organiza partidos de manera gratuita, compite en torneos y encuentra cancha. Todo en un solo lugar.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    title: "Parti2",
+    statusBarStyle: "black-translucent",
+  },
+  formatDetection: {
+    telephone: false,
+  },
+  icons: {
+    icon: [
+      { url: "/icons/favicon-32x32.png", sizes: "32x32", type: "image/png" },
+      { url: "/icons/favicon-16x16.png", sizes: "16x16", type: "image/png" },
+      { url: "/icons/icon-192x192.png", sizes: "192x192", type: "image/png" },
+      { url: "/icons/icon-512x512.png", sizes: "512x512", type: "image/png" },
+    ],
+    apple: [
+      { url: "/icons/apple-icon-180x180.png", sizes: "180x180" },
+      { url: "/icons/apple-icon-167x167.png", sizes: "167x167" },
+      { url: "/icons/apple-icon-152x152.png", sizes: "152x152" },
+      { url: "/icons/apple-icon-144x144.png", sizes: "144x144" },
+      { url: "/icons/apple-icon-120x120.png", sizes: "120x120" },
+      { url: "/icons/apple-icon-114x114.png", sizes: "114x114" },
+      { url: "/icons/apple-icon-76x76.png", sizes: "76x76" },
+      { url: "/icons/apple-icon-72x72.png", sizes: "72x72" },
+      { url: "/icons/apple-icon-60x60.png", sizes: "60x60" },
+      { url: "/icons/apple-icon-57x57.png", sizes: "57x57" },
+    ],
+  },
+  other: {
+    "mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-capable": "yes",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#22C55E",
+  colorScheme: "dark",
 };
 
 export default function RootLayout({
