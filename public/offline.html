@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sin conexion — Parti2</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #0c1929;
+      color: #e2e8f0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 24px;
+      text-align: center;
+    }
+    .logo {
+      width: 120px;
+      height: 120px;
+      margin-bottom: 24px;
+      border-radius: 24px;
+    }
+    h1 {
+      font-size: 1.5rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+      color: #f8fafc;
+    }
+    p {
+      color: #94a3b8;
+      margin-bottom: 24px;
+      max-width: 320px;
+      line-height: 1.5;
+    }
+    .btn {
+      background: #22C55E;
+      color: #0c1929;
+      border: none;
+      padding: 12px 32px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #16a34a; }
+    .btn:active { transform: scale(0.98); }
+  </style>
+</head>
+<body>
+  <img
+    class="logo"
+    src="/icons/icon-192x192.png"
+    alt="Parti2"
+    width="120"
+    height="120"
+  />
+  <h1>Estas sin conexion</h1>
+  <p>
+    Parece que no tienes acceso a internet.
+    Revisa tu conexion e intenta de nuevo.
+  </p>
+  <button class="btn" onclick="window.location.reload()">
+    Reintentar
+  </button>
+</body>
+</html>

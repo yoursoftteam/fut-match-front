@@ -5,13 +5,16 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "build:cf-pages": "NPM_CONFIG_LEGACY_PEER_DEPS=true npx --yes @cloudflare/next-on-pages@1 && node scripts/prune-pages-output.mjs",
+    "build:cf-pages": "NPM_CONFIG_LEGACY_PEER_DEPS=true npx --yes @cloudflare/next-on-pages@1 && node scripts/prune-pages-output.mjs && node scripts/copy-sw.mjs",
     "preview": "npm run build:cf-pages && wrangler pages dev .vercel/output/static",
     "deploy": "npm run build:cf-pages && wrangler pages deploy .vercel/output/static --project-name=parti2",
     "start": "next start",
     "hydrate:api-fixtures": "node scripts/hydrate-api-fixture-ids.mjs",
     "typecheck": "tsc --noEmit",
-    "lint": "eslint"
+    "lint": "eslint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@base-ui/react": "^1.4.1",
@@ -41,14 +44,22 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
+    "@testing-library/dom": "^10.4.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@vitejs/plugin-react": "^6.0.3",
     "eslint": "^9",
     "eslint-config-next": "15.5.19",
+    "jsdom": "^29.1.1",
     "supabase": "^2.106.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.10"
   }
 }

@@ -83,6 +83,73 @@ const nextConfig: NextConfig = {
         source: "/(auth|dashboard|matches|match)(.*)",
         headers: noCacheHeaders,
       },
+      // PWA: static assets cache (immutable por hash en _next/static).
+      {
+        source: "/_next/static/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public,max-age=31536000,immutable" },
+        ],
+      },
+      // PWA: icons cache.
+      {
+        source: "/icons/(.*)",
+        headers: [
+          { key: "Cache-Control", value: "public,max-age=31536000,immutable" },
+        ],
+      },
+      // PWA: manifest content-type.
+      {
+        source: "/manifest.webmanifest",
+        headers: [
+          { key: "Content-Type", value: "application/manifest+json" },
+          { key: "Cache-Control", value: "public,max-age=0,must-revalidate" },
+        ],
+      },
+      // PWA: service worker — no cache, allow scope.
+      {
+        source: "/sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript" },
+          { key: "Cache-Control", value: "public,max-age=0,must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      // PWA: firebase messaging SW.
+      {
+        source: "/firebase-messaging-sw.js",
+        headers: [
+          { key: "Content-Type", value: "application/javascript" },
+          { key: "Cache-Control", value: "public,max-age=0,must-revalidate" },
+          { key: "Service-Worker-Allowed", value: "/" },
+        ],
+      },
+      // PWA: offline page — no cache.
+      {
+        source: "/offline.html",
+        headers: [
+          { key: "Cache-Control", value: "public,max-age=0,must-revalidate" },
+        ],
+      },
+      // PWA: Digital Asset Links.
+      {
+        source: "/.well-known/assetlinks.json",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+      // PWA: Apple App Site Association.
+      {
+        source: "/apple-app-site-association",
+        headers: [{ key: "Content-Type", value: "application/json" }],
+      },
+      // PWA: images cache with stale-while-revalidate.
+      {
+        source: "/_next/image(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "public,max-age=86400,stale-while-revalidate=604800",
+          },
+        ],
+      },
     ];
   },
 };
