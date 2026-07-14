@@ -1,9 +1,9 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { AlertTriangle, Check, Plus, Trash2, Zap } from "lucide-react";
-import { useMatchDetailsContext } from "@/contexts/MatchDetailsContext";
+import { AlertTriangle, Check, Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { useMatchDetailsContext, type PlayerRegistration } from "@/contexts/MatchDetailsContext";
 import { useMatchRegistration, useMatchUnregister } from "@/hooks/useMatchRegistration";
 import { useMatchPricing, MAX_SUBSTITUTE_SLOTS } from "@/hooks/useMatchPricing";
 import { useMatches } from "@/hooks/useMatches";
@@ -14,7 +14,7 @@ import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { ShareActions } from "@/components/ShareLink";
 import { PaymentStatus } from "./PaymentStatus";
 import { PaymentSummary } from "./PaymentSummary";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import { buildMatchShareSummary } from "@/lib/convocatoria-format";
 import RulesModal from "./RulesModal";
 
@@ -110,10 +110,21 @@ export function RegistrationPanel() {
   const [quickActionLoading, setQuickActionLoading] = useState(false);
   const [quickActionMessage, setQuickActionMessage] = useState<string | null>(null);
   const [showRulesModal, setShowRulesModal] = useState(false);
+  const [quickPosition, setQuickPosition] = useState<string>("");
+
+  const userPosition = user?.user_metadata?.position as string | undefined;
+  useEffect(() => {
+    if (!userPosition || quickPosition) return;
+    setQuickPosition(userPosition);
+  }, [userPosition]); // run once on mount
+
+
+
   const totalGoalkeepersRegistered = registrations.filter((registration) => registration.is_goalkeeper).length;
-  const selectedGoalkeepersInForm = entries.filter((entry) => entry.isGoalkeeper).length;
+  const selectedGoalkeepersInForm = entries.filter((entry) => entry.position === "portero").length;
   const isGoalkeeperCheckboxDisabled = totalGoalkeepersRegistered >= maxGoalkeepers;
   const goalkeeperSelectionLimitReached = totalGoalkeepersRegistered + selectedGoalkeepersInForm >= maxGoalkeepers;
+  const gkSlotsFull = isGoalkeeperCheckboxDisabled || goalkeeperSelectionLimitReached;
   const totalCost = matchData
     ? getTotalCost(matchData.field_cost, matchData.rental_cost, matchData.has_rented_goalkeepers)
     : 0;
@@ -170,17 +181,11 @@ export function RegistrationPanel() {
     }) ?? null;
   }, [registrations, user, normalizedAuthName]);
 
-  const useQuickAuthRegistration = Boolean(user && !isCreator && normalizedAuthName);
+  const useQuickAuthRegistration = Boolean(user && normalizedAuthName);
 
-  useEffect(() => {
-    if (!isGoalkeeperCheckboxDisabled) return;
-
-    entries.forEach((entry) => {
-      if (entry.isGoalkeeper) {
-        updateEntryGoalkeeper(entry.id, false);
-      }
-    });
-  }, [entries, isGoalkeeperCheckboxDisabled, updateEntryGoalkeeper]);
+  const selectedPositionAbbr = quickPosition
+    ? (POSITIONS as readonly PositionOption[]).find((p) => p.value === quickPosition)?.abbr ?? null
+    : null;
 
   useEffect(() => {
     const currentIds = entries.map((entry) => entry.id);
@@ -219,6 +224,11 @@ export function RegistrationPanel() {
       window.clearTimeout(timeoutId);
     };
   }, [quickActionMessage]);
+
+  useEffect(() => {
+    if (!gkSlotsFull || quickPosition !== "portero") return;
+    setQuickPosition("");
+  }, [gkSlotsFull, quickPosition]);
 
   const handleSubmitWithToast = async (e: React.FormEvent) => {
     const success = await handleSubmit(e);
@@ -273,8 +283,17 @@ export function RegistrationPanel() {
         }
       }
 
-      const { error } = await registerForMatch(matchId, finalName, false, {
+      if (!quickPosition) {
+        setQuickActionMessage("Seleccioná una posición en la cancha antes de inscribirte.");
+        return;
+      }
+      if (quickPosition === "portero" && gkSlotsFull) {
+        setQuickActionMessage("Los cupos de portero ya están ocupados. Elegí otra posición para inscribirte.");
+        return;
+      }
+      const { error } = await registerForMatch(matchId, finalName, quickPosition === "portero", {
         trackCurrentUser: true,
+        position: quickPosition || undefined,
       });
       if (error) {
         const msg = error instanceof Error ? error.message : "No se pudo completar la inscripción.";
@@ -307,8 +326,8 @@ export function RegistrationPanel() {
       )}
       <div className="mb-4 rounded border border-border bg-muted p-3 text-sm text-muted-foreground">
         <p>Jugadores de campo: {fieldPlayersCount}/{maxFieldPlayers}</p>
-        <p>Arqueros: {goalkeepersCount}/{maxGoalkeepers}</p>
-        <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {goalkeepersRemaining}</p>
+        <p>Arqueros: {totalGoalkeepersRegistered}/{maxGoalkeepers}</p>
+        <p className="mt-1 text-green-400">Cupos disponibles para arqueros: {Math.max(0, maxGoalkeepers - totalGoalkeepersRegistered)}</p>
         {isGoalkeeperCheckboxDisabled && (
           <p className="mt-1 text-amber-400">Ya se completaron los cupos de portero. El check está deshabilitado.</p>
         )}
@@ -366,31 +385,145 @@ export function RegistrationPanel() {
         </div>
       )}
 
+      {user && !ownRegistration && (
+        <div className="mb-4 rounded-lg border border-primary/20 bg-primary/[0.03] p-3">
+          <div className="mb-2.5">
+            <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+              Tu puesto en la cancha
+            </span>
+          </div>
+          <div className="grid grid-cols-4 gap-2">
+            {(POSITIONS as readonly PositionOption[]).map((pos) => {
+              const Icon = pos.icon;
+              const isSelected = quickPosition === pos.value;
+              const isPortero = pos.value === "portero";
+              const gkSlotsFull = isGoalkeeperCheckboxDisabled || goalkeeperSelectionLimitReached;
+              const gkFull = isPortero && gkSlotsFull;
+
+              if (gkFull) {
+                return (
+                  <button
+                    key={pos.value}
+                    type="button"
+                    disabled
+                    style={{
+                      border: "2px solid red",
+                      backgroundColor: "#7f1d1d",
+                      color: "white",
+                      opacity: 0.7,
+                      cursor: "not-allowed",
+                      userSelect: "none",
+                    }}
+                    className="relative flex flex-col items-center gap-1.5 rounded-lg p-2.5 transition-all select-none"
+                  >
+                    <span
+                      style={{
+                        position: "absolute",
+                        right: "-0.5rem",
+                        top: "-0.5rem",
+                        width: "1.25rem",
+                        height: "1.25rem",
+                        borderRadius: "9999px",
+                        backgroundColor: "#dc2626",
+                        color: "white",
+                        fontSize: "0.625rem",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                      }}
+                    >
+                      ✕
+                    </span>
+                    <Icon className="size-5" aria-hidden="true" style={{ color: "white" }} />
+                    <span className="text-[11px] font-semibold leading-tight">
+                      {pos.abbr}
+                    </span>
+                  </button>
+                );
+              }
+
+              return (
+                <button
+                  key={pos.value}
+                  type="button"
+                  onClick={() => setQuickPosition(pos.value)}
+                  className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-2.5 transition-all select-none ${
+                    isSelected
+                      ? "relative border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20"
+                      : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground hover:shadow-sm"
+                  }`}
+                >
+                  <Icon className={`size-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
+                  <span className={`text-[11px] font-semibold leading-tight ${isSelected ? "text-primary" : ""}`}>
+                    {pos.abbr}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {gkSlotsFull && (
+            <div className="mt-3 rounded border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+              Los cupos de portero ya están ocupados. Si queres inscribirte, elegí otra posición en la cancha.
+            </div>
+          )}
+        </div>
+      )}
+
       {useQuickAuthRegistration && (
         <button
           type="button"
           onClick={handleQuickAction}
-          className={`w-full rounded py-2 px-4 font-semibold transition ${ownRegistration ? "bg-red-600 text-white hover:bg-red-700" : (isTitularFull || isFieldPlayerFull) && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
-          disabled={quickActionLoading || (!ownRegistration && isTitularFull && isSubstituteFull)}
+          className={`w-full rounded py-2 px-4 font-semibold transition ${
+            ownRegistration
+              ? "bg-red-600 text-white hover:bg-red-700"
+              : !quickPosition
+                ? "cursor-not-allowed bg-muted text-muted-foreground"
+                : (isTitularFull || isFieldPlayerFull) && !isSubstituteFull
+                  ? "bg-amber-500 text-foreground hover:bg-amber-600"
+                  : isTitularFull && isSubstituteFull
+                    ? "cursor-not-allowed bg-muted text-muted-foreground"
+                    : "bg-green-500 text-white hover:bg-green-600"
+          }`}
+          disabled={quickActionLoading || (!ownRegistration && (!quickPosition || isTitularFull && isSubstituteFull))}
         >
           {quickActionLoading
             ? (ownRegistration ? "Procesando baja..." : "Inscribiendo...")
             : ownRegistration
               ? "Cancelar inscripción"
-              : (isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : (isTitularFull || isFieldPlayerFull) ? "Inscribirme como suplente" : "Inscribirme")}
+              : (isTitularFull && isSubstituteFull
+                  ? "Sin cupos disponibles"
+                  : (isTitularFull || isFieldPlayerFull)
+                    ? selectedPositionAbbr
+                      ? `Inscribirme como ${selectedPositionAbbr} suplente`
+                      : "Inscribirme como suplente"
+                    : selectedPositionAbbr
+                      ? `Inscribirme como ${selectedPositionAbbr}`
+                      : "Inscribirme")}
         </button>
       )}
 
       {!showForm ? (
         useQuickAuthRegistration ? (
-          <button
-            type="button"
-            onClick={() => setShowForm(true)}
-            className="mt-3 w-full rounded border border-border bg-muted py-2 px-4 font-semibold text-foreground transition hover:bg-secondary"
-            disabled={isTitularFull && isSubstituteFull}
-          >
-            Inscribir a otros
-          </button>
+            <button
+              type="button"
+              onClick={() => { resetForm(); setShowForm(true); }}
+              className={`mt-3 w-full rounded py-2 px-4 font-semibold transition ${
+                isTitularFull && isSubstituteFull
+                  ? "cursor-not-allowed bg-muted text-muted-foreground"
+                  : (isTitularFull || isFieldPlayerFull)
+                    ? "bg-amber-500 text-foreground hover:bg-amber-600"
+                    : "border border-border bg-muted text-foreground hover:bg-secondary"
+              }`}
+              disabled={isTitularFull && isSubstituteFull}
+            >
+              {isTitularFull && isSubstituteFull
+                ? "Sin cupos disponibles"
+                : (isTitularFull || isFieldPlayerFull)
+                  ? "Inscribir a otros como suplentes"
+                  : "Inscribir a otros"}
+            </button>
         ) : (
           <>
             {!user && (
@@ -431,11 +564,19 @@ export function RegistrationPanel() {
             )}
             <button
               type="button"
-              onClick={() => setShowForm(true)}
+              onClick={() => { resetForm(); setShowForm(true); }}
               className={`w-full rounded py-2 px-4 font-semibold transition ${(isTitularFull || isFieldPlayerFull) && !isSubstituteFull ? "bg-amber-500 text-foreground hover:bg-amber-600" : isTitularFull && isSubstituteFull ? "cursor-not-allowed bg-muted text-muted-foreground" : "bg-green-500 text-white hover:bg-green-600"}`}
               disabled={isTitularFull && isSubstituteFull}
             >
-              {isTitularFull && isSubstituteFull ? "Sin cupos disponibles" : (isTitularFull || isFieldPlayerFull) ? "Inscribirme como suplente" : "Inscribirme"}
+              {isTitularFull && isSubstituteFull
+                ? "Sin cupos disponibles"
+                : (isTitularFull || isFieldPlayerFull)
+                  ? selectedPositionAbbr
+                    ? `Inscribirme como ${selectedPositionAbbr} suplente`
+                    : "Inscribirme como suplente"
+                  : selectedPositionAbbr
+                    ? `Inscribirme como ${selectedPositionAbbr}`
+                    : "Inscribirme"}
             </button>
           </>
         )
@@ -486,71 +627,91 @@ export function RegistrationPanel() {
                   </div>
                 )}
 
-                <div className="mt-3 flex items-center gap-3">
-                  <input
-                    id={`register-gk-${entry.id}`}
-                    type="checkbox"
-                    checked={entry.isGoalkeeper}
-                    onChange={(e) => updateEntryGoalkeeper(entry.id, e.target.checked)}
-                    className="h-5 w-5"
-                    disabled={isGoalkeeperCheckboxDisabled || (!entry.isGoalkeeper && goalkeeperSelectionLimitReached)}
-                  />
-                  <label htmlFor={`register-gk-${entry.id}`} className="text-sm text-foreground">
-                    {isGoalkeeperCheckboxDisabled || (!entry.isGoalkeeper && goalkeeperSelectionLimitReached)
-                      ? "Portero (ya se encuentran inscritos los porteros)"
-                      : "Portero"}
-                  </label>
-                </div>
-                {!entry.isGoalkeeper && (
-                  <div className="mt-2">
-                    <label className="text-xs font-medium text-muted-foreground">
-                      Posición en cancha
-                    </label>
-                    <div className="mt-1 sm:max-w-[220px]">
-                      <Select value={entry.position} onValueChange={(v) => { if (v) updateEntryPosition(entry.id, v); }}>
-                        <SelectTrigger
-                          className={`w-full text-sm transition-colors ${
-                            entry.position
-                              ? "border-primary/50 text-foreground"
-                              : "border-dashed border-primary/30 text-muted-foreground hover:border-primary/60 hover:text-foreground"
-                          }`}
-                          aria-label="Seleccionar posición"
-                        >
-                          <SelectValue placeholder="Elegí tu puesto">
-                            {entry.position && (() => {
-                              const pos = (POSITIONS as readonly PositionOption[]).find((p) => p.value === entry.position);
-                              if (pos) {
-                                const Icon = pos.icon;
-                                return (
-                                  <span className="inline-flex items-center gap-1.5">
-                                    <Icon className="size-4" aria-hidden="true" />
-                                    {pos.label}
-                                  </span>
-                                );
-                              }
-                              return null;
-                            })()}
-                          </SelectValue>
-                        </SelectTrigger>
-                        <SelectContent>
-                          {(POSITIONS as readonly PositionOption[]).filter((p) => p.value !== "portero").map((pos) => {
-                            const Icon = pos.icon;
-                            return (
-                              <SelectItem key={pos.value} value={pos.value} className="text-sm">
-                                <span className="inline-flex items-center gap-2">
-                                  <Icon className="size-4 text-primary" aria-hidden="true" />
-                                  {pos.label}
-                                </span>
-                              </SelectItem>
-                            );
-                          })}
-                        </SelectContent>
-                      </Select>
-                    </div>
+                <div className="mt-3 rounded-lg border border-primary/20 bg-primary/[0.03] p-3">
+                  <div className="mb-2.5">
+                    <span className="text-xs font-semibold uppercase tracking-wider text-primary">
+                      Puesto en la cancha
+                    </span>
                   </div>
-                )}
+                  <div className="grid grid-cols-4 gap-2">
+                    {(POSITIONS as readonly PositionOption[]).map((pos) => {
+                      const Icon = pos.icon;
+                      const isSelected = entry.position === pos.value;
+                      const isPortero = pos.value === "portero";
+                      const gkFull = isPortero && gkSlotsFull;
+
+                      if (gkFull) {
+                        return (
+                          <button
+                            key={pos.value}
+                            type="button"
+                            disabled
+                            style={{
+                              border: "2px solid red",
+                              backgroundColor: "#7f1d1d",
+                              color: "white",
+                              opacity: 0.7,
+                              cursor: "not-allowed",
+                              userSelect: "none",
+                            }}
+                            className="relative flex flex-col items-center gap-1.5 rounded-lg p-2.5 transition-all select-none"
+                          >
+                            <span
+                              style={{
+                                position: "absolute",
+                                right: "-0.5rem",
+                                top: "-0.5rem",
+                                width: "1.25rem",
+                                height: "1.25rem",
+                                borderRadius: "9999px",
+                                backgroundColor: "#dc2626",
+                                color: "white",
+                                fontSize: "0.625rem",
+                                fontWeight: 700,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                              }}
+                            >
+                              ✕
+                            </span>
+                            <Icon className="size-5" aria-hidden="true" style={{ color: "white" }} />
+                            <span className="text-[11px] font-semibold leading-tight">
+                              {pos.abbr}
+                            </span>
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <button
+                          key={pos.value}
+                          type="button"
+                          onClick={() => updateEntryPosition(entry.id, pos.value)}
+                          className={`flex flex-col items-center gap-1.5 rounded-lg border-2 p-2.5 transition-all select-none ${
+                            isSelected
+                              ? "border-primary bg-primary/10 text-primary shadow-sm shadow-primary/20"
+                              : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground hover:shadow-sm"
+                          }`}
+                        >
+                          <Icon className={`size-5 ${isSelected ? "text-primary" : "text-muted-foreground"}`} aria-hidden="true" />
+                          <span className={`text-[11px] font-semibold leading-tight ${isSelected ? "text-primary" : ""}`}>
+                            {pos.abbr}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
               </div>
             ))}
+
+            {gkSlotsFull && (
+              <div className="rounded border border-amber-500/40 bg-amber-500/10 p-2.5 text-xs text-amber-300">
+                Los cupos de portero ya están ocupados.
+              </div>
+            )}
 
             <button
               type="button"
@@ -633,10 +794,142 @@ export function RegistrationPanel() {
   );
 }
 
+function PositionEditInline({
+  registration,
+  onUpdate,
+  gkSlotsFull,
+}: {
+  registration: PlayerRegistration;
+  onUpdate: (position: string) => void;
+  gkSlotsFull: boolean;
+}) {
+  const [editing, setEditing] = useState(false);
+
+  if (registration.is_goalkeeper) {
+    return <span className="inline-flex items-center gap-1">🥅 Portero</span>;
+  }
+
+  if (editing) {
+    return (
+      <span className="flex w-full flex-col gap-1 sm:w-auto sm:flex-row sm:items-center sm:gap-3">
+        <span className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+          {(POSITIONS as readonly PositionOption[]).map((pos) => {
+            const Icon = pos.icon;
+            const isActive = registration.position === pos.value;
+            const isPortero = pos.value === "portero";
+            const gkFull = isPortero && gkSlotsFull;
+
+              const isBlocked = gkFull;
+              return (
+                <button
+                  key={pos.value}
+                  type="button"
+                  disabled={isBlocked}
+                  onClick={() => {
+                    if (isBlocked) return;
+                    onUpdate(pos.value);
+                    setEditing(false);
+                  }}
+                  style={isBlocked ? {
+                    border: "2px solid rgba(239, 68, 68, 0.7)",
+                    backgroundColor: "rgba(127, 29, 29, 0.5)",
+                    color: "rgba(252, 165, 165, 1)",
+                    opacity: 0.7,
+                    cursor: "not-allowed",
+                    userSelect: "none",
+                    position: "relative" as const,
+                  } : {}}
+                  className={`relative inline-flex w-full items-center justify-center gap-2 rounded-md border-2 px-3 py-2 text-sm font-medium transition sm:w-auto sm:inline-flex sm:px-2 sm:py-1 sm:text-xs ${
+                    isBlocked
+                      ? "border-red-500 bg-red-900/60 text-red-300 opacity-70 cursor-not-allowed"
+                      : isActive
+                        ? "border-primary bg-primary/20 text-primary shadow-sm"
+                        : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
+                  }`}
+                >
+                  {isBlocked && (
+                    <span
+                      style={{
+                        position: "absolute",
+                        right: "-0.375rem",
+                        top: "-0.375rem",
+                        width: "1rem",
+                        height: "1rem",
+                        borderRadius: "9999px",
+                        backgroundColor: "#dc2626",
+                        color: "white",
+                        fontSize: "0.625rem",
+                        fontWeight: 700,
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        boxShadow: "0 1px 3px rgba(0,0,0,0.3)",
+                      }}
+                    >
+                      ✕
+                    </span>
+                  )}
+                  <Icon className="size-4 shrink-0 sm:size-3" aria-hidden="true" />
+                  {pos.abbr}
+                  {isActive && <Check className="size-3 shrink-0" aria-hidden="true" />}
+                </button>
+              );
+          })}
+        </span>
+        <div className="flex items-center gap-1 sm:self-center">
+          <button
+            type="button"
+            onClick={() => setEditing(false)}
+            className="inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium text-destructive transition hover:bg-destructive/10 sm:px-2 sm:py-1 sm:text-xs"
+          >
+            Cancelar
+          </button>
+
+        </div>
+      </span>
+    );
+  }
+
+  const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === registration.position);
+
+  return (
+    <button
+      type="button"
+      onClick={() => setEditing(true)}
+      className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary transition hover:bg-primary/20"
+    >
+      {p ? (
+        <>
+          <p.icon className="size-3" aria-hidden="true" />
+          {p.abbr}
+        </>
+      ) : (
+        <>⚽ Sin posición</>
+      )}
+      <Pencil className="size-2.5 opacity-40" aria-hidden="true" />
+    </button>
+  );
+}
+
 export function PlayersPanel() {
-  const { matchData, registrations, registrationsLoading, isCreator } = useMatchDetailsContext();
+  const { matchData, registrations, registrationsLoading, isCreator, user } = useMatchDetailsContext();
+  const { updateRegistrationPosition } = useMatches();
+  const { refreshRegistrations } = useMatchDetailsContext();
   const { showModal, target, loading, openModal, closeModal, handleUnregister, message } = useMatchUnregister();
   const { titulares, suplentes } = useMatchPricing();
+
+  const totalGoalkeepersInMatch = registrations.filter((r) => r.is_goalkeeper).length;
+  const maxGoalkeepersSlot = Math.min(2, matchData?.max_players ?? 0);
+  const gkSlotsFull = totalGoalkeepersInMatch >= maxGoalkeepersSlot;
+
+  const handlePositionUpdate = useCallback(async (registrationId: string, position: string) => {
+    const { error } = await updateRegistrationPosition(registrationId, position);
+    if (error) {
+      console.error(error);
+    } else {
+      refreshRegistrations();
+    }
+  }, [updateRegistrationPosition, refreshRegistrations]);
 
   return (
     <>
@@ -666,22 +959,11 @@ export function PlayersPanel() {
               <span className="mr-2 text-xs text-muted-foreground">#{index + 1}</span>
               <span className="font-medium text-foreground">{registration.name}</span>
               <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                {registration.is_goalkeeper ? (
-                  <span className="inline-flex items-center gap-1">🥅 Portero</span>
-                ) : registration.position ? (
-                  <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary">
-                    {(() => {
-                      const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === registration.position);
-                      if (p) {
-                        const Icon = p.icon;
-                        return <><Icon className="size-3" aria-hidden="true" />{p.label}</>;
-                      }
-                      return `⚽ ${registration.position}`;
-                    })()}
-                  </span>
-                ) : (
-                  <span>⚽ Jugador de campo</span>
-                )}
+                <PositionEditInline
+                  registration={registration}
+                  onUpdate={(position) => handlePositionUpdate(registration.id, position)}
+                  gkSlotsFull={gkSlotsFull}
+                />
               </span>
             </div>
             <div className="ml-3 flex items-center gap-2">
@@ -714,22 +996,11 @@ export function PlayersPanel() {
                   <span className="mr-2 inline-flex items-center rounded bg-amber-900/50 px-1.5 py-0.5 text-xs text-amber-300">S{index + 1}</span>
                   <span className="font-medium text-foreground">{registration.name}</span>
                   <span className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                    {registration.is_goalkeeper ? (
-                      <span className="inline-flex items-center gap-1">🥅 Portero</span>
-                    ) : registration.position ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-primary/10 px-1.5 py-0.5 text-primary">
-                        {(() => {
-                          const p = (POSITIONS as readonly PositionOption[]).find((pos) => pos.value === registration.position);
-                          if (p) {
-                            const Icon = p.icon;
-                            return <><Icon className="size-3" aria-hidden="true" />{p.label}</>;
-                          }
-                          return `⚽ ${registration.position}`;
-                        })()}
-                      </span>
-                    ) : (
-                      <span>⚽ Jugador de campo</span>
-                    )}
+                    <PositionEditInline
+                      registration={registration}
+                      onUpdate={(position) => handlePositionUpdate(registration.id, position)}
+                      gkSlotsFull={gkSlotsFull}
+                    />
                   </span>
                 </div>
                 <div className="ml-3 flex items-center gap-2">
