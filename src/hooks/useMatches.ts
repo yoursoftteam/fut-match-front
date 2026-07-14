@@ -344,7 +344,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
           match_id: normalizedMatchId,
           name: trimmedName,
           is_goalkeeper: isGoalkeeper,
-          user_id: null,
+          user_id: user.id,
         }
         if (explicitPosition) {
           insertPayload.position = explicitPosition

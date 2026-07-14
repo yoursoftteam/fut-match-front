@@ -5,8 +5,8 @@
 -- registrations of other players or tamper with payment/position data.
 --
 -- New policies:
---   DELETE – only the registration owner (auth.uid() = user_id) or the
---            match creator (via matches.created_by) can delete.
+--   DELETE – any player registered in the match (r2.user_id = auth.uid())
+--            OR the match creator can delete any registration in that match.
 --   UPDATE – only the match creator can update registrations (position,
 --            payment status, etc.).
 --   INSERT – unchanged (any authenticated user can register, enforced by
@@ -17,12 +17,18 @@ DROP POLICY IF EXISTS "Anyone can unregister from matches" ON public.match_regis
 DROP POLICY IF EXISTS "Only authorized users can update registrations" ON public.match_registrations;
 DROP POLICY IF EXISTS "Anyone can register for matches" ON public.match_registrations;
 
--- DELETE: registration owner OR match owner
-CREATE POLICY "Registration owner or match owner can delete"
+-- DELETE: any registered player in the match OR match creator
+DROP POLICY IF EXISTS "Registration owner or match owner can delete" ON public.match_registrations;
+DROP POLICY IF EXISTS "Any registered player or match owner can delete" ON public.match_registrations;
+CREATE POLICY "Any registered player or match owner can delete"
   ON public.match_registrations
   FOR DELETE
   USING (
-    auth.uid() = user_id
+    EXISTS (
+      SELECT 1 FROM public.match_registrations r2
+      WHERE r2.match_id = match_id
+        AND r2.user_id = auth.uid()
+    )
     OR
     EXISTS (
       SELECT 1 FROM public.matches
@@ -31,6 +37,7 @@ CREATE POLICY "Registration owner or match owner can delete"
   );
 
 -- UPDATE: only match owner (position, payment status, etc.)
+DROP POLICY IF EXISTS "Only match owner can update registrations" ON public.match_registrations;
 CREATE POLICY "Only match owner can update registrations"
   ON public.match_registrations
   FOR UPDATE
@@ -48,6 +55,7 @@ CREATE POLICY "Only match owner can update registrations"
   );
 
 -- Re-create the INSERT policy (restricted to authenticated users via GRANT)
+DROP POLICY IF EXISTS "Anyone can register for matches" ON public.match_registrations;
 CREATE POLICY "Anyone can register for matches"
   ON public.match_registrations
   FOR INSERT
