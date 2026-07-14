@@ -436,6 +436,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
             p_match_id: normalizedMatchId,
             p_name: trimmedName,
             p_is_goalkeeper: isGoalkeeper,
+            p_position: effectivePosition || null,
             p_self_token: selfUnregisterToken,
           })
       } catch (rpcThrown) {
@@ -486,8 +487,8 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       try {
         await updateRegistrationPosition(data.id)
-      } catch {
-        console.warn('No se pudo actualizar la posición en la inscripción')
+      } catch (posErr) {
+        console.warn('No se pudo actualizar la posición en la inscripción:', posErr)
       }
 
       return {
@@ -729,6 +730,23 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     }
   }
 
+  const updateRegistrationPosition = async (registrationId: string, position: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('match_registrations')
+        .update({ position })
+        .eq('id', registrationId)
+        .select('id, name, is_goalkeeper, position')
+        .single()
+
+      if (error) throw error
+      return { data, error: null }
+    } catch (error) {
+      console.error('Error updating registration position:', error)
+      return { data: null, error }
+    }
+  }
+
   return {
     matches,
     loading,
@@ -745,6 +763,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     deleteMatch,
     registerRentedGoalkeepers,
     togglePaymentStatus,
+    updateRegistrationPosition,
     refetch: fetchMatches,
   }
 }
