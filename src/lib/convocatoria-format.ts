@@ -4,7 +4,13 @@ import { formatLocalTime } from "@/lib/date-utils";
 import { getPayingPlayersCount, getTotalCost } from "@/lib/match-pricing";
 import type { MatchData, PlayerRegistration } from "@/contexts/MatchDetailsContext";
 
-const POSITION_LABEL_MAP = new Map<string, string>(POSITIONS.map((p) => [p.value, p.label]));
+const POSITION_ABBR_MAP = new Map<string, string>(POSITIONS.map((p) => [p.value, p.abbr]));
+const POSITION_ICON_MAP = new Map<string, string>([
+  ["portero", "🧤"],
+  ["defensa", "🛡️"],
+  ["centrocampista", "⚡"],
+  ["delantero", "🎯"],
+]);
 
 function capitalize(value: string): string {
   if (!value) return value;
@@ -22,22 +28,26 @@ function formatMatchSummaryDate(dateValue: string): string {
   return capitalize(dateText);
 }
 
-function getRoleLabel(registration: PlayerRegistration): string {
-  if (registration.is_goalkeeper) return "Portero";
+function getRoleIcon(registration: PlayerRegistration): string {
+  if (registration.is_goalkeeper) return "🧤";
   if (registration.position) {
-    return POSITION_LABEL_MAP.get(registration.position) ?? registration.position;
+    return POSITION_ICON_MAP.get(registration.position) ?? "⚽";
   }
-  return "Jugador de campo";
+  return "⚽";
 }
 
-function getRoleIcon(registration: PlayerRegistration): string {
-  return registration.is_goalkeeper ? "🧤" : "⚽";
+function getPositionAbbr(registration: PlayerRegistration): string {
+  if (registration.is_goalkeeper) return "POR";
+  if (registration.position) {
+    return POSITION_ABBR_MAP.get(registration.position) ?? "—";
+  }
+  return "—";
 }
 
 function formatPlayerLine(index: number, registration: PlayerRegistration): string {
-  const roleLabel = getRoleLabel(registration);
   const roleIcon = getRoleIcon(registration);
-  return `${index + 1}. ${registration.name} (${roleLabel})${roleIcon}`;
+  const abbr = getPositionAbbr(registration);
+  return `${index + 1}. ${registration.name} (${abbr})${roleIcon}`;
 }
 
 export function buildConvocatoriaSummary(
