@@ -159,11 +159,12 @@ export default function DashboardPage() {
         }> = []
 
         if (preferredName.length >= 2) {
+          const firstName = preferredName.split(/\s+/)[0]
           const { data: byNameData, error: byNameError } = await supabase
             .from('match_registrations')
             .select('id, match_id, registered_at, position')
             .is('user_id', null)
-            .ilike('name', preferredName)
+            .or(`name.ilike.%${preferredName}%,name.ilike.${firstName}%`)
             .order('registered_at', { ascending: false })
 
           if (byNameError) throw byNameError
