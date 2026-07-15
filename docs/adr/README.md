@@ -18,6 +18,7 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 |-----|--------|--------|-------|
 | [001](ADR-001-mobile-technology.md) | Tecnología del cliente móvil | Aceptado | [#151](https://github.com/yoursoftteam/fut-match-front/issues/151) |
 | [002](ADR-002-repository-structure.md) | Estructura de repositorio web + móvil | Aceptado | [#152](https://github.com/yoursoftteam/fut-match-front/issues/152), [#153](https://github.com/yoursoftteam/fut-match-front/issues/153) |
+| [003](ADR-003-data-sync-offline.md) | Datos, sincronización, realtime y offline | Aceptado | [#154](https://github.com/yoursoftteam/fut-match-front/issues/154) |
 
 ## Issues de arquitectura (roadmap)
 
@@ -26,7 +27,7 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 | #151 | Tecnología del cliente móvil | ✅ Cerrada (ADR-001) | — |
 | #152 | Estructura de repositorio | ✅ Cerrada (ADR-002) | — |
 | #153 | Extraer dominio, tipos, schemas | ✅ Completado | Requiere ADR-002 |
-| #154 | Datos, sincronización, offline | ⏳ Pendiente | Requiere ADR-001 |
+| #154 | Datos, sincronización, offline | ✅ Completada (ADR-003) | Requiere ADR-001 |
 | #155 | CI/CD web + móvil | ⏳ Pendiente | Requiere ADR-002 |
 | #156 | Estrategia de testing | ⏳ Pendiente | Requiere ADR-002 |
 | #157 | Auditoría seguridad Supabase/API | ⏳ Pendiente | Independiente |
