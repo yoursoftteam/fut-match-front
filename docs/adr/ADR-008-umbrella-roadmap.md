@@ -2,6 +2,7 @@
 
 **Estado:** Aceptado  
 **Fecha:** 2026-07-14  
+**Actualizado:** 2026-07-15 (scaffold mobile + auth flow)  
 **Decisor:** Equipo Parti2  
 **Issue:** [#159](https://github.com/yoursoftteam/fut-match-front/issues/159)
 
@@ -15,7 +16,7 @@ Este issue consolida todas las decisiones de arquitectura para la evolución web
 
 | Capa | Web | Mobile |
 |------|-----|--------|
-| **Framework** | Next.js 15 (App Router) | React Native + Expo (Expo Router) |
+| **Framework** | Next.js 16 (App Router) | React Native + Expo SDK 54 (Expo Router) |
 | **Language** | TypeScript strict | TypeScript strict (shared) |
 | **UI** | Tailwind CSS 4 + shadcn/ui | NativeWind o componentes nativos |
 | **Auth** | `@supabase/ssr` (PKCE, Cloudflare) | `@supabase/supabase-js` + `expo-secure-store` |
@@ -54,19 +55,19 @@ Este issue consolida todas las decisiones de arquitectura para la evolución web
 
 ### Fase 1: App móvil MVP
 
-| Tarea | Dependencia | Prioridad |
-|-------|-------------|-----------|
-| Scaffold Expo Router | Fase 0 ✅ | ALTA |
-| Auth (login/signup/logout) | Scaffold | ALTA |
-| Dashboard — mis partidos | Auth | ALTA |
-| Join partido vía invite code | Auth | ALTA |
-| Detalle partido + inscritos (realtime) | Auth | ALTA |
-| Crear partido (flujo multi-step) | Auth | ALTA |
-| Pools — crear/unirse | Auth | MEDIA |
-| Predicciones — crear/editar | Pools | MEDIA |
-| Leaderboard + realtime | Predicciones | MEDIA |
-| Frecuentes (templates) | Auth | MEDIA |
-| Perfil de usuario | Auth | BAJA |
+| Tarea | Dependencia | Prioridad | Estado |
+|-------|-------------|-----------|--------|
+| Scaffold Expo Router | Fase 0 ✅ | ALTA | ✅ Expo SDK 54, Expo Router 6, src/app/ structure |
+| Auth (login/signup/logout) | Scaffold | ALTA | ✅ AuthContext + AuthGate + SecureStore |
+| Dashboard — mis partidos | Auth | ALTA | |
+| Join partido vía invite code | Auth | ALTA | |
+| Detalle partido + inscritos (realtime) | Auth | ALTA | |
+| Crear partido (flujo multi-step) | Auth | ALTA | |
+| Pools — crear/unirse | Auth | MEDIA | |
+| Predicciones — crear/editar | Pools | MEDIA | |
+| Leaderboard + realtime | Predicciones | MEDIA | |
+| Frecuentes (templates) | Auth | MEDIA | |
+| Perfil de usuario | Auth | BAJA | |
 
 ### Fase 2: Hardening
 

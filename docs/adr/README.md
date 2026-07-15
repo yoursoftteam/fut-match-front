@@ -39,3 +39,19 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 | #158 | Notificaciones push multi-plataforma | ✅ Completada (ADR-007) | Requiere ADR-001 |
 | #159 | Umbrella: Evolución web + móvil | ✅ Completada (ADR-008) | Requiere todas |
 | #160 | PR: Implementación PWA | 🔄 En review | Independiente |
+
+## Estado de Fase 1 (App móvil MVP)
+
+| Tarea | Estado | Notas |
+|-------|--------|-------|
+| Scaffold Expo Router | ✅ | Expo SDK 54, Expo Router 6, src/app/ structure |
+| Auth (login/signup/logout) | ✅ | AuthContext + AuthGate + SecureStore PKCE |
+| Dashboard | 🔲 | Pendiente |
+| Join partido vía invite code | 🔲 | Pendiente |
+| Detalle partido + realtime | 🔲 | Pendiente |
+| Crear partido (multi-step) | 🔲 | Pendiente |
+| Pools | 🔲 | Pendiente |
+| Predicciones | 🔲 | Pendiente |
+| Leaderboard | 🔲 | Pendiente |
+| Frecuentes (templates) | 🔲 | Pendiente |
+| Perfil de usuario | 🔲 | Pendiente |

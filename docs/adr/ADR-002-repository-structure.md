@@ -2,7 +2,7 @@
 
 **Estado:** Aceptado  
 **Fecha:** 2026-07-14  
-**Actualizado:** 2026-07-14 (implementación issue #153)  
+**Actualizado:** 2026-07-15 (scaffold mobile + auth flow)  
 **Decisor:** Equipo Parti2  
 **Issues:** [#152](https://github.com/yoursoftteam/fut-match-front/issues/152), [#153](https://github.com/yoursoftteam/fut-match-front/issues/153)
 
@@ -143,19 +143,28 @@ fut-match-front/
 │   └── package.json              ← Solo para scripts de test
 │
 ├── mobile/                       ← Expo App (nuevo)
-│   ├── app/                      ← Expo Router (file-based)
 │   ├── src/
+│   │   ├── app/                  ← Expo Router (file-based, dentro de src/)
+│   │   │   ├── _layout.tsx       ← Root layout: AuthProvider + AuthGate
+│   │   │   ├── (auth)/           ← Grupo autenticación (login, signup)
+│   │   │   │   ├── _layout.tsx
+│   │   │   │   ├── login.tsx
+│   │   │   │   └── signup.tsx
+│   │   │   └── (app)/            ← Grupo autenticado (dashboard, etc.)
+│   │   │       ├── _layout.tsx
+│   │   │       └── index.tsx
 │   │   ├── lib/
 │   │   │   └── supabase.ts       ← @supabase/supabase-js + expo-secure-store
+│   │   ├── contexts/
+│   │   │   └── AuthContext.tsx    ← AuthProvider + useAuth hook
 │   │   ├── hooks/
 │   │   ├── components/
 │   │   └── types/
-│   ├── __tests__/
-│   ├── metro.config.js           ← watchFolders: [../shared]
-│   ├── tsconfig.json             ← paths: "@shared/*": ["../shared/*"]
+│   ├── .env                      ← EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY
+│   ├── tsconfig.json             ← paths: "@/*": ["./src/*"]
+│   ├── app.json                  ← scheme: "parti2", bundle IDs
 │   ├── package.json
-│   ├── app.json
-│   └── eas.json
+│   └── index.ts                  ← import 'expo-router/entry'
 │
 ├── package.json                  ← Root (sin workspaces)
 ├── tsconfig.json                 ← paths: { "@/*", "@shared/*" }
@@ -212,15 +221,14 @@ fut-match-front/
 **`mobile/tsconfig.json`** (nuevo):
 ```jsonc
 {
-  "extends": "../tsconfig.json",
+  "extends": "expo/tsconfig.base",
   "compilerOptions": {
+    "strict": true,
     "paths": {
-      "@/*": ["./src/*"],
-      "@shared/*": ["../shared/src/*"]
+      "@/*": ["./src/*"]
     }
   },
-  "include": ["src/**/*.ts", "src/**/*.tsx", "app/**/*.ts", "app/**/*.tsx"],
-  "exclude": ["node_modules"]
+  "include": ["**/*.ts", "**/*.tsx", ".expo/types/**/*.ts", "expo-env.d.ts"]
 }
 ```
 
@@ -240,6 +248,51 @@ config.resolver.extraNodeModules = {
 };
 
 module.exports = config;
+```
+
+### Stack móvil confirmado
+
+| Paquete | Versión | Notas |
+|---------|---------|-------|
+| expo | ~54.0.0 (SDK 54) | Compatível con Expo Go en el dispositivo |
+| react-native | 0.81.5 | |
+| react | 19.1.0 | |
+| expo-router | ~6.0.24 | File-based routing |
+| expo-secure-store | ~15.0.8 | Persistencia de sesión |
+| @supabase/supabase-js | ^2.49.4 | Cliente Supabase para mobile |
+| react-native-reanimated | ~4.1.1 | Requiere react-native-worklets |
+| react-native-gesture-handler | ~2.28.0 | |
+| react-native-screens | ~4.16.0 | |
+| typescript | ^5.3.3 | |
+
+### Flujo de autenticación mobile
+
+El scaffold incluye un flujo de auth funcional con:
+
+1. **`src/lib/supabase.ts`**: Cliente Supabase con `expo-secure-store` para persistencia de sesión, PKCE flow, auto-refresh
+2. **`src/contexts/AuthContext.tsx`**: Provider con `signIn`, `signUp`, `signOut`, listener `onAuthStateChange`
+3. **`src/app/_layout.tsx`**: Root layout con `AuthProvider` + `AuthGate` (redirección según estado de sesión)
+4. **`src/app/(auth)/`**: Grupo de rutas no autenticadas (login, signup)
+5. **`src/app/(app)/`**: Grupo de rutas autenticadas (dashboard)
+
+El `AuthGate` redirige automáticamente:
+- Sin sesión → `/(auth)/login`
+- Con sesión en grupo `(auth)` → `/(app)`
+
+### Configuración de Expo (app.json)
+
+```json
+{
+  "expo": {
+    "name": "Parti2",
+    "slug": "parti2",
+    "scheme": "parti2",
+    "ios": { "bundleIdentifier": "com.bara1021.parti2" },
+    "android": { "package": "com.bara1021.parti2" },
+    "plugins": ["expo-router", "expo-splash-screen"],
+    "experiments": { "typedRoutes": true }
+  }
+}
 ```
 
 ### Archivos que requieren adaptación
@@ -367,7 +420,7 @@ NUNCA al revés. NUNCA cruzado entre apps.
 ### Negativas
 - Sin build caching (Turborepo lo daría)
 - Sin versionado de paquetes (no se necesita en fase actual)
-- Requiere `metro.config.js` watchFolders en el mobile
+- `@shared/*` no está conectado desde mobile aún — se habilitará cuando mobile necesite importar de shared/
 
 ### Neutras
 - Turborepo se puede agregar después si el build se vuelve lento
