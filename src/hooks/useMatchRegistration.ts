@@ -129,7 +129,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
 
   const defaultPosition = user?.user_metadata?.position as string | undefined;
 
-  const [entries, setEntries] = useState<RegistrationEntry[]>([createRegistrationEntry(defaultPosition)]);
+  const [entries, setEntries] = useState<RegistrationEntry[]>([createRegistrationEntry()]);
 
   useEffect(() => {
     if (!defaultPosition) return;
@@ -143,15 +143,6 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
-
-  useEffect(() => {
-    if (showForm || !defaultPosition) return;
-    setEntries((prev) => {
-      const first = prev[0];
-      if (!first || first.position) return prev;
-      return [{ ...first, position: defaultPosition, isGoalkeeper: defaultPosition === "portero" }, ...prev.slice(1)];
-    });
-  }, [showForm, defaultPosition]);
 
   useEffect(() => {
     if (!message) return;
