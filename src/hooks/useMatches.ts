@@ -370,8 +370,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
       // Capacity and role limits are enforced at DB level by trigger/rpc.
       // Avoid duplicating pre-checks in client to prevent stale-count mismatches.
 
-      const userPosition = (user?.user_metadata as Record<string, unknown> | null)?.position as string | undefined
-      const effectivePosition = explicitPosition || userPosition
+      const effectivePosition = explicitPosition
 
       const updateRegistrationPosition = async (regId: string) => {
         if (!effectivePosition || !user || !trackCurrentUser) return
