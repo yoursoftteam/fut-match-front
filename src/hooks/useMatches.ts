@@ -743,10 +743,12 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
         .update({ position })
         .eq('id', registrationId)
         .select('id, name, is_goalkeeper, position')
-        .single()
 
       if (error) throw error
-      return { data, error: null }
+      if (!data || data.length === 0) {
+        throw new Error('No se encontró el registro o no tienes permiso para editar la posición.')
+      }
+      return { data: data[0], error: null }
     } catch (error) {
       console.error('Error updating registration position:', error)
       return { data: null, error }
