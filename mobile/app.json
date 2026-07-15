@@ -4,29 +4,37 @@
     "slug": "parti2",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
-    "userInterfaceStyle": "light",
+    "icon": "./assets/images/icon.png",
     "scheme": "parti2",
+    "userInterfaceStyle": "automatic",
     "ios": {
-      "supportsTablet": true,
-      "bundleIdentifier": "com.parti2.app"
+      "bundleIdentifier": "com.bara1021.parti2",
+      "supportsTablet": false
     },
     "android": {
+      "package": "com.bara1021.parti2",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "backgroundImage": "./assets/android-icon-background.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
-      },
-      "package": "com.parti2.app",
-      "predictiveBackGestureEnabled": false
+        "backgroundColor": "#0A0E14",
+        "foregroundImage": "./assets/images/icon.png"
+      }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "output": "static",
+      "favicon": "./assets/images/icon.png"
     },
     "plugins": [
       "expo-router",
-      "expo-status-bar"
-    ]
+      [
+        "expo-splash-screen",
+        {
+          "backgroundColor": "#0A0E14",
+          "image": "./assets/images/icon.png",
+          "imageWidth": 76
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
   }
 }

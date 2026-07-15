@@ -1,28 +1,30 @@
-import { createClient } from '@supabase/supabase-js'
 import * as SecureStore from 'expo-secure-store'
-import { Platform } from 'react-native'
-
-const SUPABASE_URL = process.env.EXPO_PUBLIC_SUPABASE_URL ?? 'https://iajkipugoylzmjsrnflh.supabase.co'
-const SUPABASE_ANON_KEY = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? 'sb_publishable_Or_fzc3a-0yPu4vXiyiAEw_azITUHnc'
+import { createClient } from '@supabase/supabase-js'
 
 const ExpoSecureStoreAdapter = {
-  getItem: async (key: string) => {
-    const value = await SecureStore.getItemAsync(key)
-    return value ?? null
-  },
-  setItem: async (key: string, value: string) => {
-    await SecureStore.setItemAsync(key, value)
-  },
-  removeItem: async (key: string) => {
-    await SecureStore.deleteItemAsync(key)
-  },
+  getItem: (key: string) => SecureStore.getItemAsync(key),
+  setItem: (key: string, value: string) => SecureStore.setItemAsync(key, value),
+  removeItem: (key: string) => SecureStore.deleteItemAsync(key),
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL ?? ''
+const supabaseAnonKey = process.env.EXPO_PUBLIC_SUPABASE_ANON_KEY ?? ''
+
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.warn('Missing Supabase environment variables')
+}
+
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     storage: ExpoSecureStoreAdapter,
     autoRefreshToken: true,
     persistSession: true,
     detectSessionInUrl: false,
+    flowType: 'pkce',
+  },
+  global: {
+    headers: {
+      'X-Client-Info': 'parti2-mobile',
+    },
   },
 })
