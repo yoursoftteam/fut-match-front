@@ -1,0 +1,35 @@
+# Architecture Decision Records
+
+Los ADRs documentan las decisiones arquitectónicas clave del proyecto Parti2.
+
+## Formato
+
+Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/11/15/documenting-architecture-decisions):
+
+- **Estado**: Propuesto | Aceptado | Obsoleto | Reemplazado por [ADR-XXX](link)
+- **Contexto**: Situación y fuerzas que motivan la decisión
+- **Decisión**: Qué se decidió
+- **Consecuencias**: Impacto positivo, negativo y neutro
+- **Criterios de aceptación**: Qué validó que la decisión era correcta
+
+## Índice
+
+| ADR | Título | Estado | Issue |
+|-----|--------|--------|-------|
+| [001](ADR-001-mobile-technology.md) | Tecnología del cliente móvil | Aceptado | [#151](https://github.com/yoursoftteam/fut-match-front/issues/151) |
+| [002](ADR-002-repository-structure.md) | Estructura de repositorio web + móvil | Aceptado | [#152](https://github.com/yoursoftteam/fut-match-front/issues/152), [#153](https://github.com/yoursoftteam/fut-match-front/issues/153) |
+
+## Issues de arquitectura (roadmap)
+
+| Issue | Título | Estado | Dependencia |
+|-------|--------|--------|-------------|
+| #151 | Tecnología del cliente móvil | ✅ Cerrada (ADR-001) | — |
+| #152 | Estructura de repositorio | ✅ Cerrada (ADR-002) | — |
+| #153 | Extraer dominio, tipos, schemas | ⏳ Pendiente | Requiere ADR-002 |
+| #154 | Datos, sincronización, offline | ⏳ Pendiente | Requiere ADR-001 |
+| #155 | CI/CD web + móvil | ⏳ Pendiente | Requiere ADR-002 |
+| #156 | Estrategia de testing | ⏳ Pendiente | Requiere ADR-002 |
+| #157 | Auditoría seguridad Supabase/API | ⏳ Pendiente | Independiente |
+| #158 | Notificaciones push multi-plataforma | ⏳ Pendiente | Requiere ADR-001 |
+| #159 | Umbrella: Evolución web + móvil | ⏳ Pendiente | Requiere todas |
+| #160 | PR: Implementación PWA | 🔄 En review | Independiente |

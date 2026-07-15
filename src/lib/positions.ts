@@ -1,15 +1,19 @@
-import { Shield, Gauge, Crosshair, Hand, type LucideIcon } from 'lucide-react'
+import { POSITIONS as SHARED_POSITIONS, type PositionOption as SharedPositionOption } from '@shared/lib/positions'
+import { Shield, Swords, UserRound, CircleDot } from "lucide-react"
+import type { LucideIcon } from "lucide-react"
 
-export interface PositionOption {
-  value: string
-  label: string
-  abbr: string
+export interface PositionOption extends SharedPositionOption {
   icon: LucideIcon
 }
 
-export const POSITIONS = [
-  { value: 'portero', label: 'Portero', abbr: 'POR', icon: Hand },
-  { value: 'defensa', label: 'Defensa', abbr: 'DEF', icon: Shield },
-  { value: 'centrocampista', label: 'Centrocampista', abbr: 'MC', icon: Gauge },
-  { value: 'delantero', label: 'Delantero', abbr: 'DEL', icon: Crosshair },
-] as const satisfies readonly PositionOption[]
+const ICON_MAP: Record<string, LucideIcon> = {
+  portero: Shield,
+  defensa: Swords,
+  centrocampista: UserRound,
+  delantero: CircleDot,
+}
+
+export const POSITIONS = SHARED_POSITIONS.map(p => ({
+  ...p,
+  icon: ICON_MAP[p.value] ?? CircleDot,
+})) as readonly PositionOption[]
