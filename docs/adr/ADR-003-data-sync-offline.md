@@ -3,7 +3,8 @@
 **Estado:** Aceptado  
 **Fecha:** 2026-07-14  
 **Decisor:** Equipo Parti2  
-**Issue:** [#154](https://github.com/yoursoftteam/fut-match-front/issues/154)
+**Issue:** [#154](https://github.com/yoursoftteam/fut-match-front/issues/154)  
+**Implementación:** [#169](https://github.com/yoursoftteam/fut-match-front/issues/169)
 
 ---
 
