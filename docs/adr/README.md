@@ -25,7 +25,7 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 |-------|--------|--------|-------------|
 | #151 | Tecnología del cliente móvil | ✅ Cerrada (ADR-001) | — |
 | #152 | Estructura de repositorio | ✅ Cerrada (ADR-002) | — |
-| #153 | Extraer dominio, tipos, schemas | ⏳ Pendiente | Requiere ADR-002 |
+| #153 | Extraer dominio, tipos, schemas | ✅ Completado | Requiere ADR-002 |
 | #154 | Datos, sincronización, offline | ⏳ Pendiente | Requiere ADR-001 |
 | #155 | CI/CD web + móvil | ⏳ Pendiente | Requiere ADR-002 |
 | #156 | Estrategia de testing | ⏳ Pendiente | Requiere ADR-002 |
