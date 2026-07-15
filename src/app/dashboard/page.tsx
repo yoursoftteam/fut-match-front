@@ -90,6 +90,7 @@ export default function DashboardPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [registeredMatches, setRegisteredMatches] = useState<RegisteredMatchCardItem[]>([])
+  const [registeredMatchCounts, setRegisteredMatchCounts] = useState<Record<string, number>>({})
   const [registeredMatchesLoading, setRegisteredMatchesLoading] = useState(true)
   const [unregisteringRegistrationId, setUnregisteringRegistrationId] = useState<string | null>(null)
   const [registeredMatchesMessage, setRegisteredMatchesMessage] = useState<string | null>(null)
@@ -198,6 +199,22 @@ export default function DashboardPage() {
           if (!match) continue
           seen.add(row.match_id)
           orderedMatches.push({ registrationId: row.id, match, position: row.position })
+        }
+
+        // Fetch registration counts for these matches (they may not be owned by the user)
+        if (uniqueMatchIds.length > 0) {
+          const { data: countData } = await supabase
+            .from('match_registrations')
+            .select('match_id')
+            .in('match_id', uniqueMatchIds)
+
+          if (countData) {
+            const counts: Record<string, number> = {}
+            countData.forEach(({ match_id }) => {
+              counts[match_id] = (counts[match_id] || 0) + 1
+            })
+            if (!cancelled) setRegisteredMatchCounts(counts)
+          }
         }
 
         if (!cancelled) {
@@ -791,7 +808,7 @@ export default function DashboardPage() {
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
               {registeredMatches.map(({ registrationId, match, position }) => {
-                const regCount = registrationCounts[match.id] || 0;
+                const regCount = registeredMatchCounts[match.id] ?? registrationCounts[match.id] ?? 0;
                 const isFull = regCount >= match.max_players;
                 return (
                 <div key={`${match.id}-${registrationId}`} className="card match-card p-5 relative flex flex-col gap-4">
