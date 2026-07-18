@@ -38,6 +38,7 @@ const FILTER_LABELS: Record<string, string> = {
   round_of_16: 'Octavos',
   quarter_finals: 'Cuartos',
   semi_finals: 'Semi',
+  third_place: '3er puesto',
   final: 'Final',
 }
 
@@ -46,6 +47,7 @@ const STAGE_FILTER_ORDER = [
   MatchStage.ROUND_OF_16,
   MatchStage.QUARTER_FINALS,
   MatchStage.SEMI_FINALS,
+  MatchStage.THIRD_PLACE,
   MatchStage.FINAL,
 ]
 
@@ -304,7 +306,7 @@ export function PoolMatches({ poolId, tournamentId, showGroupTable = true }: Poo
     for (const m of matches) {
       if (m.stage === MatchStage.GROUP_STAGE && m.group_name) {
         groups.add(m.group_name)
-      } else if (m.stage && m.stage !== MatchStage.GROUP_STAGE && m.stage !== MatchStage.THIRD_PLACE) {
+      } else if (m.stage && m.stage !== MatchStage.GROUP_STAGE) {
         stages.add(m.stage)
       }
     }
