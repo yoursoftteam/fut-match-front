@@ -1,7 +1,8 @@
 import { renderLastChanceEmail, type LastChanceEmailData } from './email-templates/last-chance'
 import { renderDailyDigestEmail, type DailyDigestEmailData } from './email-templates/daily-digest'
+import { renderTournamentResultsEmail, type TournamentResultsEmailData } from './email-templates/tournament-results'
 
-export type NotificationType = 'last_chance' | 'daily_digest'
+export type NotificationType = 'last_chance' | 'daily_digest' | 'tournament_results'
 
 export interface EmailPayload {
   to: string
@@ -93,6 +94,13 @@ export class EmailService {
     return {
       subject: subjects[pool.tier] ?? subjects.mid,
       html: renderDailyDigestEmail(data),
+    }
+  }
+
+  static renderTournamentResults(data: TournamentResultsEmailData): { subject: string; html: string } {
+    return {
+      subject: '¡Resultados finales de la polla! Descubre cómo te fue y quién se llevó la corona 🏆',
+      html: renderTournamentResultsEmail(data),
     }
   }
 }
