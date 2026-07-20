@@ -100,10 +100,14 @@ export async function POST(request: NextRequest) {
       const totalMembers = sortedUsers.length
 
       const userMetaMap = new Map<string, { email: string; fullName: string | null }>()
-      await Promise.all(
+      const metaResults = await Promise.all(
         sortedUsers.map(({ uid }) =>
           supabase.auth.admin.getUserById(uid)
-            .then(({ data: { user: u } }) => {
+            .then(({ data: { user: u }, error }) => {
+              if (error) {
+                console.error(`[send-tournament-results] getUserById error for ${uid}:`, error.message)
+                return
+              }
               if (u) {
                 const meta = u.user_metadata as Record<string, unknown> | undefined
                 const fullName = (typeof meta?.full_name === 'string' && meta.full_name.trim()) ? meta.full_name.trim() : null
@@ -112,15 +116,20 @@ export async function POST(request: NextRequest) {
             })
         )
       )
+      console.log(`[send-tournament-results] pool ${pid}: ${sortedUsers.length} users, ${userMetaMap.size} resolved`)
 
       const poolUrl = `https://parti2.app/bet/pool/${pid}`
       let poolEnqueued = 0
+      let skippedNoEmail = 0
 
       for (let i = 0; i < sortedUsers.length; i++) {
         const { uid, points } = sortedUsers[i]
         const rank = i + 1
         const meta = userMetaMap.get(uid)
-        if (!meta?.email) continue
+        if (!meta?.email) {
+          skippedNoEmail++
+          continue
+        }
 
         let tier: 'winner' | 'top3' | 'rest' = 'rest'
         if (rank === 1) tier = 'winner'
@@ -162,8 +171,12 @@ export async function POST(request: NextRequest) {
         if (!insertError) {
           poolEnqueued++
           totalEnqueued++
+        } else {
+          console.error(`[send-tournament-results] insert error for ${uid}:`, insertError.message)
         }
       }
+
+      console.log(`[send-tournament-results] pool ${pid}: enqueued=${poolEnqueued}, skipped_no_email=${skippedNoEmail}`)
 
       results.push({
         pool_id: pid,
