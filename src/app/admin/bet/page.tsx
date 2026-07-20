@@ -734,6 +734,8 @@ function ClassificationTab() {
   const [summary, setSummary] = useState<Record<string, { total: number; resolved: number; partial: number; unresolved: number } | null>>({})
   const [tournaments, setTournaments] = useState<Array<{ id: string; name: string }>>([])
   const [selectedTournament, setSelectedTournament] = useState<string | null>(null)
+  const [calculatingTournament, setCalculatingTournament] = useState(false)
+  const [tournamentResult, setTournamentResult] = useState<any>(null)
 
   useEffect(() => {
     supabase
@@ -971,6 +973,32 @@ function ClassificationTab() {
       setStatusMsg(`Error: ${json.error}`)
     }
     setSaving(false)
+  }
+
+  const handleCalculateTournamentPredictions = async () => {
+    if (!selectedTournament) return
+    setCalculatingTournament(true)
+    setTournamentResult(null)
+    setStatusMsg(null)
+    try {
+      const authHeaders = await getAuthHeaders()
+      const res = await fetch('/api/v1/bet/admin/tournament-predictions', {
+        method: 'POST',
+        headers: { ...authHeaders, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tournament_id: selectedTournament }),
+      })
+      const json = await res.json()
+      if (json.success) {
+        setTournamentResult(json.data)
+        setStatusMsg('Los puntos correspondientes a las predicciones de campeón, subcampeón y tercer puesto ya han sido calculados e integrados en el ranking general.')
+      } else {
+        setStatusMsg(`Error: ${json.error}`)
+      }
+    } catch (e) {
+      setStatusMsg(`Error: ${e instanceof Error ? e.message : e}`)
+    } finally {
+      setCalculatingTournament(false)
+    }
   }
 
   const getThirdSelectedTeam = (groupName: string): string | null => {
@@ -1324,6 +1352,36 @@ function ClassificationTab() {
                       </div>
                     ))}
                 </div>
+              )}
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Trophy className="size-4 text-muted-foreground" />
+                  <h2 className="text-sm font-semibold">Puntos de Campeón / Subcampeón / Tercero</h2>
+                </div>
+                <Button size="sm" variant="outline" onClick={handleCalculateTournamentPredictions} disabled={calculatingTournament || !selectedTournament}>
+                  {calculatingTournament ? <Loader2 className="size-3.5 animate-spin" /> : <Trophy className="size-3.5" />}
+                  Calcular puntos torneo
+                </Button>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {tournamentResult ? (
+                <div className="space-y-3">
+                  <div className="flex gap-4 text-xs">
+                    <span className="text-emerald-400">Pollas procesadas: {tournamentResult.pools_processed}</span>
+                    <span className="text-emerald-400">Campeón: {tournamentResult.total_champion} aciertos</span>
+                    <span className="text-emerald-400">Subcampeón: {tournamentResult.total_subchampion} aciertos</span>
+                    <span className="text-emerald-400">Tercero: {tournamentResult.total_third_place} aciertos</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  Calcula los puntos de campeón, subcampeón y tercero para todas las pollas del torneo seleccionado.
+                </p>
               )}
             </CardContent>
           </Card>
