@@ -2,8 +2,10 @@
 
 import Link from "next/link"
 import { useEffect, useState } from "react"
-import { AlertTriangle, ArrowLeft, Calendar, Check, CheckCircle2, Flag, Loader2, RefreshCcw, Save, Users } from "lucide-react"
+import { ArrowLeft, Calendar, Check, Clock, Flag, Loader2, RefreshCcw, Save, Users, XCircle } from "lucide-react"
+import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Button } from "@/components/ui/button"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/hooks/useAuth"
 import { useTournamentManage } from "@/hooks/useTournamentManage"
@@ -236,7 +238,6 @@ function InlineDateEditor({
       }
       return
     }
-    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone
     const now = new Date()
     const offset = -now.getTimezoneOffset()
     const sign = offset >= 0 ? "+" : "-"
@@ -327,6 +328,43 @@ function InlineDateEditor({
   )
 }
 
+function ConfirmDialog({
+  open,
+  onClose,
+  onConfirm,
+  title,
+  description,
+  confirmLabel = "Confirmar",
+  loading = false,
+}: {
+  open: boolean
+  onClose: () => void
+  onConfirm: () => void
+  title: string
+  description: string
+  confirmLabel?: string
+  loading?: boolean
+}) {
+  return (
+    <DialogPrimitive.Root open={open} onOpenChange={(nextOpen) => { if (!nextOpen) onClose() }}>
+      <DialogPrimitive.Portal>
+        <DialogPrimitive.Backdrop className="fixed inset-0 z-50 bg-black/40 transition-opacity duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 supports-backdrop-filter:backdrop-blur-sm" />
+        <DialogPrimitive.Popup className="fixed top-1/2 left-1/2 z-50 w-[90vw] max-w-sm -translate-x-1/2 -translate-y-1/2 rounded-xl border border-border bg-popover p-6 text-sm text-popover-foreground shadow-lg transition-all duration-150 data-ending-style:opacity-0 data-starting-style:opacity-0 data-ending-style:scale-95 data-starting-style:scale-95">
+          <DialogPrimitive.Title className="text-base font-heading font-bold text-foreground">{title}</DialogPrimitive.Title>
+          <DialogPrimitive.Description className="mt-2 text-sm text-muted-foreground leading-relaxed">{description}</DialogPrimitive.Description>
+          <div className="mt-5 flex items-center justify-end gap-2">
+            <DialogPrimitive.Close render={<Button variant="outline" size="sm">Cancelar</Button>} />
+            <Button size="sm" onClick={onConfirm} disabled={loading}>
+              {loading ? <Loader2 className="size-3.5 animate-spin" /> : null}
+              {loading ? "Actualizando..." : confirmLabel}
+            </Button>
+          </div>
+        </DialogPrimitive.Popup>
+      </DialogPrimitive.Portal>
+    </DialogPrimitive.Root>
+  )
+}
+
 export default function ManageTournamentClient({ tournamentId }: ManageTournamentClientProps) {
   const { user, loading: authLoading } = useAuth()
   const router = useRouter()
@@ -355,6 +393,8 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
   const [updatingMaxTeams, setUpdatingMaxTeams] = useState(false)
   const [updatingDate, setUpdatingDate] = useState(false)
   const [dateValidationError, setDateValidationError] = useState<string | null>(null)
+  const [confirmingFinish, setConfirmingFinish] = useState(false)
+  const [pendingStatusValue, setPendingStatusValue] = useState<"draft" | "open" | "in_progress" | "finished" | null>(null)
 
   useEffect(() => {
     if (tournament?.registration_deadline && tournament?.starts_at && new Date(tournament.registration_deadline) > new Date(tournament.starts_at)) {
@@ -372,13 +412,21 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
 
   const onChangeStatus = async (value: "draft" | "open" | "in_progress" | "finished") => {
     if (value === "finished") {
-      const confirmed = window.confirm(
-        "¿Estás seguro de marcar el torneo como Finalizado?\n\nNo se podrán inscribir más equipos ni modificar resultados."
-      )
-      if (!confirmed) return
+      setPendingStatusValue(value)
+      setConfirmingFinish(true)
+      return
     }
     setUpdatingStatus(true)
     await updateStatus(value)
+    setUpdatingStatus(false)
+  }
+
+  const handleConfirmFinish = async () => {
+    if (!pendingStatusValue) return
+    setUpdatingStatus(true)
+    setConfirmingFinish(false)
+    await updateStatus(pendingStatusValue)
+    setPendingStatusValue(null)
     setUpdatingStatus(false)
   }
 
@@ -512,6 +560,90 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
 
         {error && <p className="text-sm text-red-400">{error}</p>}
 
+        {/* Stepper bar — sticky en la parte superior */}
+        <div className="sticky top-0 z-10 -mx-4 sm:-mx-6 -mt-4 sm:-mt-6">
+          <div className="border-b border-border/50 bg-background/80 backdrop-blur-xl px-4 py-3 sm:px-6 sm:py-4">
+            <div className="mx-auto w-full max-w-6xl">
+              {/* Fila superior: título + contador */}
+              <div className="flex items-center justify-between gap-3 mb-3 sm:mb-4">
+                <div>
+                  <p className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">Checklist de configuración</p>
+                  <h2 className="text-sm font-heading font-bold text-foreground">Progreso del torneo</h2>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <span className="text-xs text-muted-foreground hidden sm:inline">
+                    {completedSteps === setupSteps.length
+                      ? "Todo listo"
+                      : `Falta${pendingSteps.length !== 1 ? "n" : ""} ${pendingSteps.length} paso${pendingSteps.length !== 1 ? "s" : ""}`}
+                  </span>
+                  <div className="rounded-lg border border-border bg-background/70 px-2.5 py-1 text-xs font-semibold text-foreground">
+                    {completedSteps} / {setupSteps.length}
+                  </div>
+                </div>
+              </div>
+
+              {/* Stepper horizontal */}
+              <div className="relative flex items-start justify-between">
+                {/* Línea de fondo (gris) */}
+                <div className="absolute left-[22px] right-[22px] top-[11px] h-0.5 bg-border -z-0" />
+                {/* Línea de progreso (verde) */}
+                <div
+                  className="absolute left-[22px] top-[11px] h-0.5 bg-primary transition-all duration-500 -z-0"
+                  style={{
+                    right: `${100 - (completedSteps / (setupSteps.length - 1)) * 100}%`,
+                    clipPath:
+                      completedSteps > 0
+                        ? `inset(0 ${100 - (completedSteps / (setupSteps.length - 1)) * 100}% 0 0)`
+                        : "inset(0 100% 0 0)",
+                  }}
+                />
+                {setupSteps.map((step, index) => {
+                  const isCompleted = step.done
+                  const isCurrent = !step.done && setupSteps.findIndex((s) => !s.done) === index
+
+                  return (
+                    <div
+                      key={step.id}
+                      className="relative z-10 flex flex-col items-center gap-1"
+                      style={{ width: `${100 / setupSteps.length}%` }}
+                    >
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!isCompleted && step.actionHref) navigateToStep(step.actionHref)
+                        }}
+                        disabled={isCompleted}
+                        className={`relative flex size-[22px] shrink-0 items-center justify-center rounded-full transition-all duration-300 ${
+                          isCompleted
+                            ? "bg-primary text-primary-foreground cursor-default"
+                            : isCurrent
+                              ? "border-2 border-primary bg-background ring-2 ring-primary/20 cursor-pointer hover:ring-primary/40"
+                              : "border-2 border-border bg-background cursor-pointer hover:border-muted-foreground/50"
+                        }`}
+                        title={isCompleted ? `${step.title} — listo` : step.title}
+                        aria-label={`${step.title} — ${isCompleted ? "completado" : isCurrent ? "paso actual" : "pendiente"}`}
+                      >
+                        {isCompleted ? (
+                          <Check className="size-3" strokeWidth={3} />
+                        ) : isCurrent ? (
+                          <span className="size-2 rounded-full bg-primary" />
+                        ) : (
+                          <span className="size-2 rounded-full bg-border" />
+                        )}
+                      </button>
+                      <span className={`text-center text-[10px] leading-tight ${
+                        isCompleted || isCurrent ? "font-semibold text-foreground" : "text-muted-foreground/60"
+                      }`}>
+                        {step.title}
+                      </span>
+                    </div>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         <TournamentAdminBento tournament={tournament} teamsCount={teams.length} paidCount={paidCount} />
 
         <section id="status-config" className="card p-5 sm:p-6 space-y-6">
@@ -546,9 +678,12 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
                       ))}
                     </SelectContent>
                   </Select>
-                  {updatingStatus ? (
-                    <Loader2 className="size-4 shrink-0 animate-spin text-muted-foreground" />
-                  ) : null}
+                  {updatingStatus && (
+                    <div className="flex items-center gap-1.5 shrink-0 text-xs text-muted-foreground">
+                      <Loader2 className="size-3.5 animate-spin" />
+                      <span className="hidden sm:inline">Actualizando...</span>
+                    </div>
+                  )}
                 </div>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   {tournament.status === "draft" && "Solo tú puedes verlo. Pasa a Abierto para iniciar inscripciones."}
@@ -630,11 +765,10 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
           </div>
         </section>
 
-        <section className="grid gap-5 lg:grid-cols-[1.25fr_1fr]">
-          <div className="space-y-5 order-1 lg:order-1">
-            <div id="share-links-section">
-              <TournamentDynamicLinksCard tournamentId={tournamentId} />
-            </div>
+        <section className="space-y-5">
+          <div id="share-links-section">
+            <TournamentDynamicLinksCard tournamentId={tournamentId} />
+          </div>
 
             {tournament && (
               <div id="schedule-config">
@@ -659,26 +793,35 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
             )}
 
             <section className="card p-5 sm:p-6">
-              <h2 className="text-lg font-heading font-bold text-foreground">Equipos inscritos</h2>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-lg font-heading font-bold text-foreground">Equipos inscritos</h2>
+                <span className="text-xs text-muted-foreground shrink-0">{teams.length} equipo{teams.length !== 1 ? "s" : ""}</span>
+              </div>
               {teams.length === 0 ? (
                 <p className="mt-3 text-sm text-muted-foreground">Aún no hay equipos. Comparte el link y activa la convocatoria.</p>
               ) : (
                 <ul className="mt-3 space-y-1.5">
-                  {teams.map((team) => (
-                    <li key={team.id} className="rounded-md border border-border bg-background/70 px-3 py-2">
+                  {teams.map((team, idx) => (
+                    <li key={team.id} className="rounded-lg border border-border bg-background/70 px-3.5 py-2.5">
                       <div className="flex items-center justify-between gap-3">
-                        <div>
-                          <p className="text-sm font-semibold leading-tight text-foreground">{team.name}</p>
-                          <p className="text-[11px] text-muted-foreground">Capitán: {team.captain_name}</p>
+                        <div className="min-w-0">
+                          <p className="text-sm font-semibold leading-tight text-foreground truncate">
+                            <span className="mr-1.5 text-muted-foreground font-normal">{idx + 1}.</span>
+                            {team.name}
+                          </p>
+                          <p className="text-[11px] text-muted-foreground/70 mt-0.5">
+                            <Users className="inline size-3 align-text-bottom mr-0.5" />
+                            Capitán: {team.captain_name}
+                          </p>
                         </div>
                         <span
-                          className={`rounded-full px-1.5 py-0.5 text-[11px] font-semibold ${
+                          className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                             team.payment_status === "paid"
                               ? "bg-primary/15 text-primary"
                               : "bg-muted text-muted-foreground"
                           }`}
                         >
-                          {team.payment_status === "paid" ? "Pago confirmado" : "Pago pendiente"}
+                          {team.payment_status === "paid" ? "Pagado" : "Pendiente"}
                         </span>
                       </div>
                     </li>
@@ -693,98 +836,64 @@ export default function ManageTournamentClient({ tournamentId }: ManageTournamen
                 <p className="mt-3 text-sm text-muted-foreground">No hay pagos registrados todavía.</p>
               ) : (
                 <ul className="mt-4 space-y-2">
-                  {payments.map((payment) => (
-                    <li key={payment.id} className="rounded-lg border border-border bg-background/70 p-3 text-sm">
-                      <div className="flex items-center justify-between gap-3">
-                        <span className="font-semibold text-foreground">${Number(payment.amount).toLocaleString("es-CO")}</span>
-                        <span className="text-xs text-muted-foreground">{payment.status}</span>
-                      </div>
-                      <p className="mt-1 text-xs text-muted-foreground">Ref: {payment.provider_ref ?? "N/A"}</p>
-                    </li>
-                  ))}
+                  {payments.map((payment) => {
+                    const statusIcon = payment.status === "paid"
+                      ? Check
+                      : payment.status === "failed"
+                        ? XCircle
+                        : Clock
+                    const statusColor = payment.status === "paid"
+                      ? "text-primary"
+                      : payment.status === "failed"
+                        ? "text-red-400"
+                        : "text-muted-foreground"
+                    const statusBg = payment.status === "paid"
+                      ? "bg-primary/10"
+                      : payment.status === "failed"
+                        ? "bg-red-500/10"
+                        : "bg-muted"
+
+                    return (
+                      <li key={payment.id} className="rounded-lg border border-border bg-background/70 p-3 text-sm">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <span className="font-semibold text-foreground">
+                              ${Number(payment.amount).toLocaleString("es-CO")}
+                            </span>
+                            {payment.provider_ref && (
+                              <p className="mt-0.5 text-xs text-muted-foreground truncate">Ref: {payment.provider_ref}</p>
+                            )}
+                          </div>
+                          <span className={`inline-flex shrink-0 items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-semibold ${statusColor} ${statusBg}`}>
+                            {statusIcon === Check && <Check className="size-3" />}
+                            {statusIcon === XCircle && <XCircle className="size-3" />}
+                            {statusIcon === Clock && <Clock className="size-3" />}
+                            {payment.status === "paid" ? "Pagado" : payment.status === "failed" ? "Fallido" : "Pendiente"}
+                          </span>
+                        </div>
+                      </li>
+                    )
+                  })}
                 </ul>
               )}
             </section>
-          </div>
 
-          <div className="order-2 lg:order-2">
-            <section className="card space-y-4 p-5 sm:p-6 lg:sticky lg:top-24">
-              <div className="flex flex-wrap items-start justify-between gap-3">
-                <div>
-                  <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Checklist de configuración</p>
-                  <h2 className="mt-1 text-lg font-heading font-bold text-foreground">Progreso del torneo</h2>
-                  <p className="mt-1 text-sm text-muted-foreground">Siempre visible para que no tengas que hacer scroll largo.</p>
-                </div>
-                <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-sm font-semibold text-foreground">
-                  {completedSteps} / {setupSteps.length} completados
-                </div>
-              </div>
+          </section>
 
-              <div className="grid gap-2">
-                {setupSteps.map((step) => (
-                  <div
-                    key={step.id}
-                    className={`rounded-lg border border-border bg-background/70 px-3 py-2.5 ${
-                      !step.done && step.actionHref ? "cursor-pointer transition hover:border-primary/40 hover:bg-muted/40" : ""
-                    }`}
-                    onClick={() => {
-                      if (!step.done && step.actionHref) navigateToStep(step.actionHref)
-                    }}
-                    onKeyDown={(event) => {
-                      if (step.done || !step.actionHref) return
-                      if (event.key === "Enter" || event.key === " ") {
-                        event.preventDefault()
-                        navigateToStep(step.actionHref)
-                      }
-                    }}
-                    tabIndex={!step.done && step.actionHref ? 0 : -1}
-                    role={!step.done && step.actionHref ? "button" : undefined}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className={`text-sm font-semibold ${step.done ? "text-foreground" : "text-muted-foreground"}`}>
-                          {step.done ? "Listo" : "Pendiente"} · {step.title}
-                        </p>
-                        {!step.done ? <p className="mt-1 text-xs text-muted-foreground">{step.hintWhenMissing}</p> : null}
-                      </div>
-                      {step.done ? (
-                        <CheckCircle2 className="mt-0.5 size-4 text-primary" />
-                      ) : (
-                        <AlertTriangle className="mt-0.5 size-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    {!step.done && step.actionHref && step.actionLabel ? (
-                      <Link
-                        href={step.actionHref}
-                        className="mt-2 inline-flex rounded-md border border-border px-2.5 py-1.5 text-xs font-semibold text-foreground transition hover:bg-muted"
-                      >
-                        {step.actionLabel}
-                      </Link>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-
-              {pendingSteps.length > 0 ? (
-                <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm text-muted-foreground">
-                  Faltan {pendingSteps.length} paso(s): {pendingSteps.map((step) => step.title).join(", ")}.
-                </div>
-              ) : (
-                <div className="rounded-lg border border-primary/40 bg-primary/10 p-3 text-sm text-primary">
-                  Todo listo. El torneo está configurado correctamente.
-                </div>
-              )}
-            </section>
-          </div>
-        </section>
-
-        {updatingStatus && (
-          <p className="inline-flex items-center gap-2 text-sm text-muted-foreground">
-            <Loader2 className="size-4 animate-spin" />
-            Actualizando estado del torneo...
-          </p>
-        )}
       </main>
+
+      <ConfirmDialog
+        open={confirmingFinish}
+        onClose={() => {
+          setConfirmingFinish(false)
+          setPendingStatusValue(null)
+        }}
+        onConfirm={() => void handleConfirmFinish()}
+        title="Finalizar torneo"
+        description="¿Estás seguro? Una vez finalizado no se podrán inscribir más equipos ni modificar resultados."
+        confirmLabel="Sí, finalizar"
+        loading={updatingStatus}
+      />
     </div>
   )
 }

@@ -344,7 +344,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
           match_id: normalizedMatchId,
           name: trimmedName,
           is_goalkeeper: isGoalkeeper,
-          user_id: null,
+          user_id: user.id,
         }
         if (explicitPosition) {
           insertPayload.position = explicitPosition
@@ -436,6 +436,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
             p_match_id: normalizedMatchId,
             p_name: trimmedName,
             p_is_goalkeeper: isGoalkeeper,
+            p_position: effectivePosition || null,
             p_self_token: selfUnregisterToken,
           })
       } catch (rpcThrown) {
@@ -486,8 +487,8 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       try {
         await updateRegistrationPosition(data.id)
-      } catch {
-        console.warn('No se pudo actualizar la posición en la inscripción')
+      } catch (posErr) {
+        console.warn('No se pudo actualizar la posición en la inscripción:', posErr)
       }
 
       return {
@@ -561,7 +562,13 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       if (error) throw error
       if (!data) {
-        throw new Error('No se encontró la inscripción o ya fue eliminada.')
+        // RLS puede filtrar el DELETE (0 filas) si el usuario no es el
+        // dueño de la inscripción ni el creador del partido.
+        const { data: { user } } = await supabase.auth.getUser()
+        if (!user) {
+          throw new Error('Debes iniciar sesión para realizar esta acción.')
+        }
+        throw new Error('No tienes permiso para eliminar esta inscripción o la inscripción ya no existe.')
       }
       return { error: null }
     } catch (error) {
@@ -729,6 +736,25 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     }
   }
 
+  const updateRegistrationPosition = async (registrationId: string, position: string) => {
+    try {
+      const { data, error } = await supabase
+        .from('match_registrations')
+        .update({ position })
+        .eq('id', registrationId)
+        .select('id, name, is_goalkeeper, position')
+
+      if (error) throw error
+      if (!data || data.length === 0) {
+        throw new Error('No se encontró el registro o no tienes permiso para editar la posición.')
+      }
+      return { data: data[0], error: null }
+    } catch (error) {
+      console.error('Error updating registration position:', error)
+      return { data: null, error }
+    }
+  }
+
   return {
     matches,
     loading,
@@ -745,6 +771,7 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
     deleteMatch,
     registerRentedGoalkeepers,
     togglePaymentStatus,
+    updateRegistrationPosition,
     refetch: fetchMatches,
   }
 }

@@ -82,6 +82,7 @@ export default function DashboardPage() {
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
   const [registeredMatches, setRegisteredMatches] = useState<RegisteredMatchCardItem[]>([])
+  const [registeredMatchCounts, setRegisteredMatchCounts] = useState<Record<string, number>>({})
   const [registeredMatchesLoading, setRegisteredMatchesLoading] = useState(true)
   const [unregisteringRegistrationId, setUnregisteringRegistrationId] = useState<string | null>(null)
   const [registeredMatchesMessage, setRegisteredMatchesMessage] = useState<string | null>(null)
@@ -296,11 +297,12 @@ export default function DashboardPage() {
         }> = []
 
         if (preferredName.length >= 2) {
+          const firstName = preferredName.split(/\s+/)[0]
           const { data: byNameData, error: byNameError } = await supabase
             .from('match_registrations')
             .select('id, match_id, registered_at, position')
             .is('user_id', null)
-            .ilike('name', preferredName)
+            .or(`name.ilike.%${preferredName}%,name.ilike.${firstName}%`)
             .order('registered_at', { ascending: false })
 
           if (byNameError) throw byNameError
@@ -334,6 +336,22 @@ export default function DashboardPage() {
           if (!match) continue
           seen.add(row.match_id)
           orderedMatches.push({ registrationId: row.id, match, position: row.position })
+        }
+
+        // Fetch registration counts for these matches (they may not be owned by the user)
+        if (uniqueMatchIds.length > 0) {
+          const { data: countData } = await supabase
+            .from('match_registrations')
+            .select('match_id')
+            .in('match_id', uniqueMatchIds)
+
+          if (countData) {
+            const counts: Record<string, number> = {}
+            countData.forEach(({ match_id }) => {
+              counts[match_id] = (counts[match_id] || 0) + 1
+            })
+            if (!cancelled) setRegisteredMatchCounts(counts)
+          }
         }
 
         if (!cancelled) {
@@ -829,6 +847,62 @@ export default function DashboardPage() {
                 Plantillas para armar rápido
               </p>
               <FrecuentesSection />
+            </section>
+
+            {/* Registered matches */}
+            <section>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-1">
+                Mis Inscripciones
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+                Partidos en los que estás inscrito
+              </p>
+            </section>
+
+            {/* Registered matches */}
+            <section>
+              <h2 className="text-2xl font-heading font-bold text-foreground mb-1">
+                Mis Inscripciones
+              </h2>
+              <p className="text-xs text-muted-foreground mt-0.5 mb-4">
+                Partidos en los que estás inscrito
+              </p>
+              {registeredMatchesLoading ? (
+                <div className="text-center py-10">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-r-transparent mx-auto mb-4" />
+                  <p className="text-muted-foreground text-sm">Cargando inscripciones…</p>
+                </div>
+              ) : registeredMatches.length === 0 ? (
+                <div className="card p-8 text-center">
+                  <div className="w-14 h-14 rounded-2xl bg-muted border border-border flex items-center justify-center mx-auto mb-4">
+                    <Users className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-heading font-semibold text-foreground mb-2">
+                    No tienes inscripciones activas
+                  </h3>
+                  <p className="text-muted-foreground text-sm max-w-sm mx-auto">
+                    Cuando te inscribas en un partido aparecerá aquí.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5 card-grid">
+                  {registeredMatches.map(({ registrationId, match, position }) => {
+                    const regCount = registeredMatchCounts[match.id] ?? registrationCounts[match.id] ?? 0;
+                    return (
+                      <MatchCard
+                        key={`${match.id}-${registrationId}`}
+                        match={match}
+                        registeredCount={regCount}
+                        variant="participant"
+                        registrationId={registrationId}
+                        userPosition={position}
+                        onUnregister={handleQuickUnregister}
+                        isUnregistering={unregisteringRegistrationId === registrationId}
+                      />
+                    )
+                  })}
+                </div>
+              )}
             </section>
 
             {/* Created matches */}

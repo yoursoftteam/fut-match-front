@@ -438,6 +438,10 @@ serve(async (req) => {
           const poolCount = payload.pools.length;
           subject = `📊 Tu resumen diario — ${poolCount} polla${poolCount !== 1 ? "s" : ""} activa${poolCount !== 1 ? "s" : ""}`;
           html = renderDailyDigestEmail(payload);
+        } else if (item.notification_type === "tournament_results") {
+          const payload = item.payload as unknown as { subject: string; html: string };
+          subject = payload.subject;
+          html = payload.html;
         } else {
           await supabase
             .from("bet_notification_queue")

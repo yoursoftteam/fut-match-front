@@ -108,6 +108,9 @@ export async function GET(
       .filter(d => d.source_type === 'tournament')
       .map(d => d.source_id)
 
+    const allValidCategories = ['champion', 'subchampion', 'third_place'] as const
+    const categoriesToFetch = [...new Set([...tournamentCategories, ...allValidCategories])]
+
     const matchEntriesMap = new Map<string, MatchScoreEntry>()
     if (matchEntryIds.length > 0) {
       const { data: matches } = await supabase
@@ -152,14 +155,13 @@ export async function GET(
     }
 
     const tournamentDetailsMap = new Map<string, { team_name: string | null; points: number }>()
-    const VALID_CATEGORIES = ['champion', 'subchampion', 'third_place'] as const
-    if (tournamentCategories.length > 0) {
+    {
       const { data: predictions } = await supabase
         .from('bet_tournament_predictions')
         .select('category, team:team_id(id, name)')
         .eq('pool_id', poolId)
         .eq('user_id', user.id)
-        .in('category', tournamentCategories.filter(c => VALID_CATEGORIES.includes(c as typeof VALID_CATEGORIES[number])))
+        .in('category', categoriesToFetch as string[])
 
       for (const pred of predictions ?? []) {
         const detail = safeDetails.find(d => d.source_type === 'tournament' && d.source_id === pred.category)

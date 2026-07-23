@@ -113,12 +113,12 @@ function clearNameErrors(entries: RegistrationEntry[]): RegistrationEntry[] {
   return entries.map((e) => ({ ...e, nameError: null }));
 }
 
-function createRegistrationEntry(): RegistrationEntry {
+function createRegistrationEntry(defaultPosition?: string): RegistrationEntry {
   return {
     id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
     name: "",
-    isGoalkeeper: false,
-    position: "",
+    isGoalkeeper: defaultPosition === "portero",
+    position: defaultPosition ?? "",
     nameError: null,
   };
 }
@@ -127,7 +127,19 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
   const { matchId, refreshRegistrations, user, registrations } = useMatchDetailsContext();
   const { registerForMatch } = useMatches();
 
+  const defaultPosition = user?.user_metadata?.position as string | undefined;
+
   const [entries, setEntries] = useState<RegistrationEntry[]>([createRegistrationEntry()]);
+
+  useEffect(() => {
+    if (!defaultPosition) return;
+    setEntries((prev) => {
+      const first = prev[0];
+      if (!first || first.position) return prev;
+      return [{ ...first, position: defaultPosition, isGoalkeeper: defaultPosition === "portero" }, ...prev.slice(1)];
+    });
+  }, [defaultPosition]);
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
@@ -209,7 +221,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
 
   const updateEntryPosition = useCallback((entryId: string, value: string) => {
     setEntries((prev) => prev.map((entry) => (
-      entry.id === entryId ? { ...entry, position: value } : entry
+      entry.id === entryId ? { ...entry, position: value, isGoalkeeper: value === "portero" } : entry
     )));
   }, []);
 
@@ -339,7 +351,7 @@ export function useMatchRegistration(): UseMatchRegistrationReturn {
         id: `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`,
         name: item.name,
         isGoalkeeper: item.isGoalkeeper,
-        position: '',
+        position: item.isGoalkeeper ? 'portero' : '',
       })));
       return successCount > 0;
     } catch {
