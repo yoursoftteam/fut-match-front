@@ -1,7 +1,6 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { ChevronDown } from "lucide-react"
 import type { TournamentScheduleDay, WeekDay } from "@/lib/tournament-schema"
 
 function toAmPm(hhmm: string): string {
@@ -11,6 +10,11 @@ function toAmPm(hhmm: string): string {
   const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h
   return `${hour12}:00 ${period}`
 }
+
+const timeOptions = Array.from({ length: 24 }, (_, i) => {
+  const hhmm = `${String(i).padStart(2, "0")}:00`
+  return { value: hhmm, label: toAmPm(hhmm) }
+})
 
 const dayOptions: Array<{ value: WeekDay; label: string }> = [
   { value: 0, label: "Dom" },
@@ -22,24 +26,89 @@ const dayOptions: Array<{ value: WeekDay; label: string }> = [
   { value: 6, label: "Sáb" },
 ]
 
-const timeBlocks = [
-  { label: "Mañana", range: `${toAmPm("06:00")} – ${toAmPm("11:00")}`, times: ["06:00", "07:00", "08:00", "09:00", "10:00", "11:00"] },
-  { label: "Tarde", range: `${toAmPm("12:00")} – ${toAmPm("17:00")}`, times: ["12:00", "13:00", "14:00", "15:00", "16:00", "17:00"] },
-  { label: "Noche", range: `${toAmPm("18:00")} – ${toAmPm("23:00")}`, times: ["18:00", "19:00", "20:00", "21:00", "22:00", "23:00"] },
-]
-
 interface TournamentSchedulePickerProps {
   value: TournamentScheduleDay[]
   onChange: (value: TournamentScheduleDay[]) => void
 }
 
-function blockKey(dayOfWeek: WeekDay, blockLabel: string) {
-  return `${dayOfWeek}-${blockLabel}`
+function DayRow({
+  day,
+  dayLabel,
+  onAddTime,
+  onRemoveTime,
+  onRemoveDay,
+}: {
+  day: TournamentScheduleDay
+  dayLabel: string
+  onAddTime: (dayOfWeek: WeekDay, hhmm: string) => void
+  onRemoveTime: (dayOfWeek: WeekDay, time: string) => void
+  onRemoveDay: (dayOfWeek: WeekDay) => void
+}) {
+  const [selectedTime, setSelectedTime] = useState("09:00")
+
+  const selectClass =
+    "h-8 rounded-lg border border-border bg-background px-2.5 text-sm text-foreground transition focus:border-primary/50 focus:outline-none"
+
+  return (
+    <div
+      className={`rounded-lg border bg-background px-4 py-3 ${
+        day.times.length === 0 ? "border-red-500/40" : "border-border"
+      }`}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <p className="text-sm font-semibold text-foreground">{dayLabel}</p>
+        <button
+          type="button"
+          onClick={() => onRemoveDay(day.day_of_week)}
+          className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
+        >
+          Quitar día
+        </button>
+      </div>
+
+      <div className="mt-3 flex items-center gap-2">
+        <select
+          value={selectedTime}
+          onChange={(e) => setSelectedTime(e.target.value)}
+          className={selectClass}
+        >
+          {timeOptions.map((opt) => (
+            <option key={opt.value} value={opt.value}>{opt.label}</option>
+          ))}
+        </select>
+        <button
+          type="button"
+          onClick={() => onAddTime(day.day_of_week, selectedTime)}
+          className="h-8 rounded-lg bg-primary px-3 text-xs font-semibold text-primary-foreground transition hover:bg-primary/90 active:scale-95"
+        >
+          Agregar
+        </button>
+      </div>
+
+      {day.times.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {day.times.map((time) => (
+            <span
+              key={time}
+              className="inline-flex items-center gap-1 rounded-full border border-primary/20 bg-primary/8 px-2.5 py-1 text-xs font-semibold text-foreground"
+            >
+              {toAmPm(time)}
+              <button
+                type="button"
+                onClick={() => onRemoveTime(day.day_of_week, time)}
+                className="ml-0.5 text-muted-foreground transition hover:text-foreground"
+              >
+                ×
+              </button>
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  )
 }
 
 export function TournamentSchedulePicker({ value, onChange }: TournamentSchedulePickerProps) {
-  const [expanded, setExpanded] = useState<Set<string>>(new Set())
-
   const sortedValue = useMemo(
     () => [...value].sort((left, right) => left.day_of_week - right.day_of_week),
     [value]
@@ -54,29 +123,23 @@ export function TournamentSchedulePicker({ value, onChange }: TournamentSchedule
     onChange([...value, { day_of_week: dayOfWeek, times: [] }])
   }
 
-  const toggleTime = (dayOfWeek: WeekDay, time: string) => {
+  const addTime = (dayOfWeek: WeekDay, hhmm: string) => {
     onChange(
       value.map((item) => {
         if (item.day_of_week !== dayOfWeek) return item
-        const active = item.times.includes(time)
-        return {
-          ...item,
-          times: active ? item.times.filter((t) => t !== time) : [...item.times, time],
-        }
+        if (item.times.includes(hhmm)) return item
+        return { ...item, times: [...item.times, hhmm].sort() }
       })
     )
   }
 
-  const toggleBlock = (key: string) => {
-    setExpanded((prev) => {
-      const next = new Set(prev)
-      if (next.has(key)) {
-        next.delete(key)
-      } else {
-        next.add(key)
-      }
-      return next
-    })
+  const removeTime = (dayOfWeek: WeekDay, time: string) => {
+    onChange(
+      value.map((item) => {
+        if (item.day_of_week !== dayOfWeek) return item
+        return { ...item, times: item.times.filter((t) => t !== time) }
+      })
+    )
   }
 
   const selectedSummary = sortedValue.length
@@ -127,73 +190,14 @@ export function TournamentSchedulePicker({ value, onChange }: TournamentSchedule
           sortedValue.map((day) => {
             const dayLabel = dayOptions.find((o) => o.value === day.day_of_week)?.label ?? "Día"
             return (
-              <div key={day.day_of_week} className={`rounded-lg border bg-background px-4 py-3 ${
-                  day.times.length === 0
-                    ? "border-red-500/40"
-                    : "border-border"
-                }`}>
-                <div className="flex items-center justify-between gap-3">
-                  <p className="text-sm font-semibold text-foreground">{dayLabel}</p>
-                  <button
-                    type="button"
-                    onClick={() => toggleDay(day.day_of_week)}
-                    className="text-xs font-semibold text-muted-foreground transition hover:text-foreground"
-                  >
-                    Quitar día
-                  </button>
-                </div>
-
-                <div className="mt-3 space-y-1">
-                  {timeBlocks.map((block) => {
-                    const key = blockKey(day.day_of_week, block.label)
-                    const isOpen = expanded.has(key)
-                    const selectedCount = block.times.filter((t) => day.times.includes(t)).length
-                    return (
-                      <div key={block.label} className="rounded-lg border border-border/60">
-                        <button
-                          type="button"
-                          onClick={() => toggleBlock(key)}
-                          className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-xs font-semibold text-muted-foreground transition hover:text-foreground"
-                        >
-                          <span>
-                            {block.label}{" "}
-                            <span className="font-normal text-muted-foreground">{block.range}</span>
-                            {selectedCount > 0 && (
-                              <span className="ml-1.5 rounded-full bg-primary/15 px-1.5 py-0.5 text-[10px] text-primary">
-                                {selectedCount}
-                              </span>
-                            )}
-                          </span>
-                          <ChevronDown
-                            className={`size-3.5 transition ${isOpen ? "rotate-180" : ""}`}
-                          />
-                        </button>
-                        {isOpen && (
-                          <div className="grid grid-cols-3 gap-1.5 border-t border-border/60 px-3 py-2 sm:grid-cols-6">
-                            {block.times.map((time) => {
-                              const active = day.times.includes(time)
-                              return (
-                                <button
-                                  key={time}
-                                  type="button"
-                                  onClick={() => toggleTime(day.day_of_week, time)}
-                                  className={`rounded-md border px-2 py-1.5 text-xs font-semibold transition ${
-                                    active
-                                      ? "border-primary bg-primary/15 text-foreground"
-                                      : "border-border text-muted-foreground hover:bg-muted"
-                                  }`}
-                                >
-                                  {toAmPm(time)}
-                                </button>
-                              )
-                            })}
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
+              <DayRow
+                key={day.day_of_week}
+                day={day}
+                dayLabel={dayLabel}
+                onAddTime={addTime}
+                onRemoveTime={removeTime}
+                onRemoveDay={toggleDay}
+              />
             )
           })
         )}

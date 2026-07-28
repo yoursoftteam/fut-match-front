@@ -21,6 +21,7 @@ interface UseTournamentManageActions {
   updateSchedule: (input: { scheduled_days: TournamentScheduleDay[] }) => Promise<boolean>
   updateMaxTeams: (max_teams: number) => Promise<boolean>
   updateDateField: (field: "starts_at" | "registration_deadline", value: string | null) => Promise<boolean>
+  updateTeamPaymentStatus: (teamId: string, paymentStatus: TournamentTeam["payment_status"]) => Promise<boolean>
 }
 
 export function useTournamentManage(tournamentId: string): UseTournamentManageState & UseTournamentManageActions {
@@ -188,6 +189,35 @@ export function useTournamentManage(tournamentId: string): UseTournamentManageSt
     [tournamentId, user]
   )
 
+  const updateTeamPaymentStatus = useCallback(
+    async (teamId: string, paymentStatus: TournamentTeam["payment_status"]): Promise<boolean> => {
+      if (!user) {
+        setError("Debes iniciar sesión para editar el torneo")
+        return false
+      }
+
+      try {
+        const { data, error: updateError } = await supabase
+          .from("tournament_teams")
+          .update({ payment_status: paymentStatus })
+          .eq("id", teamId)
+          .eq("tournament_id", tournamentId)
+          .select("*")
+          .single()
+
+        if (updateError) throw updateError
+
+        setTeams((prev) => prev.map((t) => (t.id === teamId ? (data as TournamentTeam) : t)))
+        return true
+      } catch (err) {
+        const message = err instanceof Error ? err.message : "No se pudo actualizar el estado de pago"
+        setError(message)
+        return false
+      }
+    },
+    [tournamentId, user]
+  )
+
   useEffect(() => {
     void refresh()
   }, [refresh])
@@ -205,5 +235,6 @@ export function useTournamentManage(tournamentId: string): UseTournamentManageSt
     updateSchedule,
     updateMaxTeams,
     updateDateField,
+    updateTeamPaymentStatus,
   }
 }

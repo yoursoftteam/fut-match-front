@@ -69,18 +69,6 @@ export function DashboardSidebar({
 
   const content = (
     <div className={`flex flex-col h-full transition-all duration-200 ${expanded ? 'w-52' : 'w-16'}`}>
-      {/* Toggle — desktop only */}
-      <div className={`hidden md:flex items-center border-b border-border ${sidebarExpanded ? 'justify-end px-3' : 'justify-center'} h-12`}>
-        <button
-          type="button"
-          onClick={onToggleExpand}
-          className="flex size-8 items-center justify-center rounded-lg text-muted-foreground hover:text-foreground hover:bg-muted transition-colors cursor-pointer"
-          aria-label={sidebarExpanded ? 'Colapsar' : 'Expandir'}
-        >
-          {sidebarExpanded ? <ChevronLeft className="size-4" /> : <PanelRightClose className="size-4" />}
-        </button>
-      </div>
-
       {/* Mobile close button when expanded */}
       {mobileExpanded && (
         <div className="flex md:hidden items-center justify-end px-3 h-12 border-b border-border">
@@ -96,6 +84,20 @@ export function DashboardSidebar({
       )}
 
       <nav className="flex-1 flex flex-col gap-1 p-2 overflow-y-auto">
+        <button
+          type="button"
+          onClick={onToggleExpand}
+          className={`
+            flex items-center gap-3 rounded-xl transition-colors cursor-pointer w-full
+            ${expanded ? 'px-3 py-2.5' : 'px-0 py-2.5 justify-center'}
+            text-muted-foreground hover:text-foreground hover:bg-muted/50
+          `}
+          title={sidebarExpanded ? 'Contraer' : 'Expandir'}
+        >
+          {sidebarExpanded ? <ChevronLeft className="size-5 shrink-0" /> : <PanelRightClose className="size-5 shrink-0" />}
+          {expanded && <span className="text-sm font-medium leading-none">Contraer</span>}
+        </button>
+
         {NAV_ITEMS.map((item) => {
           const Icon = item.icon
           const active = isActive(item.href)
