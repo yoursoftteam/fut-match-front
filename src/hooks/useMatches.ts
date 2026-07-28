@@ -562,13 +562,11 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
       if (error) throw error
       if (!data) {
-        // RLS puede filtrar el DELETE (0 filas) si el usuario no es el
-        // dueño de la inscripción ni el creador del partido.
         const { data: { user } } = await supabase.auth.getUser()
         if (!user) {
-          throw new Error('Debes iniciar sesión para realizar esta acción.')
+          throw new Error('Debes iniciar sesión para eliminar una inscripción.')
         }
-        throw new Error('No tienes permiso para eliminar esta inscripción o la inscripción ya no existe.')
+        throw new Error('No tienes permiso para eliminar esta inscripción.')
       }
       return { error: null }
     } catch (error) {
@@ -738,9 +736,10 @@ export function useMatches({ autoFetch = false, onlyOwnedByCurrentUser = false }
 
   const updateRegistrationPosition = async (registrationId: string, position: string) => {
     try {
+      const isGoalkeeper = position === 'portero'
       const { data, error } = await supabase
         .from('match_registrations')
-        .update({ position })
+        .update({ position, is_goalkeeper: isGoalkeeper })
         .eq('id', registrationId)
         .select('id, name, is_goalkeeper, position')
 
