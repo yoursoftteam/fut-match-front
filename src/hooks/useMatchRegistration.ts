@@ -423,9 +423,9 @@ export function useMatchUnregister(): UseMatchUnregisterReturn {
     setLoading(true);
     try {
       const { error } = await unregisterFromMatch(target.id);
+      closeModal();
       if (!error) {
         await refreshRegistrations();
-        closeModal();
         setMessage("Jugador eliminado correctamente.");
       } else {
         const errorMessage =
