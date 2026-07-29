@@ -102,8 +102,19 @@ CREATE POLICY "Anyone can view match registrations" ON match_registrations
 CREATE POLICY "Anyone can register for matches" ON match_registrations
   FOR INSERT WITH CHECK (true);
 
-CREATE POLICY "Anyone can unregister from matches" ON match_registrations
-  FOR DELETE USING (true);
+CREATE POLICY "Any registered player or match owner can delete" ON match_registrations
+  FOR DELETE USING (
+    EXISTS (
+      SELECT 1 FROM public.match_registrations r2
+      WHERE r2.match_id = match_id
+        AND r2.user_id = auth.uid()
+    )
+    OR
+    EXISTS (
+      SELECT 1 FROM public.matches
+      WHERE id = match_id AND created_by = auth.uid()
+    )
+  );
 
 -- Only match creator can update payment status
 CREATE POLICY "Only match owner can update payments" ON match_registrations
@@ -124,7 +135,8 @@ CREATE OR REPLACE FUNCTION register_for_match_public(
   p_match_id UUID,
   p_name TEXT,
   p_is_goalkeeper BOOLEAN,
-  p_self_token TEXT
+  p_position TEXT DEFAULT NULL,
+  p_self_token TEXT DEFAULT NULL
 )
 RETURNS TABLE (
   id UUID,
@@ -172,6 +184,7 @@ BEGIN
     user_id,
     name,
     is_goalkeeper,
+    position,
     self_unreg_token_hash
   )
   VALUES (
@@ -179,6 +192,7 @@ BEGIN
     auth.uid(),
     v_trimmed_name,
     p_is_goalkeeper,
+    CASE WHEN p_position IS NOT NULL AND p_position != '' THEN btrim(p_position) ELSE NULL END,
     encode(extensions.digest(p_self_token, 'sha256'), 'hex')
   )
   RETURNING match_registrations.id INTO v_registration_id;
@@ -198,7 +212,7 @@ BEGIN
 END;
 $$;
 
-GRANT EXECUTE ON FUNCTION register_for_match_public(UUID, TEXT, BOOLEAN, TEXT) TO anon, authenticated;
+GRANT EXECUTE ON FUNCTION register_for_match_public(UUID, TEXT, BOOLEAN, TEXT, TEXT) TO anon, authenticated;
 
 CREATE OR REPLACE FUNCTION unregister_self_from_match(
   p_registration_id UUID,
@@ -263,12 +277,14 @@ BEGIN
     RAISE EXCEPTION 'No hay cupos disponibles, ni siquiera como suplente.';
   END IF;
 
-  -- Keep goalkeeper cap only for titular filling stage.
-  IF v_total < v_max_players AND NEW.is_goalkeeper THEN
+  -- Position restrictions only while filling titular slots.
+  IF v_total < v_max_players THEN
     v_reserved_goalkeeper_slots := LEAST(2, v_max_players);
 
-    IF v_goalkeepers >= v_reserved_goalkeeper_slots THEN
-      RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
+    IF NEW.is_goalkeeper THEN
+      IF v_goalkeepers >= v_reserved_goalkeeper_slots THEN
+        RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
+      END IF;
     END IF;
   END IF;
 
@@ -282,6 +298,61 @@ CREATE TRIGGER trg_validate_match_registration
 BEFORE INSERT ON match_registrations
 FOR EACH ROW
 EXECUTE FUNCTION validate_match_registration();
+
+-- Sync is_goalkeeper when position changes via UPDATE, and enforce
+-- goalkeeper slot limits on UPDATE (not just INSERT).
+CREATE OR REPLACE FUNCTION sync_is_goalkeeper_on_position_update()
+RETURNS TRIGGER
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_max_players INTEGER;
+  v_total INTEGER;
+  v_goalkeepers INTEGER;
+  v_reserved_goalkeeper_slots INTEGER;
+  v_max_substitute_slots CONSTANT INTEGER := 10;
+BEGIN
+  -- Auto-sync is_goalkeeper with the new position
+  NEW.is_goalkeeper := (NEW.position = 'portero');
+
+  SELECT m.max_players INTO v_max_players
+  FROM get_public_match_by_id(NEW.match_id) AS m;
+
+  IF v_max_players IS NULL THEN
+    RAISE EXCEPTION 'Partido no encontrado.';
+  END IF;
+
+  SELECT
+    COUNT(*),
+    COUNT(*) FILTER (WHERE is_goalkeeper)
+  INTO v_total, v_goalkeepers
+  FROM match_registrations
+  WHERE match_id = NEW.match_id;
+
+  IF v_total > v_max_players + v_max_substitute_slots THEN
+    RAISE EXCEPTION 'No hay cupos disponibles, ni siquiera como suplente.';
+  END IF;
+
+  -- Enforce goalkeeper limit: adjust count for this row's change
+  IF v_total <= v_max_players AND NEW.is_goalkeeper THEN
+    v_reserved_goalkeeper_slots := LEAST(2, v_max_players);
+
+    IF (v_goalkeepers - OLD.is_goalkeeper::int + NEW.is_goalkeeper::int) > v_reserved_goalkeeper_slots THEN
+      RAISE EXCEPTION 'Ya se completaron los cupos de arqueros (máximo 2).';
+    END IF;
+  END IF;
+
+  RETURN NEW;
+END;
+$$;
+
+DROP TRIGGER IF EXISTS trg_sync_is_goalkeeper_on_position_update ON match_registrations;
+
+CREATE TRIGGER trg_sync_is_goalkeeper_on_position_update
+BEFORE UPDATE OF position ON match_registrations
+FOR EACH ROW
+WHEN (OLD.position IS DISTINCT FROM NEW.position)
+EXECUTE FUNCTION sync_is_goalkeeper_on_position_update();
 
 -- Automatic push notification dispatch to Cloudflare when a player registers.
 CREATE EXTENSION IF NOT EXISTS pg_net;
