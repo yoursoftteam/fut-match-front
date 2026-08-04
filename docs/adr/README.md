@@ -24,6 +24,7 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 | [006](ADR-006-security-audit.md) | Auditoría seguridad Supabase/API | Aceptado | [#157](https://github.com/yoursoftteam/fut-match-front/issues/157) |
 | [007](ADR-007-push-notifications.md) | Notificaciones push web + iOS + Android | Aceptado | [#158](https://github.com/yoursoftteam/fut-match-front/issues/158) |
 | [008](ADR-008-umbrella-roadmap.md) | Evolución web + móvil — Umbrella roadmap | Aceptado | [#159](https://github.com/yoursoftteam/fut-match-front/issues/159) |
+| [009](ADR-009-mobile-auth-ux.md) | UX nativa mobile-first en el auth | Aceptado | — |
 
 ## Issues de arquitectura (roadmap)
 
@@ -54,6 +55,7 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 | Pending invite (pool join) | ✅ localStorage | ✅ AsyncStorage + `EXPO_PUBLIC_API_URL` | ✅ |
 | Deep links `parti2://` | n/a | ✅ `auth/callback`, `auth/confirm`, `/join/<code>` | ✅ |
 | Paridad visual (marca web) | tokens oklch + glow + card | ✅ `theme/tokens.ts` + `components/auth/*` (tokens hex, Space Grotesk/Outfit, glow, neon button) | ✅ |
+| UX nativa mobile-first | card web centrada | ✅ [ADR-009](ADR-009-mobile-auth-ux.md): full-bleed, `FormGroup` iOS, glow gradiente + fallback, Reanimated v4, `worklets@0.5.1` | ✅ |
 
 > Config de Supabase dashboard pendiente para mobile: agregar redirect URL del app (Expo Go/standalone) en Auth → URL Configuration, registrar OAuth client de Google para iOS/Android, y apuntar templates de email de confirmación/reset al deep link del app.
 
