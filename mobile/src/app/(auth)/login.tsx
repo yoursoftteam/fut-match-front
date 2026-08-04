@@ -1,94 +1,167 @@
-import { useState } from 'react'
-import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  KeyboardAvoidingView,
-  Platform,
-  Alert,
-} from 'react-native'
-import { Link } from 'expo-router'
+import { useEffect, useState } from 'react'
+import { View, Text, StyleSheet, Pressable } from 'react-native'
+import { useRouter } from 'expo-router'
+import { Mail, Lock, Zap } from 'lucide-react-native'
 import { useAuth } from '@/contexts/AuthContext'
+import { getAuthErrorMessage } from '@shared/lib/auth-errors'
+import { getPendingInvite } from '@/lib/storage'
+import {
+  AuthScreen,
+  AuthField,
+  FormGroup,
+  AuthButton,
+  AuthMessage,
+  AuthDivider,
+  AuthInviteBanner,
+  SegmentedTabs,
+  GoogleIcon,
+  type AuthTab,
+} from '@/components/auth'
+import { colors, fonts } from '@/theme/tokens'
 
 export default function LoginScreen() {
-  const { signIn } = useAuth()
+  const router = useRouter()
+  const { signIn, signInWithGoogle } = useAuth()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [loading, setLoading] = useState(false)
+  const [googleLoading, setGoogleLoading] = useState(false)
+  const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null)
+  const [pendingInvite, setPendingInvite] = useState<string | null>(null)
+
+  useEffect(() => {
+    getPendingInvite().then(setPendingInvite)
+  }, [])
+
+  const switchTab = (tab: AuthTab) => {
+    router.replace(tab === 'signup' ? '/(auth)/signup' : '/(auth)/login')
+  }
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Completa todos los campos')
+      setMessage({ type: 'error', text: 'Completa todos los campos para continuar.' })
       return
     }
+    setMessage(null)
     setLoading(true)
     const { error } = await signIn(email, password)
     setLoading(false)
-    if (error) Alert.alert('Error', error)
+    if (error) setMessage({ type: 'error', text: getAuthErrorMessage(error) })
+  }
+
+  const handleGoogle = async () => {
+    setMessage(null)
+    setGoogleLoading(true)
+    const { error } = await signInWithGoogle()
+    setGoogleLoading(false)
+    if (error) setMessage({ type: 'error', text: getAuthErrorMessage(error) })
   }
 
   return (
-    <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-      <View style={styles.inner}>
-        <Text style={styles.title}>Parti2</Text>
-        <Text style={styles.subtitle}>Inicia sesion en tu cuenta</Text>
+    <AuthScreen title="Iniciar Sesión" subtitle="Bienvenido de vuelta a Parti2">
+      <View style={styles.form}>
+        {pendingInvite ? <AuthInviteBanner /> : null}
 
-        <TextInput
-          style={styles.input}
-          placeholder="Email"
-          placeholderTextColor="#6B7280"
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          keyboardType="email-address"
-        />
-        <TextInput
-          style={styles.input}
-          placeholder="Contrasena"
-          placeholderTextColor="#6B7280"
-          value={password}
-          onChangeText={setPassword}
-          secureTextEntry
+        <SegmentedTabs active="login" onChange={switchTab} />
+
+        <AuthButton
+          variant="outline"
+          label="Continuar con Google"
+          loading={googleLoading}
+          disabled={loading}
+          onPress={handleGoogle}
+          icon={<GoogleIcon size={20} />}
         />
 
-        <TouchableOpacity style={styles.button} onPress={handleLogin} disabled={loading}>
-          <Text style={styles.buttonText}>{loading ? 'Entrando...' : 'Iniciar Sesion'}</Text>
-        </TouchableOpacity>
+        <AuthDivider />
 
-        <Link href="/(auth)/signup" asChild>
-          <TouchableOpacity>
-            <Text style={styles.link}>No tienes cuenta? Registrate</Text>
-          </TouchableOpacity>
-        </Link>
+        <FormGroup>
+          <AuthField
+            label="Email"
+            value={email}
+            onChangeText={setEmail}
+            keyboardType="email-address"
+            autoComplete="email"
+            autoCorrect={false}
+            spellCheck={false}
+            placeholder="tu@email.com"
+            icon={<Mail size={18} color={colors.mutedForeground} />}
+          />
+          <AuthField
+            label="Contraseña"
+            value={password}
+            onChangeText={setPassword}
+            isPassword
+            autoComplete="current-password"
+            placeholder="••••••••"
+            icon={<Lock size={18} color={colors.mutedForeground} />}
+          />
+        </FormGroup>
+
+        <View style={styles.forgotRow}>
+          <Pressable onPress={() => router.push('/(auth)/forgot')} hitSlop={8} accessibilityRole="button">
+            {({ pressed }) => (
+              <Text style={[styles.forgotLink, pressed && styles.linkPressed]}>¿Olvidaste tu contraseña?</Text>
+            )}
+          </Pressable>
+        </View>
+
+        <AuthButton
+          variant="primary"
+          label="Iniciar Sesión"
+          loading={loading}
+          disabled={googleLoading}
+          onPress={handleLogin}
+          icon={<Zap size={18} color={colors.primaryForeground} />}
+        />
+
+        <View style={styles.terms}>
+          <Text style={styles.termsText}>
+            Al continuar, aceptas nuestros <Text style={styles.termsBold}>Términos y Condiciones</Text> y la{' '}
+            <Text style={styles.termsBold}>Política de Privacidad</Text>.
+          </Text>
+        </View>
+
+        {message ? <AuthMessage type={message.type}>{message.text}</AuthMessage> : null}
       </View>
-    </KeyboardAvoidingView>
+    </AuthScreen>
   )
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#0A0E14' },
-  inner: { flex: 1, justifyContent: 'center', paddingHorizontal: 24 },
-  title: { fontSize: 32, fontWeight: 'bold', color: '#FFFFFF', textAlign: 'center', marginBottom: 8 },
-  subtitle: { fontSize: 16, color: '#9CA3AF', textAlign: 'center', marginBottom: 32 },
-  input: {
-    backgroundColor: '#1A1F2E',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#FFFFFF',
-    marginBottom: 12,
+  form: {
+    gap: 14,
+  },
+  forgotRow: {
+    alignItems: 'flex-end',
+    marginTop: -4,
+  },
+  forgotLink: {
+    fontFamily: fonts.body,
+    fontSize: 13,
+    color: colors.mutedForeground,
+  },
+  linkPressed: {
+    color: colors.primary,
+  },
+  terms: {
     borderWidth: 1,
-    borderColor: '#2D3348',
-  },
-  button: {
-    backgroundColor: '#208AEF',
+    borderColor: 'rgba(0, 175, 103, 0.2)',
+    backgroundColor: 'rgba(0, 175, 103, 0.05)',
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  buttonText: { color: '#FFFFFF', fontSize: 16, fontWeight: '600' },
-  link: { color: '#208AEF', textAlign: 'center', marginTop: 16, fontSize: 14 },
+  termsText: {
+    fontFamily: fonts.body,
+    fontSize: 12,
+    lineHeight: 18,
+    textAlign: 'center',
+    color: colors.mutedForeground,
+  },
+  termsBold: {
+    fontFamily: fonts.bodySemiBold,
+    fontWeight: '600',
+    color: colors.foreground,
+  },
 })

@@ -39,13 +39,30 @@ Cada ADR sigue la plantilla de [Michael Nygard](https://cognitect.com/blog/2011/
 | #158 | Notificaciones push multi-plataforma | ✅ Completada (ADR-007) | Requiere ADR-001 |
 | #159 | Umbrella: Evolución web + móvil | ✅ Completada (ADR-008) | Requiere todas |
 | #160 | PR: Implementación PWA | 🔄 En review | Independiente |
+| #169 | Implementar ADR-003 (caché/mutaciones/realtime) | 🔲 Pendiente | Requiere Fase 1 |
+
+## Auth parity web → mobile (módulo auth)
+
+| Capacidad | Web | Mobile | Estado |
+|-----------|-----|--------|--------|
+| Email/password login | ✅ | ✅ | ✅ |
+| Signup (full_name + alias) | ✅ | ✅ | ✅ |
+| Google OAuth | ✅ `signInWithOAuth` | ✅ `expo-auth-session` + deep link | ✅ |
+| Forgot / reset password | ✅ | ✅ `forgot.tsx` + `reset.tsx` | ✅ |
+| Detección de admin (`admin_users`) | ✅ | ✅ `isAdmin` en AuthContext | ✅ |
+| Error messages compartidos | inline | ✅ `shared/lib/auth-errors.ts` | ✅ |
+| Pending invite (pool join) | ✅ localStorage | ✅ AsyncStorage + `EXPO_PUBLIC_API_URL` | ✅ |
+| Deep links `parti2://` | n/a | ✅ `auth/callback`, `auth/confirm`, `/join/<code>` | ✅ |
+| Paridad visual (marca web) | tokens oklch + glow + card | ✅ `theme/tokens.ts` + `components/auth/*` (tokens hex, Space Grotesk/Outfit, glow, neon button) | ✅ |
+
+> Config de Supabase dashboard pendiente para mobile: agregar redirect URL del app (Expo Go/standalone) en Auth → URL Configuration, registrar OAuth client de Google para iOS/Android, y apuntar templates de email de confirmación/reset al deep link del app.
 
 ## Estado de Fase 1 (App móvil MVP)
 
 | Tarea | Estado | Notas |
 |-------|--------|-------|
 | Scaffold Expo Router | ✅ | Expo SDK 54, Expo Router 6, src/app/ structure |
-| Auth (login/signup/logout) | ✅ | AuthContext + AuthGate + SecureStore PKCE |
+| Auth (login/signup/logout) | ✅ | AuthContext + AuthGate + SecureStore PKCE + Google OAuth (deep link), forgot/reset, isAdmin, invite bridge |
 | Dashboard | 🔲 | Pendiente |
 | Join partido vía invite code | 🔲 | Pendiente |
 | Detalle partido + realtime | 🔲 | Pendiente |
